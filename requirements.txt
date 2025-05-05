@@ -1,0 +1,29 @@
+# Dépendances principales pour le RAG Chatbot avec Confluence et Streamlit
+streamlit
+langchain
+langchain-community
+langchain-core
+langchain-text-splitters
+faiss-cpu
+pandas
+python-dotenv
+huggingface-hub
+sentence-transformers
+ollama
+
+# Dépendances pour Confluence et parsing HTML
+atlassian-python-api
+lxml
+beautifulsoup4
+
+# Dépendances pour les embeddings et LLM
+torch
+transformers
+
+# Dépendances pour la base de données et l'authentification
+sqlite3
+hashlib
+
+# Utilitaires
+tqdm
+watchdog

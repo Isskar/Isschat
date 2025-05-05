@@ -1,0 +1,71 @@
+graph TD
+    %% Utilisateurs et Interface
+    User([Utilisateur]) -->|Se connecte| Login[Page de Login]
+    Login -->|Vérifie identifiants| AuthDB[(Base de données SQLite<br>Utilisateurs)]
+    Login -->|Authentification réussie| Chat[Interface de Chat]
+    Login -->|Accès admin| Admin[Gestion des Utilisateurs]
+    
+    %% Flux de la question
+    User -->|Pose une question| Chat
+    Chat -->|Envoie la requête| Retriever[Retriever FAISS]
+    
+    %% Recherche de documents
+    Retriever -->|Recherche similitude vectorielle| VectorDB[(Base de données<br>vectorielle FAISS)]
+    VectorDB -->|Documents pertinents| Retriever
+    
+    %% Génération de réponse
+    Retriever -->|Contexte documentaire| Chain[Chaîne LangChain]
+    Chain -->|Construit le prompt| LLM[Modèle LLM<br>Ollama/llama2]
+    LLM -->|Génère réponse| Chain
+    Chain -->|Réponse formatée| Chat
+    Chat -->|Affiche réponse + sources| User
+    
+    %% Initialisation et mise à jour de la base
+    ConfluenceAPI[API Confluence] -->|Récupère pages| DataLoader[DataLoader]
+    DataLoader -->|Traite documents| TextSplitter[Text Splitter]
+    TextSplitter -->|Découpe en chunks| Embedder[Embeddings<br>HuggingFace]
+    Embedder -->|Vecteurs + Métadonnées| VectorDB
+    
+    %% Gestion des utilisateurs
+    Admin -->|Ajoute/Supprime| AuthDB
+    
+    %% Options avancées
+    RebuildDB[Option: Reconstruire DB] -.->|Déclenche| DataLoader
+    
+    %% Sous-graphes pour organiser
+    subgraph "Interface Utilisateur"
+        User
+        Login
+        Chat
+        Admin
+        RebuildDB
+    end
+    
+    subgraph "Traitement RAG"
+        Retriever
+        Chain
+        LLM
+    end
+    
+    subgraph "Stockage de Données"
+        VectorDB
+        AuthDB
+    end
+    
+    subgraph "Ingestion de Données"
+        ConfluenceAPI
+        DataLoader
+        TextSplitter
+        Embedder
+    end
+    
+    %% Styles pour une meilleure lisibilité
+    classDef interface fill:#f9f,stroke:#333,stroke-width:1px
+    classDef processing fill:#bbf,stroke:#333,stroke-width:1px
+    classDef storage fill:#bfb,stroke:#333,stroke-width:1px
+    classDef ingestion fill:#fbb,stroke:#333,stroke-width:1px
+    
+    class User,Login,Chat,Admin,RebuildDB interface
+    class Retriever,Chain,LLM processing
+    class VectorDB,AuthDB storage
+    class ConfluenceAPI,DataLoader,TextSplitter,Embedder ingestion

@@ -1,0 +1,68 @@
+# Environnements virtuels
+.venv
+env/
+venv/
+ENV/
+
+# Fichiers de configuration sensibles
+.env
+*.env
+
+# Fichiers de configuration Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Fichiers de base de données
+*.db
+*.sqlite3
+
+# Dossiers de l'IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Fichiers de cache
+.cache/
+.coverage
+htmlcov/
+
+# Fichiers de logs
+*.log
+
+# Dossiers de dépendances
+data/
+db/
+
+# Fichiers temporaires
+*.tmp
+*.bak
+*.swp
+*~
+
+# Fichiers spécifiques au projet
+*.pkl
+*.faiss
+*.pdf
+*.docx
+*.xlsx
+*.csv
