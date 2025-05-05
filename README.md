@@ -97,27 +97,6 @@ RAG-Chatbot-with-Confluence/
 - **Historique des requêtes** : Consultation des recherches précédentes
 - **Suggestion de questions** : Propositions de questions connexes
 
-## Contribution
-
-Les contributions sont les bienvenues ! Voici comment procéder :
-
-1. Forkez le projet
-2. Créez votre branche (`git checkout -b feature/AmazingFeature`)
-3. Committez vos changements (`git commit -m 'Add some AmazingFeature'`)
-4. Poussez vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrez une Pull Request
-
-## Licence
-
-Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
-## Remerciements
-
-- [LangChain](https://langchain.com/) pour le framework RAG
-- [Streamlit](https://streamlit.io/) pour l'interface utilisateur
-- [Hugging Face](https://huggingface.co/) pour les modèles de langage
-- [Atlassian](https://www.atlassian.com/software/confluence) pour l'API Confluence
-
 ---
 
-Développé par l'équipe Kanbios
+Développé par Nicolas Lambropoulos
