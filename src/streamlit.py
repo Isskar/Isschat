@@ -17,6 +17,7 @@ import json
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+import os
 
 # Ajouter le répertoire parent au chemin de recherche Python
 sys.path.append(str(Path(__file__).parent.parent))
@@ -36,7 +37,6 @@ def get_model(rebuild_db=False):
     # Afficher un spinner pendant le chargement
     with st.spinner("Chargement du modèle RAG..."):
         # Vérifier si le fichier index.faiss existe
-        import os
         import sys
         from pathlib import Path
         from config import PERSIST_DIRECTORY
@@ -116,7 +116,6 @@ def main():
                 if st.button("Reconstruire depuis Confluence", type="primary"):
                     with st.spinner("Reconstruction de la base de données depuis Confluence en cours..."):
                         # Supprimer les fichiers existants
-                        import os
                         import shutil
                         from config import PERSIST_DIRECTORY
                         
@@ -146,7 +145,29 @@ def main():
                 logout()
     
     # Déterminer quelle page afficher
+    # Check if user wants to bypass login
+    bypass_login = st.session_state.get("bypass_login", False)
+    if bypass_login or "BYPASS_LOGIN" in os.environ:
+        bypass_login = True
+        
+    # Create a session for the first time if bypass is enabled
+    if bypass_login and "user" not in st.session_state:
+        from src.auth import get_all_users
+        # Look for admin user
+        users = get_all_users()
+        if users:
+            admin_user = next((user for user in users if user["is_admin"]), users[0])
+            st.session_state["user"] = admin_user
+            st.session_state["user_id"] = f"user_{admin_user['id']}"
+            st.session_state["page"] = "chat"
+    
+    # Normal flow with bypass option
     if "user" not in st.session_state:
+        # Add bypass checkbox in sidebar
+        with st.sidebar:
+            if st.checkbox("Bypass login (auto-connect as admin)", value=False):
+                st.session_state["bypass_login"] = True
+                st.rerun()
         login_page()
     elif st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
         admin_page()
@@ -179,6 +200,18 @@ def admin_required(func):
 def login_page():
     """Affiche la page de connexion"""
     st.title("Connexion à l'Assistant Confluence")
+    
+    # Auto-login option with admin credentials
+    auto_login = st.checkbox("Connexion automatique (admin)", value=True)
+    
+    if auto_login:
+        # Try to log in as admin@example.com / admin123
+        user = verify_user("admin@example.com", "admin123")
+        if user:
+            st.session_state["user"] = user
+            st.session_state["user_id"] = f"user_{user['id']}"
+            st.session_state["page"] = "chat"
+            st.rerun()
     
     with st.form("login_form"):
         email = st.text_input("Email")
