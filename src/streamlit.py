@@ -40,16 +40,7 @@ def get_model(rebuild_db=False):
         import sys
         from pathlib import Path
         from config import PERSIST_DIRECTORY
-        
-        # Afficher les informations de configuration pour le débogage
-        st.sidebar.expander("Débogage", expanded=False).write(f"""
-        **Configuration**:
-        - Dossier de la base vectorielle: `{PERSIST_DIRECTORY}`
-        - URL Confluence: `{os.getenv('CONFLUENCE_SPACE_NAME')}`
-        - Clé d'espace: `{os.getenv('CONFLUENCE_SPACE_KEY')}`
-        - Utilisateur: `{os.getenv('EMAIL_ADRESS')}`
-        - Clé API: `{'*'*5}{os.getenv('CONFLUENCE_PRIVATE_API_KEY')[-5:] if os.getenv('CONFLUENCE_PRIVATE_API_KEY') else 'Non définie'}`
-        """)
+               
         
         # Vérifier que le dossier existe
         if not os.path.exists(PERSIST_DIRECTORY):
