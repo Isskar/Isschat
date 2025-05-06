@@ -145,30 +145,34 @@ def main():
                 logout()
     
     # Déterminer quelle page afficher
-    # Check if user wants to bypass login
-    bypass_login = st.session_state.get("bypass_login", False)
-    if bypass_login or "BYPASS_LOGIN" in os.environ:
-        bypass_login = True
-        
-    # Create a session for the first time if bypass is enabled
-    if bypass_login and "user" not in st.session_state:
-        from src.auth import get_all_users
-        # Look for admin user
-        users = get_all_users()
-        if users:
-            admin_user = next((user for user in users if user["is_admin"]), users[0])
-            st.session_state["user"] = admin_user
-            st.session_state["user_id"] = f"user_{admin_user['id']}"
-            st.session_state["page"] = "chat"
     
-    # Normal flow with bypass option
+    # Automatically log in using Confluence credentials from .env
     if "user" not in st.session_state:
-        # Add bypass checkbox in sidebar
-        with st.sidebar:
-            if st.checkbox("Bypass login (auto-connect as admin)", value=False):
-                st.session_state["bypass_login"] = True
-                st.rerun()
-        login_page()
+        # Auto-create and login with Confluence credentials
+        email = os.getenv("CONFLUENCE_EMAIL_ADRESS")
+        if email:
+            from src.auth import get_all_users, add_user
+            
+            # Check if user exists, if not create it
+            users = get_all_users()
+            user = next((u for u in users if u["email"] == email), None)
+            
+            if not user:
+                # Create user with admin privileges using email from .env
+                add_user(email, "auto_generated_pwd", is_admin=True)
+                users = get_all_users()
+                user = next((u for u in users if u["email"] == email), None)
+            
+            if user:
+                st.session_state["user"] = user
+                st.session_state["user_id"] = f"user_{user['id']}"
+                st.session_state["page"] = "chat"
+            else:
+                st.error(f"Failed to auto-login with {email}")
+                login_page()
+        else:
+            st.error("No Confluence email found in .env file")
+            login_page()
     elif st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
         admin_page()
     elif st.session_state.get("page") == "history":
@@ -198,40 +202,13 @@ def admin_required(func):
     return wrapper
 
 def login_page():
-    """Affiche la page de connexion"""
-    st.title("Connexion à l'Assistant Confluence")
+    """Auto-login using Confluence credentials from .env"""
+    # Just show a message that we're using the Confluence credentials
+    st.info("Using Confluence credentials from environment variables...")
     
-    # Auto-login option with admin credentials
-    auto_login = st.checkbox("Connexion automatique (admin)", value=True)
-    
-    if auto_login:
-        # Try to log in as admin@example.com / admin123
-        user = verify_user("admin@example.com", "admin123")
-        if user:
-            st.session_state["user"] = user
-            st.session_state["user_id"] = f"user_{user['id']}"
-            st.session_state["page"] = "chat"
-            st.rerun()
-    
-    with st.form("login_form"):
-        email = st.text_input("Email")
-        password = st.text_input("Mot de passe", type="password")
-        submit = st.form_submit_button("Se connecter")
-        
-        if submit and email and password:
-            user = verify_user(email, password)
-            if user:
-                # Utiliser l'ID utilisateur de la base de données pour assurer la persistance
-                # Pas besoin de générer un UUID aléatoire à chaque session
-                st.session_state["user"] = user
-                
-                # Utiliser l'ID utilisateur directement comme identifiant persistant
-                st.session_state["user_id"] = f"user_{user['id']}"
-                
-                st.session_state["page"] = "chat"
-                st.rerun()
-            else:
-                st.error("Email ou mot de passe incorrect.")
+    # Redirect to main function which will handle the auto-login
+    time.sleep(1)
+    st.rerun()
 
 @login_required
 def chat_page():
