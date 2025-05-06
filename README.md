@@ -39,6 +39,10 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
    
    - Your login email
    CONFLUENCE_EMAIL_ADRESS=firstname.lastname@your_company.com
+   
+   - OpenRouter API key (for AI model access)
+   OPENROUTER_API_KEY=your_openrouter_api_key
+   # Get your API key from https://openrouter.ai/
 
 
 ## Launch
@@ -73,6 +77,10 @@ RAG-Chatbot-with-Confluence/
 - **Feedback system**: User response evaluation
 - **Query history**: Previous search consultation
 - **Question suggestions**: Related question proposals
+
+## Model Integration
+
+This project uses OpenRouter.ai as the AI model provider, which gives access to various large language models including ChatGPT. The OpenRouter integration is configured in `src/help_desk.py` and requires an API key from [OpenRouter](https://openrouter.ai/).
 
 ---
 
