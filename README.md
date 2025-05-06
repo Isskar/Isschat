@@ -1,6 +1,6 @@
 # RAG Chatbot with Confluence
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Isskar/RAG-Chatbot-with-Confluence/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
 Un chatbot intelligent qui interagit avec la base de connaissances Confluence de Kanbios en utilisant la technologie RAG (Retrieval-Augmented Generation).
@@ -96,6 +96,11 @@ RAG-Chatbot-with-Confluence/
 - **Système de feedback** : Évaluation des réponses par les utilisateurs
 - **Historique des requêtes** : Consultation des recherches précédentes
 - **Suggestion de questions** : Propositions de questions connexes
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
+Added in [commit f801768](https://github.com/Isskar/Isschat/commit/f801768).
 
 ---
 
