@@ -56,6 +56,17 @@ Un chatbot intelligent qui interagit avec la base de connaissances Confluence de
    EMAIL_ADRESS=prenom.nomfamilles@isskar.fr
    ```
 
+## Configuration Admin
+
+Pour créer un compte administrateur :
+```bash
+python scripts/create_admin.py
+```
+
+Vous serez invité à saisir :
+- Un email valide
+- Un mot de passe sécurisé
+
 ## Lancement
 
 1. **Démarrer le serveur Ollama** (dans un terminal séparé)

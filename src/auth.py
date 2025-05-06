@@ -27,17 +27,6 @@ def init_auth_db():
     )
     ''')
     
-    # Vérifier si l'utilisateur admin existe déjà
-    c.execute("SELECT * FROM users WHERE email = ?", ("nicolas.lambropoulos@isskar.fr",))
-    if not c.fetchone():
-        # Ajouter l'utilisateur admin
-        password_hash = hashlib.sha256("mdp".encode()).hexdigest()
-        c.execute(
-            "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)",
-            ("nicolas.lambropoulos@isskar.fr", password_hash, True)
-        )
-        print("Utilisateur admin créé avec succès.")
-    
     # Valider les changements et fermer la connexion
     conn.commit()
     conn.close()
