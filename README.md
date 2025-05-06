@@ -29,18 +29,17 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
    ```
 
 2. **Configure environment variables**
-   Create a `.env` file at project root with:
-   ```env
-   # Confluence API key (get from:
+   Copy `.env.example` to `.env` file at root with:
+   
+   - Confluence API key got from:
    # https://id.atlassian.com/manage-profile/security/api-tokens)
-   CONFLUENCE_PRIVATE_API_KEY=your_api_key
    
-   # Confluence space URL
-   CONFLUENCE_SPACE_NAME=https://kanbios.atlassian.net
+   - Confluence space URL
+   CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
    
-   # Your login email
-   EMAIL_ADRESS=firstname.lastname@isskar.fr
-   ```
+   - Your login email
+   CONFLUENCE_EMAIL_ADRESS=firstname.lastname@your_company.com
+
 
 ## Launch
 

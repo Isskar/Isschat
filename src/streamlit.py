@@ -47,7 +47,7 @@ def get_model(rebuild_db=False):
         - Dossier de la base vectorielle: `{PERSIST_DIRECTORY}`
         - URL Confluence: `{os.getenv('CONFLUENCE_SPACE_NAME')}`
         - Clé d'espace: `{os.getenv('CONFLUENCE_SPACE_KEY')}`
-        - Utilisateur: `{os.getenv('EMAIL_ADRESS')}`
+        - Utilisateur: `{os.getenv('CONFLUENCE_EMAIL_ADRESS')}`
         - Clé API: `{'*'*5}{os.getenv('CONFLUENCE_PRIVATE_API_KEY')[-5:] if os.getenv('CONFLUENCE_PRIVATE_API_KEY') else 'Non définie'}`
         """)
         
