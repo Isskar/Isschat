@@ -3,111 +3,100 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-Un chatbot intelligent qui interagit avec la base de connaissances Confluence de Kanbios en utilisant la technologie RAG (Retrieval-Augmented Generation).
+An intelligent chatbot that interacts with Kanbios' Confluence knowledge base using RAG (Retrieval-Augmented Generation) technology.
 
-## Fonctionnalités
+## Features
 
-- Recherche sémantique dans la documentation Confluence
-- Interface conversationnelle intuitive avec Streamlit
-- Mise en cache des embeddings pour des performances accrues
-- Tableau de bord d'administration
-- Système d'authentification utilisateur
-- Historique des requêtes et feedback utilisateur
-- Analyse des performances et des interactions
+- Semantic search in Confluence documentation
+- Intuitive conversational interface with Streamlit
+- Embedding caching for improved performance
+- Admin dashboard
+- User authentication system
+- Query history and user feedback
+- Performance and interaction analysis
 
 ## Installation
 
-### Prérequis
+### Prerequisites
 - Python 3.10+
-- Compte Confluence avec permissions API
-- Ollama installé localement
+- Confluence account with API permissions
+- Ollama installed locally
 
 ### Configuration
 
-1. **Cloner le dépôt**
+1. **Clone the repository**
    ```bash
    git clone https://github.com/Isskar/RAG-Chatbot-with-Confluence.git
    cd RAG-Chatbot-with-Confluence
    ```
 
-2. **Créer un environnement virtuel**
+2. **Create a virtual environment**
    ```bash
    python -m venv .venv
-   source .venv/bin/activate  # Sur Linux/Mac
-   # .\.venv\Scripts\activate  # Sur Windows
+   source .venv/bin/activate  # Linux/Mac
+   # .\.venv\Scripts\activate  # Windows
    ```
 
-3. **Installer les dépendances**
+3. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configurer les variables d'environnement**
-   Créez un fichier `.env` à la racine du projet avec les variables suivantes :
+4. **Configure environment variables**
+   Create a `.env` file at project root with:
    ```env
-   # Clé API de votre compte Confluence (récupérable sur :
+   # Confluence API key (get from:
    # https://id.atlassian.com/manage-profile/security/api-tokens)
-   CONFLUENCE_PRIVATE_API_KEY=votre_api_key
+   CONFLUENCE_PRIVATE_API_KEY=your_api_key
    
-   # URL de votre espace Confluence
+   # Confluence space URL
    CONFLUENCE_SPACE_NAME=https://kanbios.atlassian.net
    
-   # Votre email de connexion
-   EMAIL_ADRESS=prenom.nomfamilles@isskar.fr
+   # Your login email
+   EMAIL_ADRESS=firstname.lastname@isskar.fr
    ```
 
-## Configuration Admin
+## Launch
 
-Pour créer un compte administrateur :
-```bash
-python scripts/create_admin.py
-```
-
-Vous serez invité à saisir :
-- Un email valide
-- Un mot de passe sécurisé
-
-## Lancement
-
-1. **Démarrer le serveur Ollama** (dans un terminal séparé)
+1. **Start Ollama server** (in separate terminal)
    ```bash
    ollama serve
    ```
 
-2. **Lancer l'application Streamlit**
+2. **Launch Streamlit app**
    ```bash
    streamlit run src/streamlit.py
    ```
 
-3. **Accéder à l'application**
-   Ouvrez votre navigateur à l'adresse : http://localhost:8501
+3. **Access the app**
+   Open your browser at: http://localhost:8501
 
 ## Architecture
 
 ```
 RAG-Chatbot-with-Confluence/
-├── data/                    # Dossier pour les données persistantes
-│   ├── cache/               # Cache des embeddings
-│   └── history.db           # Base de données SQLite pour l'historique
+├── data/                    # Persistent data
+│   ├── cache/               # Embedding cache
+│   └── history.db           # SQLite database for history
 ├── src/
-│   ├── auth.py             # Gestion de l'authentification
-│   ├── help_desk.py         # Logique principale du chatbot
-│   ├── streamlit.py         # Interface utilisateur Streamlit
-│   ├── features_integration.py # Intégration des fonctionnalités avancées
+│   ├── auth.py             # Authentication
+│   ├── help_desk.py         # Main chatbot logic
+│   ├── streamlit.py         # Streamlit UI
+│   ├── features_integration.py # Advanced features
 │   └── ...
-├── .env.example           # Exemple de configuration
-├── requirements.txt        # Dépendances Python
-└── README.md              # Ce fichier
+├── .env.example           # Configuration example
+├── requirements.txt        # Python dependencies
+└── README.md              # This file
 ```
 
-## Fonctionnalités avancées
+## Advanced Features
 
-- **Analyse conversationnelle** : Suivi des interactions utilisateur
-- **Suivi des performances** : Mesure des temps de réponse et précision
-- **Système de feedback** : Évaluation des réponses par les utilisateurs
-- **Historique des requêtes** : Consultation des recherches précédentes
-- **Suggestion de questions** : Propositions de questions connexes
+- **Conversation analysis**: User interaction tracking
+- **Performance tracking**: Response time and accuracy metrics
+- **Feedback system**: User response evaluation
+- **Query history**: Previous search consultation
+- **Question suggestions**: Related question proposals
 
 ---
 
-Développé par Nicolas Lambropoulos
+Developed by Nicolas Lambropoulos
