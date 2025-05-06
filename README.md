@@ -1,7 +1,7 @@
 # RAG Chatbot with Confluence
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
 An intelligent chatbot that interacts with Kanbios' Confluence knowledge base using RAG (Retrieval-Augmented Generation) technology.
 
@@ -18,31 +18,17 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 ## Installation
 
 ### Prerequisites
-- Python 3.10+
-- Confluence account with API permissions
-- Ollama installed locally
+- Install uv, on mac : `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
 ### Configuration
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Isskar/RAG-Chatbot-with-Confluence.git
-   cd RAG-Chatbot-with-Confluence
+   git clone https://github.com/Isskar/Isschat.git
+   cd Isschat
    ```
 
-2. **Create a virtual environment**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Linux/Mac
-   # .\.venv\Scripts\activate  # Windows
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure environment variables**
+2. **Configure environment variables**
    Create a `.env` file at project root with:
    ```env
    # Confluence API key (get from:
@@ -58,18 +44,10 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 
 ## Launch
 
-1. **Start Ollama server** (in separate terminal)
+1. **Launch Streamlit app**
    ```bash
-   ollama serve
+   uv run streamlit run src/streamlit.py
    ```
-
-2. **Launch Streamlit app**
-   ```bash
-   streamlit run src/streamlit.py
-   ```
-
-3. **Access the app**
-   Open your browser at: http://localhost:8501
 
 ## Architecture
 
