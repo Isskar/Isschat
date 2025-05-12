@@ -79,6 +79,46 @@ RAG-Chatbot-with-Confluence/
 └── README.md              # This file
 ```
 
+## Development
+
+### Testing
+
+This project uses `pytest` for testing. Tests are located in the `tests/` directory.
+
+#### Prerequisites
+
+- Python 3.12 or higher
+- UV package manager
+
+#### Setting up the development environment
+
+1. Install UV if you haven't already:
+   ```bash
+   curl -sSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. Install the project in development mode with test dependencies:
+   ```bash
+   uv pip install -e ".[test]"
+   ```
+
+#### Running tests
+
+To run all tests:
+```bash
+uv run pytest
+```
+
+To run tests with coverage report:
+```bash
+uv run pytest --cov=src
+```
+
+To run a specific test file:
+```bash
+uv run pytest tests/test_basic.py -v
+```
+
 ## Advanced Features
 
 - **Conversation analysis**: User interaction tracking
