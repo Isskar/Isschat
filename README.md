@@ -52,6 +52,15 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
    uv run streamlit run src/streamlit.py
    ```
 
+2. **Reconstruct the database**
+
+   Click on the button "reconstruire base de donnée"
+
+3. **Launch the chatbot**
+
+   Ask your question to the chatbot 
+   
+
 ## Architecture
 
 ```
