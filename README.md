@@ -118,6 +118,9 @@ To run a specific test file:
 ```bash
 uv run pytest tests/test_basic.py -v
 ```
+To test your confluence api : 
+```bash
+uv run test_confluence.py
 
 ## Advanced Features
 
