@@ -4,8 +4,11 @@ import collections
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.llms import Ollama
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
+from openai import OpenAI
+import os
 
 
 class HelpDesk():
