@@ -13,7 +13,7 @@ username = os.getenv("CONFLUENCE_EMAIL_ADRESS")
 space_key = os.getenv("CONFLUENCE_SPACE_KEY")
 
 # Afficher les informations (sans la clé complète)
-print(f"==== INFORMATIONS DE CONNEXION ====")
+print("==== INFORMATIONS DE CONNEXION ====")
 print(f"URL: {confluence_url}")
 print(f"Username: {username}")
 print(f"Space Key: {space_key}")
@@ -33,30 +33,31 @@ try:
         url=base_url,
         username=username,
         password=api_key,
-        cloud=True  # Spécifier que c'est une instance cloud
+        cloud=True,  # Spécifier que c'est une instance cloud
     )
-    
+
     # Tester la connexion en récupérant les espaces
     print("Test de connexion: récupération des espaces...")
     spaces = confluence.get_all_spaces()
     print(f"Connexion réussie! {len(spaces)} espaces trouvés.")
-    
+
     # Tester la récupération des pages dans l'espace spécifié
     print(f"\nRécupération des pages dans l'espace {space_key}...")
     pages = confluence.get_all_pages_from_space(space_key)
     print(f"Récupération réussie! {len(pages)} pages trouvées.")
-    
+
     # Afficher quelques informations sur les pages
     if pages:
         print("\nVoici les 3 premières pages:")
         for i, page in enumerate(pages[:3]):
-            print(f"  {i+1}. {page.get('title', 'Sans titre')} (ID: {page.get('id', 'N/A')})")
-    
+            print(f"  {i + 1}. {page.get('title', 'Sans titre')} (ID: {page.get('id', 'N/A')})")
+
 except Exception as e:
-    print(f"\n==== ERREUR DE CONNEXION ====")
+    print("\n==== ERREUR DE CONNEXION ====")
     print(f"Type d'erreur: {type(e).__name__}")
     print(f"Message d'erreur: {str(e)}")
     import traceback
+
     print("\nTrace d'erreur complète:")
     print(traceback.format_exc())
     sys.exit(1)

@@ -30,4 +30,7 @@ dependencies = [
     "html2text>=2025.4.15",
     "langchain-huggingface>=0.2.0",
     "langchain-openai>=0.3.16",
+    "pre-commit>=4.2.0",
+    "black>=25.1.0",
+    "flake8>=7.2.0",
 ]
