@@ -132,7 +132,7 @@ class HelpDesk:
             str: The template string with placeholders for context and question.
         """
         template = """
-        Tu es un assistant virtuel professionnel et amical nommé "Confluence Assistant". 
+        Tu es un assistant virtuel professionnel et amical nommé "Isschat". 
         Ta mission est d'aider les utilisateurs à trouver des informations dans la documentation Confluence.
         
         À partir de ces extraits de texte :

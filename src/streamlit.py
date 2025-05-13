@@ -19,6 +19,7 @@ from pathlib import Path
 from datetime import datetime
 import os
 
+
 # Ajouter le répertoire parent au chemin de recherche Python
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -30,7 +31,7 @@ from src.auth import verify_user, logout, get_all_users, add_user, delete_user, 
 from src.features_integration import setup_features, FeaturesManager
 
 # Configuration de la page Streamlit - doit être la première commande Streamlit
-st.set_page_config(page_title="Assistant Confluence", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
 # Pas de cache pour forcer le rechargement à chaque lancement
 def get_model(rebuild_db=False):
@@ -109,7 +110,7 @@ def main():
     # Sidebar for navigation and options
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/confluence--v2.png", width=100)
-        st.title("Assistant Confluence")
+        st.title("Isschat")
         
         # Always display user info
         st.success(f"Connecté en tant que: {st.session_state['user']['email']}")
