@@ -78,7 +78,7 @@ class HelpDesk():
             
         # Use ChatOpenAI with the custom client
         llm = ChatOpenAI(
-            model="gpt-4o",  # Vous pouvez spécifier le modèle désiré sur OpenRouter
+            model="deepseek/deepseek-chat",  # Vous pouvez spécifier le modèle désiré sur OpenRouter
             temperature=0.1,        # Réduire la température pour des réponses plus déterministes
             max_tokens=512,         # Limiter la longueur de la réponse
             openai_api_key=api_key, # Utiliser la clé API OpenRouter
