@@ -93,24 +93,8 @@ This project uses OpenRouter.ai as the AI model provider, which gives access to 
 
 ## Development
 
-### 🧹 Linting and Formatting with `ruff`
+### Linting and Formatting with `ruff`
 This project uses ruff for both linting and code formatting.
-
-1. **Install `ruff` using `uv`**
-
-   ```bash
-   uv pip install ruff
-   ```
-You only need to do this once in your virtual environment.
-
-To check your code for linting issues:
-
-   ```bash
-   ruff check .
-   ```
-
-2. **Auto-fix and Format Code**
-
 Please ensure you run the following before committing code to automatically fix lint issues and format your code:
 
    ```bash
