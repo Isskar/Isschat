@@ -22,7 +22,7 @@ class QuestionSuggester:
             try:
                 with open(self.suggestion_cache_file, "r") as f:
                     return json.load(f)
-            except:
+            except Exception:
                 return {"popular": [], "by_topic": {}}
         else:
             return {"popular": [], "by_topic": {}}
@@ -46,7 +46,7 @@ class QuestionSuggester:
                             log_entry = json.loads(line.strip())
                             if "question" in log_entry:
                                 all_questions.append(log_entry["question"])
-                        except:
+                        except Exception:
                             continue
 
         if not all_questions:
@@ -84,7 +84,7 @@ class QuestionSuggester:
                         topics[term] = questions[:5]
 
                 self.popular_questions["by_topic"] = topics
-            except:
+            except Exception:
                 pass  # En cas d'erreur, on garde les anciennes données
 
         # Sauvegarder les résultats

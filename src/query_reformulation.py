@@ -18,7 +18,7 @@ class QueryReformulator:
             try:
                 with open(self.reformulation_patterns_file, "r") as f:
                     return json.load(f)
-            except:
+            except Exception:
                 return self._create_default_patterns()
         else:
             return self._create_default_patterns()

@@ -105,7 +105,7 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except:
+            except Exception:
                 sources = []
 
             history.append(
@@ -188,7 +188,7 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except:
+            except Exception:
                 sources = []
 
             favorites.append(
@@ -248,7 +248,7 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except:
+            except Exception:
                 sources = []
 
             results.append(

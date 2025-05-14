@@ -91,6 +91,33 @@ RAG-Chatbot-with-Confluence/
 
 This project uses OpenRouter.ai as the AI model provider, which gives access to various large language models including ChatGPT. The OpenRouter integration is configured in `src/help_desk.py` and requires an API key from [OpenRouter](https://openrouter.ai/).
 
+## Development
+
+### 🧹 Linting and Formatting with `ruff`
+This project uses ruff for both linting and code formatting.
+
+1. **Install `ruff` using `uv`**
+
+   ```bash
+   uv pip install ruff
+   ```
+You only need to do this once in your virtual environment.
+
+To check your code for linting issues:
+
+   ```bash
+   ruff check .
+   ```
+
+2. **Auto-fix and Format Code**
+
+Please ensure you run the following before committing code to automatically fix lint issues and format your code:
+
+   ```bash
+   ruff check . --fix
+   ruff format .
+   ```
+
 ---
 
 Developed by Nicolas Lambropoulos
