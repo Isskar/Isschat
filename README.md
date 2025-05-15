@@ -93,6 +93,13 @@ RAG-Chatbot-with-Confluence/
 
 This project uses OpenRouter.ai as the AI model provider, which gives access to various large language models including ChatGPT. The OpenRouter integration is configured in `src/help_desk.py` and requires an API key from [OpenRouter](https://openrouter.ai/).
 
+# Development 
+
+This project is under active development. Contributions are welcome!
+To do so, you must commit approved changes using our pre-commit hooks, that you can install using : 
+
+- `pre-commit install` 
+
 ---
 
 Developed by Nicolas Lambropoulos
