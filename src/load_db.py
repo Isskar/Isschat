@@ -4,10 +4,10 @@ import shutil
 import os
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche Python
+# Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Importer les variables depuis config.py
+# Import variables from config.py
 from config import (CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY,
                     CONFLUENCE_USERNAME, CONFLUENCE_API_KEY, PERSIST_DIRECTORY)
 
@@ -35,7 +35,7 @@ class DataLoader():
     def load_from_confluence_loader(self):
         """Load HTML files from Confluence using direct Atlassian API"""
         try:
-            # Configurer le logging pour afficher les messages dans la console
+            # Configure logging to display messages in the console
             import sys
             from atlassian import Confluence
             from langchain_core.documents import Document
@@ -45,150 +45,150 @@ class DataLoader():
             logging.basicConfig(level=logging.INFO, stream=sys.stdout, 
                               format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             
-            # Afficher les informations de connexion pour le débogage (sans la clé API)
-            print(f"\n==== DéTAILS DE CONNEXION CONFLUENCE ====")
+            # Display connection information for debugging (without the API key)
+            print(f"\n==== CONFLUENCE CONNECTION DETAILS ====")
             print(f"URL: {self.confluence_url}")
             print(f"Username: {self.username}")
             print(f"Space Key: {self.space_key}")
-            print(f"API Key: {'*' * 5}{self.api_key[-5:] if self.api_key else 'Non définie'}")
+            print(f"API Key: {'*' * 5}{self.api_key[-5:] if self.api_key else 'Not defined'}")
             
-            # S'assurer que l'URL est au bon format (sans le chemin spécifique)
+            # Ensure the URL is in the correct format (without the specific path)
             base_url = self.confluence_url
             if "/wiki" in base_url:
                 base_url = base_url.split("/wiki")[0]
-                print(f"URL ajustée: {base_url}")
+                print(f"Adjusted URL: {base_url}")
             
-            # Vérifier que les paramètres sont corrects
+            # Verify that the parameters are correct
             if not base_url or not base_url.startswith("http"):
-                raise ValueError(f"URL Confluence invalide: {base_url}")
+                raise ValueError(f"Invalid Confluence URL: {base_url}")
             if not self.username:
-                raise ValueError("Nom d'utilisateur Confluence manquant")
+                raise ValueError("Missing Confluence username")
             if not self.api_key:
-                raise ValueError("Clé API Confluence manquante")
+                raise ValueError("Missing Confluence API key")
             if not self.space_key:
-                raise ValueError("Clé d'espace Confluence manquante")
+                raise ValueError("Missing Confluence space key")
             
-            print(f"\n==== TENTATIVE DE CONNEXION À CONFLUENCE ====")
-            # Créer une instance Confluence avec l'API Atlassian
+            print(f"\n==== ATTEMPTING CONNECTION TO CONFLUENCE ====")
+            # Create a Confluence instance with the Atlassian API
             confluence = Confluence(
                 url=base_url,
                 username=self.username,
                 password=self.api_key,
-                cloud=True  # Spécifier que c'est une instance cloud
+                cloud=True  # Specify that it's a cloud instance
             )
             
-            # Récupérer toutes les pages de l'espace avec pagination
-            print(f"Récupération des pages de l'espace {self.space_key}...")
+            # Retrieve all pages from the space with pagination
+            print(f"Retrieving pages from space {self.space_key}...")
             
-            # Utiliser la pagination pour récupérer toutes les pages
-            # La méthode get_all_pages_from_space peut avoir des limites
+            # Use pagination to retrieve all pages
+            # The get_all_pages_from_space method may have limitations
             start = 0
-            limit = 100  # Nombre maximum de pages à récupérer par requête
+            limit = 100  # Maximum number of pages to retrieve per request
             all_pages = []
             
             while True:
-                # Récupérer un lot de pages
+                # Retrieve a batch of pages
                 batch = confluence.get_all_pages_from_space(self.space_key, start=start, limit=limit, expand='version')
                 
                 if not batch:
-                    break  # Plus de pages à récupérer
+                    break  # No more pages to retrieve
                     
                 all_pages.extend(batch)
-                print(f"  Récupéré {len(all_pages)} pages jusqu'à présent...")
+                print(f"  Retrieved {len(all_pages)} pages so far...")
                 
-                # Mettre à jour l'index de départ pour la prochaine requête
+                # Update the starting index for the next request
                 start += len(batch)
                 
-                # Si le nombre de pages récupérées est inférieur à la limite, nous avons tout récupéré
+                # If the number of pages retrieved is less than the limit, we've retrieved everything
                 if len(batch) < limit:
                     break
             
             pages = all_pages
-            print(f"Récupération réussie! {len(pages)} pages trouvées au total.")
+            print(f"Retrieval successful! {len(pages)} pages found in total.")
             
-            # Récupérer également les pages d'enfants (sous-pages) si nécessaire
+            # Also retrieve child pages (sub-pages) if necessary
             if len(pages) > 0:
-                print("Recherche de sous-pages supplémentaires...")
+                print("Searching for additional sub-pages...")
                 child_pages = []
                 
                 for page in pages:
                     page_id = page.get('id')
-                    # Récupérer les enfants de cette page
+                    # Retrieve the children of this page
                     try:
                         children = confluence.get_page_child_by_type(page_id, type='page')
                         if children and len(children) > 0:
                             child_pages.extend(children)
                     except Exception as e:
-                        print(f"Erreur lors de la récupération des sous-pages pour {page.get('title', 'Sans titre')}: {str(e)}")
+                        print(f"Error retrieving sub-pages for {page.get('title', 'Untitled')}: {str(e)}")
                 
-                # Ajouter les sous-pages à notre liste principale (en évitant les doublons)
+                # Add sub-pages to our main list (avoiding duplicates)
                 existing_ids = {p.get('id') for p in pages}
                 new_child_pages = [p for p in child_pages if p.get('id') not in existing_ids]
                 
                 if new_child_pages:
                     pages.extend(new_child_pages)
-                    print(f"Ajout de {len(new_child_pages)} sous-pages supplémentaires. Total: {len(pages)} pages.")
+                    print(f"Added {len(new_child_pages)} additional sub-pages. Total: {len(pages)} pages.")
             
             
-            # Convertir les pages en documents LangChain
+            # Convert pages to LangChain documents
             docs = []
             h = html2text.HTML2Text()
             h.ignore_links = False
             h.ignore_images = False
             h.ignore_tables = False
-            h.body_width = 0  # Pas de limite de largeur pour conserver la mise en forme
+            h.body_width = 0  # No width limit to preserve formatting
             
-            # Nombre total de pages à traiter
+            # Total number of pages to process
             total_pages = len(pages)
-            print(f"Traitement du contenu de {total_pages} pages...")
+            print(f"Processing content of {total_pages} pages...")
             
             for i, page in enumerate(pages):
                 try:
-                    # Récupérer les informations de base de la page
+                    # Retrieve basic information about the page
                     page_id = page.get('id')
-                    page_title = page.get('title', 'Sans titre')
+                    page_title = page.get('title', 'Untitled')
                     
-                    # Afficher la progression régulièrement
+                    # Display progress regularly
                     if i % 10 == 0 or i == total_pages - 1:
-                        print(f"Traitement de la page {i+1}/{total_pages}: {page_title}")
+                        print(f"Processing page {i+1}/{total_pages}: {page_title}")
                     
-                    # Récupérer le contenu complet de la page avec les propriétés et les pièces jointes
+                    # Retrieve the complete content of the page with properties and attachments
                     page_data = confluence.get_page_by_id(
                         page_id, 
                         expand='body.storage,history,space,version,ancestors,children.page,children.attachment,metadata.properties'
                     )
                     
-                    # Extraire le contenu HTML
+                    # Extract HTML content
                     content = page_data.get('body', {}).get('storage', {}).get('value', '')
                     
-                    # Informations supplémentaires pour enrichir les métadonnées
+                    # Additional information to enrich metadata
                     space_info = page_data.get('space', {})
                     version_info = page_data.get('version', {})
                     ancestors = page_data.get('ancestors', [])
                     last_updated = version_info.get('when', '')
                     creator = version_info.get('by', {}).get('displayName', '')
                     
-                    # Construire un chemin de navigation (breadcrumb)
+                    # Build a navigation path (breadcrumb)
                     breadcrumb = ' > '.join([a.get('title', '') for a in ancestors] + [page_title])
                     
-                    # Convertir HTML en texte
+                    # Convert HTML to text
                     text_content = h.handle(content)
                     
-                    # Ajouter des informations structurées au début du contenu pour améliorer la recherche
+                    # Add structured information at the beginning of the content to improve search
                     structured_header = f"# {page_title}\n\n"
                     if breadcrumb:
-                        structured_header += f"**Chemin:** {breadcrumb}\n\n"
+                        structured_header += f"**Path:** {breadcrumb}\n\n"
                     if creator:
-                        structured_header += f"**Auteur:** {creator}\n\n"
+                        structured_header += f"**Author:** {creator}\n\n"
                     if last_updated:
-                        structured_header += f"**Dernière mise à jour:** {last_updated}\n\n"
+                        structured_header += f"**Last updated:** {last_updated}\n\n"
                     
                     structured_header += "---\n\n"
                     
-                    # Combiner l'en-tête structurée avec le contenu
+                    # Combine the structured header with the content
                     enhanced_content = structured_header + text_content
                     
-                    # Créer un document LangChain avec des métadonnées enrichies
+                    # Create a LangChain document with enriched metadata
                     doc = Document(
                         page_content=enhanced_content,
                         metadata={
@@ -265,7 +265,7 @@ class DataLoader():
         db = FAISS.load_local(
             self.persist_directory, 
             embeddings, 
-            allow_dangerous_deserialization=True  # Nécessaire pour les versions récentes de LangChain
+            allow_dangerous_deserialization=True  # Necessary for recent versions of LangChain
         )
         return db
 
@@ -303,9 +303,9 @@ class DataLoader():
             # Load docs from Confluence
             docs = self.load_from_confluence_loader()
         except Exception as e:
-            logging.error(f"Erreur lors du chargement depuis Confluence: {str(e)}")
-            logging.warning("Utilisation d'un jeu de données factice pour permettre le démarrage de l'application")
-            # Créer un jeu de données factice
+            logging.error(f"Error when loading from the Confluence {str(e)}")
+            logging.warning("Using a dummy dataset to allow the application to start")
+            # Create a dummy dataset
             docs = self.create_dummy_docs()
 
         # Split Docs

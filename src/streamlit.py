@@ -19,24 +19,24 @@ from pathlib import Path
 from datetime import datetime
 import os
 
-# Ajouter le répertoire parent au chemin de recherche Python
+# Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Import des modules personnalisés
+# Import custom modules
 from src.help_desk import HelpDesk
 from src.auth import verify_user, logout, get_all_users, add_user, delete_user, login_page, login_required, admin_required
 
-# Import des nouvelles fonctionnalités
+# Import new features
 from src.features_integration import setup_features, FeaturesManager
 
-# Configuration de la page Streamlit - doit être la première commande Streamlit
+# Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Assistant Confluence", page_icon="🤖", layout="wide")
 
 # No cache to force reload on each launch
 def get_model(rebuild_db=False):
     # Display a spinner during loading
     with st.spinner("Loading RAG model..."):
-        # Vérifier si le fichier index.faiss existe
+        # Check if the index.faiss file exists
         import sys
         from pathlib import Path
         from config import PERSIST_DIRECTORY
@@ -303,7 +303,7 @@ def chat_page():
     
     # Initialize message history
     if "messages" not in st.session_state:
-        st.session_state["messages"] = [{"role": "assistant", "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ?"}]
+        st.session_state["messages"] = [{"role": "assistant", "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ?"}]  # Keeping French response as per requirements
     
     # Display message history
     for msg in st.session_state.messages:
@@ -443,6 +443,6 @@ def admin_page():
         st.session_state["page"] = "chat"
         st.rerun()
 
-# Lancer l'application
+# Launch the application
 if __name__ == "__main__":
     main()

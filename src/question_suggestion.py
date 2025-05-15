@@ -31,15 +31,15 @@ class QuestionSuggester:
             return {"popular": [], "by_topic": {}}
     
     def _save_popular_questions(self):
-        """Sauvegarde les questions populaires dans le cache"""
+        """Saves popular questions to the cache"""
         with open(self.suggestion_cache_file, 'w') as f:
             json.dump(self.popular_questions, f)
     
     def update_question_database(self):
-        """Met à jour la base de données des questions à partir des logs"""
+        """Updates the questions database from logs"""
         all_questions = []
         
-        # Parcourir tous les fichiers de log
+        # Go through all log files
         for filename in os.listdir(self.log_path):
             if filename.startswith("conv_log_") and filename.endswith(".jsonl"):
                 file_path = os.path.join(self.log_path, filename)
@@ -55,22 +55,22 @@ class QuestionSuggester:
         if not all_questions:
             return
         
-        # Identifier les questions les plus populaires
+        # Identify the most popular questions
         question_counter = Counter(all_questions)
         popular = question_counter.most_common(20)
         self.popular_questions["popular"] = [q for q, count in popular if count > 1]
         
-        # Regrouper les questions par thème
-        if len(all_questions) > 10:  # Seulement si nous avons assez de données
+        # Group questions by theme
+        if len(all_questions) > 10:  # Only if we have enough data
             vectorizer = TfidfVectorizer(max_features=100, stop_words='english')
             try:
                 tfidf_matrix = vectorizer.fit_transform(all_questions)
                 feature_names = vectorizer.get_feature_names_out()
                 
-                # Extraire les thèmes principaux
+                # Extract main themes
                 topics = {}
                 for i, row in enumerate(tfidf_matrix.toarray()):
-                    top_indices = row.argsort()[-3:][::-1]  # Top 3 termes
+                    top_indices = row.argsort()[-3:][::-1]  # Top 3 terms
                     terms = [feature_names[idx] for idx in top_indices if row[idx] > 0]
                     if terms:
                         main_term = terms[0]
@@ -78,68 +78,69 @@ class QuestionSuggester:
                             topics[main_term] = []
                         topics[main_term].append(all_questions[i])
                 
-                # Garder seulement les thèmes avec plusieurs questions
+                # Keep only themes with multiple questions
                 for term, questions in list(topics.items()):
                     if len(questions) < 2:
                         del topics[term]
                     else:
-                        # Limiter à 5 questions par thème
+                        # Limit to 5 questions per theme
                         topics[term] = questions[:5]
                 
                 self.popular_questions["by_topic"] = topics
             except:
-                pass  # En cas d'erreur, on garde les anciennes données
+                pass  # In case of error, keep the old data
         
-        # Sauvegarder les résultats
+        # Save the results
         self._save_popular_questions()
     
     def extract_keywords(self, text):
-        """Extrait les mots-clés d'un texte"""
-        # Nettoyage basique
+        """Extracts keywords from a text"""
+        # Basic cleaning
         text = re.sub(r'[^\w\s]', '', text.lower())
         words = text.split()
         
-        # Filtrer les mots courts et les mots vides
-        stopwords = set(['le', 'la', 'les', 'un', 'une', 'des', 'et', 'ou', 'a', 'à', 'de', 'du', 'ce', 'cette', 'ces', 'est', 'sont', 'comment', 'pourquoi', 'quand', 'qui', 'que', 'quoi', 'où', 'dont', 'pour', 'par', 'sur', 'dans', 'en', 'avec', 'sans'])
+        # Filter short words and stop words
+        stopwords = set(['the', 'a', 'an', 'of', 'and', 'or', 'to', 'in', 'on', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'from', 'up', 'down', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing'])
         keywords = [w for w in words if len(w) > 3 and w not in stopwords]
         
         return keywords
     
     def suggest_next_questions(self, current_question, current_answer, history=None, max_suggestions=3):
-        """Suggère des questions de suivi basées sur la question et la réponse actuelles"""
+        """Suggests follow-up questions based on the current question and answer"""
         suggestions = []
         
-        # Extraire les mots-clés
+        # Extract keywords
         question_keywords = self.extract_keywords(current_question)
         answer_keywords = self.extract_keywords(current_answer)
         
-        # Combiner les mots-clés, avec plus de poids pour ceux de la réponse
+        # Combine keywords, with more weight for those from the response
         all_keywords = question_keywords + answer_keywords * 2
         
-        # 1. Vérifier les questions par thème
+        # 1. Check questions by theme
         for topic, questions in self.popular_questions["by_topic"].items():
             if topic in all_keywords:
                 for q in questions:
                     if q != current_question and q not in suggestions:
                         suggestions.append(q)
         
-        # 2. Générer des questions de suivi basées sur des patterns
+        # 2. Generate follow-up questions based on patterns
         follow_up_templates = [
-            "Pouvez-vous expliquer plus en détail {}?",
-            "Quels sont les avantages de {}?",
-            "Comment implémenter {}?",
-            "Quelles sont les alternatives à {}?",
-            "Quels sont les prérequis pour {}?"
+            "Can you explain {} in more detail?",
+            "What are the advantages of {}?",
+            "What are the limitations of {}?",
+            "How can I use {} in my project?",
+            "What is the difference between {} and alternatives?",
+            "Are there any best practices for {}?"
         ]
         
-        # Trouver les termes importants dans la réponse
+        # Find important terms in the answer
         important_terms = [kw for kw in answer_keywords if len(kw) > 4]
         if important_terms:
-            for term in important_terms[:2]:  # Limiter à 2 termes
+            for term in important_terms[:2]:  # Limit to 2 terms
                 template = np.random.choice(follow_up_templates)
                 suggestions.append(template.format(term))
         
-        # 3. Ajouter des questions populaires si nécessaire
+        # 3. Add popular questions if necessary
         if len(suggestions) < max_suggestions:
             for q in self.popular_questions["popular"]:
                 if q != current_question and q not in suggestions:
@@ -147,18 +148,18 @@ class QuestionSuggester:
                     if len(suggestions) >= max_suggestions:
                         break
         
-        # Limiter le nombre de suggestions
+        # Limit the number of suggestions
         return suggestions[:max_suggestions]
     
     def render_suggestions(self, st, current_question, current_answer, callback=None):
-        """Affiche les suggestions de questions dans Streamlit"""
+        """Displays question suggestions in Streamlit"""
         suggestions = self.suggest_next_questions(current_question, current_answer)
         
         if not suggestions:
             return
         
         st.write("---")
-        st.write("### Questions suggérées")
+        st.write("### Suggested Questions")
         
         for suggestion in suggestions:
             if st.button(suggestion, key=f"suggest_{hash(suggestion)}"):
@@ -166,15 +167,15 @@ class QuestionSuggester:
                     callback(suggestion)
 
 
-# Fonction pour intégrer le suggestionneur dans l'application principale
+# Function to integrate the suggester into the main application
 def integrate_question_suggester(help_desk):
-    """Intègre le suggestionneur de questions au help_desk"""
+    """Integrates the question suggester into the help_desk"""
     suggester = QuestionSuggester()
     
-    # Mettre à jour la base de données des questions
+    # Update the questions database
     suggester.update_question_database()
     
-    # Ajouter le suggestionneur comme attribut
+    # Add the suggester as an attribute
     help_desk.question_suggester = suggester
     
     return help_desk

@@ -1,14 +1,14 @@
-# Environnements virtuels
+# Virtual environments
 .venv
 env/
 venv/
 ENV/
 
-# Fichiers de configuration sensibles
+# Sensitive configuration files
 .env
 *.env
 
-# Fichiers de configuration Python
+# Python configuration files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -31,35 +31,35 @@ wheels/
 .installed.cfg
 *.egg
 
-# Fichiers de base de données
+# Data base files
 *.db
 *.sqlite3
 
-# Dossiers de l'IDE
+# IDE folders
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# Fichiers de cache
+# Cache files
 .cache/
 .coverage
 htmlcov/
 
-# Fichiers de logs
+# Log files
 *.log
 
-# Dossiers de dépendances
+# Dependencies folders
 data/
 db/
 
-# Fichiers temporaires
+# Temporary files
 *.tmp
 *.bak
 *.swp
 *~
 
-# Fichiers spécifiques au projet
+# Project specific files
 *.pkl
 *.faiss
 *.pdf

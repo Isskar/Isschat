@@ -4,7 +4,7 @@ import logging
 import time
 from datetime import datetime
 
-# Importer tous les modules de fonctionnalités
+# Import all feature modules
 from src.conversation_analysis import ConversationAnalyzer, integrate_conversation_analyzer
 from src.response_tracking import ResponseTracker, integrate_response_tracker, add_feedback_widget
 from src.question_suggestion import QuestionSuggester, integrate_question_suggester
@@ -13,19 +13,19 @@ from src.query_history import QueryHistory, integrate_query_history
 from src.query_reformulation import QueryReformulator, integrate_query_reformulator
 
 class FeaturesManager:
-    """Gestionnaire central pour toutes les fonctionnalités avancées du chatbot"""
+    """Central manager for all advanced chatbot features"""
     
     def __init__(self, help_desk, user_id):
-        """Initialise et intègre toutes les fonctionnalités au help_desk"""
+        """Initialize and integrate all features into the help_desk"""
         self.help_desk = help_desk
         self.user_id = user_id
         
-        # Créer les dossiers nécessaires s'ils n'existent pas
+        # Create necessary folders if they don't exist
         os.makedirs("./logs", exist_ok=True)
         os.makedirs("./data", exist_ok=True)
         os.makedirs("./cache", exist_ok=True)
         
-        # Configurer le logging
+        # Configure logging
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -219,27 +219,27 @@ class FeaturesManager:
             return answer, sources
             
         except Exception as e:
-            st.error(f"Erreur lors du traitement de la question: {str(e)}")
-            self.logger.error(f"Erreur lors du traitement de la question: {str(e)}")
+            st.error(f"Error processing question: {str(e)}")
+            self.logger.error(f"Error processing question: {str(e)}")
             import traceback
             self.logger.error(traceback.format_exc())
-            return "Désolé, une erreur s'est produite lors du traitement de votre question.", []
+            return "Sorry, an error occurred while processing your question.", []
     
     def _add_feedback_widget(self, st, question, answer, sources):
-        """Ajoute un widget de feedback pour évaluer la qualité de la réponse"""
+        """Add a feedback widget to evaluate the quality of the response"""
         st.write("---")
-        st.write("### Évaluez cette réponse")
+        st.write("### Rate this response")
         
         col1, col2 = st.columns([3, 1])
         
         with col1:
-            feedback_score = st.slider("Qualité de la réponse", 1, 5, 3, key="feedback_score")
-            feedback_text = st.text_area("Commentaire (optionnel)", key="feedback_text", 
-                                      placeholder="Dites-nous ce que vous pensez de cette réponse")
+            feedback_score = st.slider("Response quality", 1, 5, 3, key="feedback_score")
+            feedback_text = st.text_area("Comment (optional)", key="feedback_text", 
+                                       placeholder="Tell us what you think about this response")
         
         with col2:
-            if st.button("Envoyer feedback", key="send_feedback"):
-                # Enregistrer le feedback
+            if st.button("Send feedback", key="send_feedback"):
+                # Record the feedback
                 self.response_tracker.log_response_quality(
                     user_id=self.user_id,
                     question=question,
@@ -248,27 +248,27 @@ class FeaturesManager:
                     feedback_score=feedback_score,
                     feedback_text=feedback_text
                 )
-                st.success("Merci pour votre feedback!")
+                st.success("Thank you for your feedback!")
     
     def _show_question_suggestions(self, st, question, answer):
-        """Affiche des suggestions de questions de suivi"""
+        """Display follow-up question suggestions"""
         try:
             suggestions = self.question_suggester.suggest_next_questions(question, answer)
             
             if suggestions:
                 st.write("---")
-                st.write("### Questions suggérées")
+                st.write("### Suggested questions")
                 
                 for i, suggestion in enumerate(suggestions):
                     if st.button(suggestion, key=f"suggest_{i}"):
-                        # Stocker la question dans la session pour la réutiliser
+                        # Store the question in the session for reuse
                         return suggestion
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'affichage des suggestions: {str(e)}")
+            self.logger.error(f"Error displaying suggestions: {str(e)}")
             return None
 
 
-# Fonction pour intégrer le gestionnaire de fonctionnalités dans l'application principale
+# Function to integrate the feature manager into the main application
 def setup_features(help_desk, user_id):
     """Configure et retourne un gestionnaire de fonctionnalités pour l'application"""
     return FeaturesManager(help_desk, user_id)

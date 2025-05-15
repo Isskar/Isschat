@@ -8,20 +8,20 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 class ResponseTracker:
-    """Suit les questions sans réponses satisfaisantes et propose des améliorations"""
+    """Tracks questions without satisfactory responses and suggests improvements"""
     
     def __init__(self, log_path="./logs/responses"):
         self.log_path = log_path
         os.makedirs(log_path, exist_ok=True)
         self.current_log_file = os.path.join(log_path, f"response_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
         self.feedback_thresholds = {
-            "negative": 2,  # Score de feedback < 2 est considéré négatif
-            "neutral": 3,   # Score de feedback = 3 est considéré neutre
-            "positive": 4   # Score de feedback > 3 est considéré positif
+            "negative": 2,  # Feedback score < 2 is considered negative
+            "neutral": 3,   # Feedback score = 3 is considered neutral
+            "positive": 4   # Feedback score > 3 is considered positive
         }
     
     def log_response_quality(self, user_id, question, answer, sources, feedback_score, feedback_text=None):
-        """Enregistre la qualité d'une réponse basée sur le feedback utilisateur"""
+        """Records the quality of a response based on user feedback"""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "user_id": user_id,
@@ -37,10 +37,10 @@ class ResponseTracker:
             f.write(json.dumps(log_entry) + "\n")
     
     def get_unsatisfactory_responses(self, days=30):
-        """Récupère les réponses insatisfaisantes des n derniers jours"""
+        """Retrieves unsatisfactory responses from the last n days"""
         unsatisfactory = []
         
-        # Trouver tous les fichiers de log dans la période spécifiée
+        # Find all log files in the specified period
         for filename in os.listdir(self.log_path):
             if filename.startswith("response_log_") and filename.endswith(".jsonl"):
                 file_path = os.path.join(self.log_path, filename)
@@ -58,7 +58,7 @@ class ResponseTracker:
         return unsatisfactory
     
     def identify_patterns(self, unsatisfactory_responses=None):
-        """Identifie des modèles dans les questions sans réponses satisfaisantes"""
+        """Identifies patterns in questions without satisfactory responses"""
         if unsatisfactory_responses is None:
             unsatisfactory_responses = self.get_unsatisfactory_responses()
         
@@ -68,7 +68,7 @@ class ResponseTracker:
         # Extraire les questions
         questions = [resp["question"] for resp in unsatisfactory_responses]
         
-        # Utiliser TF-IDF pour trouver des similitudes
+        # Use TF-IDF to find similarities
         vectorizer = TfidfVectorizer(max_features=100, stop_words='english')
         try:
             tfidf_matrix = vectorizer.fit_transform(questions)

@@ -10,7 +10,7 @@ import seaborn as sns
 from collections import defaultdict
 
 class PerformanceTracker:
-    """Suit les performances du système RAG et fournit des métriques d'analyse"""
+    """Tracks RAG system performance and provides analysis metrics"""
     
     def __init__(self, log_path="./logs/performance"):
         self.log_path = log_path
@@ -18,7 +18,7 @@ class PerformanceTracker:
         self.current_log_file = os.path.join(log_path, f"perf_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
     
     def log_performance(self, metrics):
-        """Enregistre les métriques de performance d'une requête"""
+        """Records performance metrics of a query"""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             **metrics
@@ -29,7 +29,7 @@ class PerformanceTracker:
     
     def track_query(self, question, retrieval_time, generation_time, num_docs_retrieved, 
                    embedding_time=None, total_time=None, memory_usage=None):
-        """Enregistre les métriques de performance d'une requête complète"""
+        """Records performance metrics of a complete query"""
         metrics = {
             "question": question,
             "retrieval_time_ms": retrieval_time,
@@ -44,10 +44,10 @@ class PerformanceTracker:
         return metrics
     
     def get_performance_logs(self, days=7):
-        """Récupère les logs de performance des n derniers jours"""
+        """Retrieves performance logs from the last n days"""
         logs = []
         
-        # Trouver tous les fichiers de log dans la période spécifiée
+        # Find all log files in the specified period
         for filename in os.listdir(self.log_path):
             if filename.startswith("perf_log_") and filename.endswith(".jsonl"):
                 file_path = os.path.join(self.log_path, filename)
@@ -65,22 +65,22 @@ class PerformanceTracker:
         return logs
     
     def analyze_performance(self, logs=None):
-        """Analyse les métriques de performance"""
+        """Analyzes performance metrics"""
         if logs is None:
             logs = self.get_performance_logs()
         
         if not logs:
-            return {"message": "Aucune donnée disponible pour l'analyse"}
+            return {"message": "No data available for analysis"}
         
-        # Convertir en DataFrame pour faciliter l'analyse
+        # Convert to DataFrame to facilitate analysis
         df = pd.DataFrame(logs)
         
-        # Ajouter la date/heure pour l'analyse temporelle
+        # Add date/time for temporal analysis
         df['datetime'] = pd.to_datetime(df['timestamp'])
         df['date'] = df['datetime'].dt.date
         df['hour'] = df['datetime'].dt.hour
         
-        # Métriques globales
+        # Global metrics
         metrics = {
             "total_queries": len(df),
             "avg_total_time_ms": df['total_time_ms'].mean(),
@@ -92,18 +92,18 @@ class PerformanceTracker:
             "min_total_time_ms": df['total_time_ms'].min()
         }
         
-        # Tendances temporelles (par jour)
+        # Temporal trends (by day)
         daily_metrics = df.groupby('date').agg({
             'total_time_ms': 'mean',
             'retrieval_time_ms': 'mean',
             'generation_time_ms': 'mean',
-            'timestamp': 'count'  # Nombre de requêtes par jour
+            'timestamp': 'count'  # Number of queries per day
         }).rename(columns={'timestamp': 'query_count'})
         
-        # Tendances par heure
+        # Trends by hour
         hourly_metrics = df.groupby('hour').agg({
             'total_time_ms': 'mean',
-            'timestamp': 'count'  # Nombre de requêtes par heure
+            'timestamp': 'count'  # Number of queries per hour
         }).rename(columns={'timestamp': 'query_count'})
         
         return {
@@ -181,38 +181,34 @@ class PerformanceTracker:
             st.pyplot(fig)
 
 
-# Fonction pour intégrer le tracker de performance dans l'application principale
 def integrate_performance_tracker(help_desk):
-    """Intègre le tracker de performance au help_desk"""
+    """Integrates the performance tracker into the help_desk"""
     tracker = PerformanceTracker()
     
-    # Fonction wrapper pour ask_question qui mesure les performances
     original_ask = help_desk.ask_question
     
     def ask_with_performance_tracking(question, verbose=False):
-        # Mesurer le temps total
         start_time = time.time()
         
-        # Mesurer le temps d'embedding (approximation)
         embedding_start = time.time()
-        # Cette partie dépend de l'implémentation exacte de votre help_desk
-        # Nous supposons que l'embedding est fait avant la recherche
-        embedding_time = (time.time() - embedding_start) * 1000  # en ms
+        # This part depends on the exact implementation of your help_desk
+        # We assume that embedding is done before search
+        embedding_time = (time.time() - embedding_start) * 1000  # in ms
         
-        # Mesurer le temps de recherche
+        # Measure search time
         retrieval_start = time.time()
-        # Cette partie dépend de l'implémentation exacte de votre help_desk
-        # Nous supposons que la recherche est faite avant la génération
-        retrieval_time = (time.time() - retrieval_start) * 1000  # en ms
+        # This part depends on the exact implementation of your help_desk
+        # We assume that search is done before generation
+        retrieval_time = (time.time() - retrieval_start) * 1000  # in ms
         
-        # Appeler la fonction originale pour obtenir la réponse
+        # Call the original function to get the response
         answer, sources = original_ask(question, verbose)
         
-        # Calculer le temps total et le temps de génération
-        total_time = (time.time() - start_time) * 1000  # en ms
+        # Calculate total time and generation time
+        total_time = (time.time() - start_time) * 1000  # in ms
         generation_time = total_time - retrieval_time - embedding_time
         
-        # Enregistrer les métriques
+        # Record metrics
         tracker.track_query(
             question=question,
             retrieval_time=retrieval_time,
