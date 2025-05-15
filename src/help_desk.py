@@ -1,4 +1,3 @@
-import sys
 import load_db
 import collections
 from langchain_core.prompts import PromptTemplate
@@ -6,12 +5,13 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage
 from openai import OpenAI
 import os
 
-class HelpDesk():
+
+class HelpDesk:
     """Create the necessary objects to create a QARetrieval chain"""
+
     def __init__(self, new_db=True):
         self.new_db = new_db
         self.template = self.get_template()
@@ -28,7 +28,7 @@ class HelpDesk():
         self.retriever = self.db.as_retriever(
             search_kwargs={
                 "k": 3,  # Reduce the number of retrieved documents (default 4)
-                "fetch_k": 5  # Reduce the number of documents to consider before selecting the best k
+                "fetch_k": 5,  # Reduce the number of documents to consider before selecting the best k
             }
         )
         self.retrieval_qa_chain = self.get_retrieval_qa()
@@ -56,8 +56,7 @@ class HelpDesk():
 
     def get_prompt(self):
         prompt = PromptTemplate(
-            template=self.template,
-            input_variables=["context", "question"]
+            template=self.template, input_variables=["context", "question"]
         )
         return prompt
 
@@ -69,20 +68,20 @@ class HelpDesk():
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
-        
+
         # Configure OpenAI client with OpenRouter API
         client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
         )
-            
+
         # Use ChatOpenAI with the custom client
         llm = ChatOpenAI(
-            model="deepseek/deepseek-chat",  
-            temperature=0.1,       
-            max_tokens=512,         
-            openai_api_key=api_key, 
-            openai_api_base="https://openrouter.ai/api/v1" 
+            model="deepseek/deepseek-chat",
+            temperature=0.1,
+            max_tokens=512,
+            openai_api_key=api_key,
+            openai_api_base="https://openrouter.ai/api/v1",
         )
         return llm
 
@@ -100,19 +99,19 @@ class HelpDesk():
     def retrieval_qa_inference(self, question, verbose=True):
         # Get the source documents directly from the retriever
         docs = self.retriever.get_relevant_documents(question)
-        
+
         # Add logs to verify the retrieved documents
         if verbose:
             print(f"\n=== Documents retrieved for the question: '{question}' ===\n")
             for i, doc in enumerate(docs[:3]):  # Display the first 3 documents
-                print(f"Document {i+1}:")
+                print(f"Document {i + 1}:")
                 print(f"Title: {doc.metadata.get('title', 'Not available')}")
                 print(f"Source: {doc.metadata.get('source', 'Not available')}")
                 print(f"Content (excerpt): {doc.page_content[:150]}...\n")
-        
+
         # Get the answer from the chain
         answer = self.retrieval_qa_chain.invoke(question)
-        
+
         sources = self.list_top_k_sources({"source_documents": docs}, k=2)
 
         if verbose:
@@ -122,13 +121,15 @@ class HelpDesk():
 
     def list_top_k_sources(self, answer, k=2):
         sources = [
-            f'[{res.metadata["title"]}]({res.metadata["source"]})'
+            f"[{res.metadata['title']}]({res.metadata['source']})"
             for res in answer["source_documents"]
         ]
 
         if sources:
             k = min(k, len(sources))
-            distinct_sources = list(zip(*collections.Counter(sources).most_common()))[0][:k]
+            distinct_sources = list(zip(*collections.Counter(sources).most_common()))[
+                0
+            ][:k]
             distinct_sources_str = "  \n- ".join(distinct_sources)
 
         if len(distinct_sources) == 1:
