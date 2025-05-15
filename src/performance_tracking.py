@@ -113,71 +113,71 @@ class PerformanceTracker:
         }
     
     def render_performance_dashboard(self):
-        """Affiche le tableau de bord de performance dans Streamlit"""
-        st.title("Suivi des Performances")
+        """Display the performance dashboard in Streamlit"""
+        st.title("Performance Tracking")
         
-        # Sélection de la période
-        days = st.slider("Période d'analyse (jours)", 1, 30, 7, key="perf_days")
+        # Period selection
+        days = st.slider("Analysis period (days)", 1, 30, 7, key="perf_days")
         logs = self.get_performance_logs(days)
         
         if not logs:
-            st.warning("Aucune donnée disponible pour la période sélectionnée")
+            st.warning("No data available for the selected period")
             return
         
-        # Analyse
+        # Analysis
         analysis = self.analyze_performance(logs)
         
-        # Affichage des métriques principales
+        # Display main metrics
         metrics = analysis["metrics"]
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("Temps de réponse moyen", f"{metrics['avg_total_time_ms']:.0f} ms")
+            st.metric("Average response time", f"{metrics['avg_total_time_ms']:.0f} ms")
         with col2:
-            st.metric("Temps de recherche moyen", f"{metrics['avg_retrieval_time_ms']:.0f} ms")
+            st.metric("Average retrieval time", f"{metrics['avg_retrieval_time_ms']:.0f} ms")
         with col3:
-            st.metric("Temps de génération moyen", f"{metrics['avg_generation_time_ms']:.0f} ms")
+            st.metric("Average generation time", f"{metrics['avg_generation_time_ms']:.0f} ms")
         
-        # Graphique d'évolution temporelle
-        st.subheader("Évolution des temps de réponse")
+        # Time evolution chart
+        st.subheader("Response Time Evolution")
         
-        # Convertir les données pour le graphique
+        # Convert data for the chart
         daily_data = pd.DataFrame(analysis["daily_metrics"])
         if not daily_data.empty:
             daily_data['date'] = pd.to_datetime(daily_data['date'])
             daily_data = daily_data.sort_values('date')
             
-            # Créer le graphique
+            # Create chart
             fig, ax1 = plt.subplots(figsize=(10, 6))
             
-            # Temps de réponse
+            # Response times
             ax1.set_xlabel('Date')
-            ax1.set_ylabel('Temps (ms)', color='tab:blue')
-            ax1.plot(daily_data['date'], daily_data['total_time_ms'], 'b-', label='Temps total')
-            ax1.plot(daily_data['date'], daily_data['retrieval_time_ms'], 'g--', label='Temps de recherche')
-            ax1.plot(daily_data['date'], daily_data['generation_time_ms'], 'r--', label='Temps de génération')
+            ax1.set_ylabel('Time (ms)', color='tab:blue')
+            ax1.plot(daily_data['date'], daily_data['total_time_ms'], 'b-', label='Total time')
+            ax1.plot(daily_data['date'], daily_data['retrieval_time_ms'], 'g--', label='Retrieval time')
+            ax1.plot(daily_data['date'], daily_data['generation_time_ms'], 'r--', label='Generation time')
             ax1.tick_params(axis='y', labelcolor='tab:blue')
             ax1.legend(loc='upper left')
             
-            # Nombre de requêtes
+            # Number of queries
             ax2 = ax1.twinx()
-            ax2.set_ylabel('Nombre de requêtes', color='tab:orange')
-            ax2.bar(daily_data['date'], daily_data['query_count'], alpha=0.3, color='tab:orange', label='Requêtes')
+            ax2.set_ylabel('Number of queries', color='tab:orange')
+            ax2.bar(daily_data['date'], daily_data['query_count'], alpha=0.3, color='tab:orange', label='Queries')
             ax2.tick_params(axis='y', labelcolor='tab:orange')
             ax2.legend(loc='upper right')
             
             fig.tight_layout()
             st.pyplot(fig)
         
-        # Distribution par heure
-        st.subheader("Distribution des performances par heure")
+        # Distribution by hour
+        st.subheader("Performance distribution by hour")
         hourly_data = pd.DataFrame(analysis["hourly_metrics"])
         if not hourly_data.empty:
             fig, ax = plt.subplots(figsize=(10, 6))
             sns.barplot(x='hour', y='total_time_ms', data=hourly_data, ax=ax, color='skyblue')
-            ax.set_xlabel('Heure de la journée')
-            ax.set_ylabel('Temps de réponse moyen (ms)')
-            ax.set_title('Temps de réponse moyen par heure')
+            ax.set_xlabel('Hour of day')
+            ax.set_ylabel('Average response time (ms)')
+            ax.set_title('Average response time by hour')
             st.pyplot(fig)
 
 

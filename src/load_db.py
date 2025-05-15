@@ -210,14 +210,14 @@ class DataLoader():
                     import traceback
                     print(traceback.format_exc())
             
-            print(f"Chargement réussi: {len(docs)} documents récupérés")
+            print(f"Loading successful: {len(docs)} documents retrieved")
             return docs
             
         except Exception as e:
-            print(f"\n==== ERREUR DE CONNEXION CONFLUENCE ====")
-            print(f"Type d'erreur: {type(e).__name__}")
-            print(f"Message d'erreur: {str(e)}")
-            # Pour le débogage, affichons la trace complète
+            print(f"\n==== CONFLUENCE CONNECTION ERROR ====")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error message: {str(e)}")
+            # For debugging, let's show the full trace
             import traceback
             print("Trace d'erreur complète:")
             print(traceback.format_exc())
@@ -270,23 +270,23 @@ class DataLoader():
         return db
 
     def create_dummy_docs(self):
-        """Crée un jeu de données factice pour permettre le démarrage de l'application"""
+        """Creates a dummy dataset to allow the application to start"""
         from langchain_core.documents import Document
         
-        logging.warning("Création d'un jeu de données factice pour permettre le démarrage de l'application")
+        logging.warning("Creating dummy dataset to allow the application to start")
         
         dummy_docs = [
             Document(
-                page_content="Bienvenue dans l'assistant Confluence. Cette base de données est une version factice créée car la connexion à Confluence a échoué.",
-                metadata={"source": "dummy_doc_1", "title": "Bienvenue"}
+                page_content="Welcome to the Confluence Assistant. This database is a dummy version created because the connection to Confluence failed.",
+                metadata={"source": "dummy_doc_1", "title": "Welcome"}
             ),
             Document(
-                page_content="Pour utiliser l'assistant avec les vraies données, vérifiez vos paramètres de connexion à Confluence dans le fichier .env.",
+                page_content="To use the assistant with real data, check your Confluence connection settings in the .env file.",
                 metadata={"source": "dummy_doc_2", "title": "Configuration"}
             ),
             Document(
-                page_content="Assurez-vous que les variables CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY, CONFLUENCE_USERNAME et CONFLUENCE_PRIVATE_API_KEY sont correctement configurées.",
-                metadata={"source": "dummy_doc_3", "title": "Variables d'environnement"}
+                page_content="Make sure the variables CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY, CONFLUENCE_USERNAME and CONFLUENCE_PRIVATE_API_KEY are properly configured.",
+                metadata={"source": "dummy_doc_3", "title": "Environment Variables"}
             ),
         ]
         

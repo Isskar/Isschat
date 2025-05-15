@@ -10,7 +10,7 @@ import re
 from collections import Counter
 
 class QuestionSuggester:
-    """Suggère des questions pertinentes basées sur le contexte de la conversation"""
+    """Suggests relevant questions based on conversation context"""
     
     def __init__(self, log_path="./logs/conversations", suggestion_cache_path="./cache"):
         self.log_path = log_path
@@ -20,7 +20,7 @@ class QuestionSuggester:
         self.popular_questions = self._load_popular_questions()
         
     def _load_popular_questions(self):
-        """Charge les questions populaires depuis le cache ou crée un cache vide"""
+        """Loads popular questions from cache or creates an empty cache"""
         if os.path.exists(self.suggestion_cache_file):
             try:
                 with open(self.suggestion_cache_file, 'r') as f:

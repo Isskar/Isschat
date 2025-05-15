@@ -83,62 +83,62 @@ class ConversationAnalyzer:
         }
     
     def render_analysis_dashboard(self):
-        """Affiche le tableau de bord d'analyse dans Streamlit"""
-        st.title("Analyse Conversationnelle")
+        """Display the analysis dashboard in Streamlit"""
+        st.title("Conversation Analysis")
         
-        # Sélection de la période
-        days = st.slider("Période d'analyse (jours)", 1, 30, 7)
+        # Period selection
+        days = st.slider("Analysis period (days)", 1, 30, 7)
         logs = self.get_recent_logs(days)
         
         if not logs:
-            st.warning("Aucune donnée disponible pour la période sélectionnée")
+            st.warning("No data available for the selected period")
             return
         
-        # Analyse
+        # Analysis
         analysis = self.analyze_questions(logs)
         
-        # Affichage des métriques
+        # Display metrics
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("Total des questions", analysis["total_questions"])
+            st.metric("Total questions", analysis["total_questions"])
         with col2:
-            st.metric("Temps de réponse moyen", f"{analysis['avg_response_time_ms']:.0f} ms")
+            st.metric("Average response time", f"{analysis['avg_response_time_ms']:.0f} ms")
         
-        # Graphique de distribution horaire
-        st.subheader("Distribution des questions par heure")
+        # Hourly distribution chart
+        st.subheader("Question distribution by hour")
         hours = list(range(24))
         counts = [analysis["hour_distribution"].get(hour, 0) for hour in hours]
         
         hour_df = pd.DataFrame({
-            "Heure": hours,
-            "Nombre de questions": counts
+            "Hour": hours,
+            "Number of questions": counts
         })
-        st.bar_chart(hour_df.set_index("Heure"))
+        st.bar_chart(hour_df.set_index("Hour"))
         
-        # Mots les plus fréquents
-        st.subheader("Mots-clés les plus fréquents")
+        # Most frequent words
+        st.subheader("Most frequent keywords")
         if analysis["common_words"]:
-            keywords_df = pd.DataFrame(analysis["common_words"], columns=["Mot", "Fréquence"])
+            keywords_df = pd.DataFrame(analysis["common_words"], columns=["Word", "Frequency"])
             st.dataframe(keywords_df)
         else:
-            st.info("Pas assez de données pour l'analyse des mots-clés")
+            st.info("Not enough data for keyword analysis")
 
 
-# Fonction pour intégrer l'analyseur dans l'application principale
+# Function to integrate the analyzer in the main application
 def integrate_conversation_analyzer(help_desk, user_id):
-    """Intègre l'analyseur de conversation au help_desk"""
+    """Integrates the conversation analyzer into the help_desk"""
     analyzer = ConversationAnalyzer()
     
-    # Fonction wrapper pour ask_question qui enregistre les interactions
+    # Wrapper function for ask_question that logs interactions
     original_ask = help_desk.ask_question
     
     def ask_with_logging(question, verbose=False):
         start_time = datetime.now()
         answer, sources = original_ask(question, verbose)
         end_time = datetime.now()
-        response_time = (end_time - start_time).total_seconds() * 1000  # en millisecondes
+        response_time = (end_time - start_time).total_seconds() * 1000  # in milliseconds
         
-        # Enregistrer l'interaction
+        # Log the interaction
         analyzer.log_interaction(
             user_id=user_id,
             question=question,
@@ -149,10 +149,10 @@ def integrate_conversation_analyzer(help_desk, user_id):
         
         return answer, sources
     
-    # Remplacer la méthode originale
+    # Replace the original method
     help_desk.ask_question = ask_with_logging
     
-    # Ajouter l'analyseur comme attribut
+    # Add the analyzer as an attribute
     help_desk.analyzer = analyzer
     
     return help_desk

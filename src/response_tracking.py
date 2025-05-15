@@ -118,79 +118,79 @@ class ResponseTracker:
             return {"error": str(e), "message": "Erreur lors de l'analyse des patterns"}
     
     def render_tracking_dashboard(self):
-        """Affiche le tableau de bord de suivi des non-réponses dans Streamlit"""
-        st.title("Suivi des Non-Réponses")
+        """Display the response tracking dashboard in Streamlit"""
+        st.title("Response Tracking")
         
-        # Sélection de la période
-        days = st.slider("Période d'analyse (jours)", 1, 90, 30, key="nonresponse_days")
+        # Period selection
+        days = st.slider("Analysis period (days)", 1, 90, 30, key="nonresponse_days")
         unsatisfactory = self.get_unsatisfactory_responses(days)
         
         if not unsatisfactory:
-            st.warning("Aucune réponse insatisfaisante trouvée pour la période sélectionnée")
+            st.warning("No unsatisfactory responses found for the selected period")
             return
         
-        # Métriques de base
-        st.metric("Nombre de réponses insatisfaisantes", len(unsatisfactory))
+        # Basic metrics
+        st.metric("Number of unsatisfactory responses", len(unsatisfactory))
         
-        # Analyse des patterns
+        # Pattern analysis
         patterns = self.identify_patterns(unsatisfactory)
         
         if "error" in patterns:
-            st.error(f"Erreur d'analyse: {patterns['error']}")
+            st.error(f"Analysis error: {patterns['error']}")
             return
             
-        # Afficher les clusters de questions similaires
+        # Display clusters of similar questions
         if "clusters" in patterns and patterns["clusters"]:
-            st.subheader("Groupes de questions similaires sans réponses satisfaisantes")
+            st.subheader("Groups of similar questions without satisfactory responses")
             
             for i, cluster in enumerate(patterns["clusters"]):
-                with st.expander(f"Groupe {i+1}: {cluster['main_question']} ({cluster['count']} questions)"):
+                with st.expander(f"Group {i+1}: {cluster['main_question']} ({cluster['count']} questions)"):
                     for q in cluster["similar_questions"]:
                         st.write(f"- {q}")
         
-        # Afficher les termes communs
+        # Display common terms
         if "common_terms" in patterns and patterns["common_terms"]:
-            st.subheader("Termes fréquents dans les questions sans réponses")
-            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Terme", "Fréquence"])
+            st.subheader("Frequent terms in questions without satisfactory responses")
+            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Term", "Frequency"])
             st.dataframe(terms_df)
         
-        # Tableau des questions sans réponses
-        st.subheader("Détail des questions sans réponses satisfaisantes")
+        # Table of questions without satisfactory responses
+        st.subheader("Details of questions without satisfactory responses")
         
-        # Convertir en DataFrame pour un affichage plus propre
+        # Convert to DataFrame for cleaner display
         df = pd.DataFrame([{
             "Date": datetime.fromisoformat(item["timestamp"]).strftime("%Y-%m-%d %H:%M"),
             "Question": item["question"],
             "Score": item["feedback_score"],
-            "Commentaire": item.get("feedback_text", "")
+            "Comment": item.get("feedback_text", "")
         } for item in unsatisfactory])
         
         st.dataframe(df)
 
 
-# Fonction pour intégrer le tracker dans l'application principale
+# Function to integrate the tracker in the main application
 def integrate_response_tracker(help_desk, user_id):
-    """Intègre le tracker de réponses au help_desk"""
+    """Integrates the response tracker into the help_desk"""
     tracker = ResponseTracker()
     
-    # Ajouter le tracker comme attribut
+    # Add the tracker as an attribute
     help_desk.response_tracker = tracker
     
     return help_desk
 
-# Fonction pour ajouter un widget de feedback dans Streamlit
+# Function to add a feedback widget in Streamlit
 def add_feedback_widget(st, help_desk, user_id, question, answer, sources):
-    """Ajoute un widget de feedback pour la réponse"""
+    """Adds a feedback widget for the response"""
     st.write("---")
-    st.write("### Évaluez cette réponse")
+    st.write("### Rate this response")
     
     col1, col2, col3 = st.columns([3, 1, 1])
     
     with col1:
-        feedback_score = st.slider("Qualité de la réponse", 1, 5, 3)
+        feedback_score = st.slider("Response quality", 1, 5, 3)
     
     with col2:
-        if st.button("Envoyer feedback"):
+        if st.button("Send feedback"):
             feedback_text = st.session_state.get("feedback_text", "")
             help_desk.response_tracker.log_response_quality(
                 user_id=user_id,
@@ -200,11 +200,11 @@ def add_feedback_widget(st, help_desk, user_id, question, answer, sources):
                 feedback_score=feedback_score,
                 feedback_text=feedback_text
             )
-            st.success("Merci pour votre feedback!")
+            st.success("Thank you for your feedback!")
     
     with col3:
         if feedback_score <= 3:
-            feedback_text = st.text_area("Commentaire (optionnel)", key="feedback_text", 
-                                         placeholder="Dites-nous pourquoi cette réponse n'était pas satisfaisante")
+            feedback_text = st.text_area("Comment (optional)", key="feedback_text", 
+                                         placeholder="Tell us why this response was not satisfactory")
 
 from collections import Counter

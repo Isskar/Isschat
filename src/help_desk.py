@@ -24,31 +24,32 @@ class HelpDesk():
         else:
             self.db = load_db.DataLoader().get_db(self.embeddings)
 
-        # Optimiser le retriever pour des réponses plus rapides
+        # Optimize the retriever for faster responses
         self.retriever = self.db.as_retriever(
             search_kwargs={
-                "k": 3,  # Réduire le nombre de documents récupérés (par défaut 4)
-                "fetch_k": 5  # Réduire le nombre de documents à considérer avant de sélectionner les k meilleurs
+                "k": 3,  # Reduce the number of retrieved documents (default 4)
+                "fetch_k": 5  # Reduce the number of documents to consider before selecting the best k
             }
         )
         self.retrieval_qa_chain = self.get_retrieval_qa()
 
     def get_template(self):
         template = """
-        Tu es un assistant virtuel professionnel et amical nommé "Confluence Assistant". 
-        Ta mission est d'aider les utilisateurs à trouver des informations dans la documentation Confluence.
+        You are a professional and friendly virtual assistant named "Confluence Assistant".
+        Your mission is to help users find information in the Confluence documentation.
         
-        À partir de ces extraits de texte :
+        Based on these text excerpts:
         -----
         {context}
         -----
         
-        Réponds à la question suivante en français de manière conversationnelle et professionnelle.
-        Utilise un ton amical mais professionnel, comme si tu étais un collègue serviable.
-        Sois concis mais complet. Utilise des formulations comme "je vous suggère de...", "vous pourriez...", etc.
-        Si tu n'as pas l'information, dis-le clairement et propose des alternatives.
+        Answer the following question IN FRENCH in a conversational and professional manner.
+        Use a friendly but professional tone, as if you were a helpful colleague.
+        Be concise but complete. Use phrases like "je vous suggère de...", "vous pourriez...", etc.
+        If you don't have the information, clearly state so and suggest alternatives.
+        IMPORTANT: Always respond in French regardless of the language of the question.
         
-        Question : {question}
+        Question: {question}
         Réponse :
         """
         return template
