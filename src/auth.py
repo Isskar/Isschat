@@ -65,7 +65,7 @@ def add_user(email, password, is_admin=False):
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
 
-        # Ajouter l'utilisateur
+            # Add user
         c.execute(
             "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)",
             (email, password_hash, is_admin),
@@ -77,7 +77,6 @@ def add_user(email, password, is_admin=False):
         conn.close()
         return True
     except sqlite3.IntegrityError:
-        # L'email existe déjà  #LANGUAGE
         return False
 
 
@@ -87,12 +86,12 @@ def get_all_users():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # Récupérer tous les utilisateurs  #LANGUAGE
+    # Retrieve all users
     c.execute("SELECT id, email, is_admin, created_at FROM users")
     users = c.fetchall()
     conn.close()
 
-    # Formater les résultats  #LANGUAGE
+    # Format the results
     return [{"id": u[0], "email": u[1], "is_admin": u[2], "created_at": u[3]} for u in users]
 
 

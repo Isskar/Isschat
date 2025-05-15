@@ -277,5 +277,5 @@ class FeaturesManager:
 
 # Function to integrate the feature manager into the main application
 def setup_features(help_desk, user_id):
-    """Configure et retourne un gestionnaire de fonctionnalités pour l'application"""  # LANGUAGE
+    """Configure and return a feature manager for the application"""
     return FeaturesManager(help_desk, user_id)

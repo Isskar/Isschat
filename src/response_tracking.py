@@ -64,9 +64,9 @@ class ResponseTracker:
             unsatisfactory_responses = self.get_unsatisfactory_responses()
 
         if not unsatisfactory_responses:
-            return {"message": "Aucune réponse insatisfaisante trouvée"}  # LANGUAGE
+            return {"message": "No unsatisfactory responses found"}  
 
-        # Extraire les questions  #LANGUAGE
+        # extract the questions
         questions = [resp["question"] for resp in unsatisfactory_responses]
 
         # Use TF-IDF to find similarities
@@ -117,7 +117,7 @@ class ResponseTracker:
                 "common_terms": Counter(important_terms).most_common(10),
             }
         except Exception as e:
-            return {"error": str(e), "message": "Erreur lors de l'analyse des patterns"}  # LANGUAGE
+            return {"error": str(e), "message": "Error during pattern analysis"}  # Translated from French
 
     def render_tracking_dashboard(self):
         """Display the response tracking dashboard in Streamlit"""
