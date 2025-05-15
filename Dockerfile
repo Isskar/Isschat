@@ -2,12 +2,12 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 ENV PATH="/root/.local/bin:$PATH"
 
-WORKDIR /src
+WORKDIR /app
 
-COPY pyproject.toml README.md /src/
-COPY src /src
-COPY .env /.env
-COPY config.py /config.py
+COPY pyproject.toml README.md /app/
+COPY src /app/src
+COPY .env /app/.env
+COPY config.py /app/config.py
 
 EXPOSE 8501
 
