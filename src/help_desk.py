@@ -5,7 +5,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from openai import OpenAI
 import os
 
 
@@ -67,12 +66,6 @@ class HelpDesk:
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
-
-        # Configure OpenAI client with OpenRouter API
-        OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=api_key,
-        )
 
         # Use ChatOpenAI with the custom client
         llm = ChatOpenAI(
