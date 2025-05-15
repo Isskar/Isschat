@@ -48,7 +48,7 @@ def evaluate_dataset(model, dataset, verbose=True):
         levenshtein_distances.append(levenshtein_distance["score"])
         cosine_distances.append(cosine_distance["score"])
 
-    dataset["Prediction"] = predictions  # Translated from French
+    dataset["Prediction"] = predictions
     dataset["Levenshtein_Distance"] = levenshtein_distances
     dataset["Cosine_Distance"] = cosine_distances
     dataset.to_csv(EVALUATION_DATASET, index=False, sep="\t")
