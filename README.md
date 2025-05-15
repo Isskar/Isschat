@@ -19,6 +19,7 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 
 ### Prerequisites
 - Install uv, on mac : `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Source your future .venv binaries with `source .venv/bin/activate` that you can add to your terminal profile
 
 ### Configuration
 
@@ -50,7 +51,7 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 
 1. **Launch Streamlit app**
    ```bash
-   uv run streamlit run src/streamlit.py
+   streamlit run src/streamlit.py
    ```
 
 2. **Reconstruct the database**
@@ -91,17 +92,6 @@ RAG-Chatbot-with-Confluence/
 ## Model Integration
 
 This project uses OpenRouter.ai as the AI model provider, which gives access to various large language models including ChatGPT. The OpenRouter integration is configured in `src/help_desk.py` and requires an API key from [OpenRouter](https://openrouter.ai/).
-
-## Development
-
-### Linting and Formatting with `ruff`
-This project uses ruff for both linting and code formatting.
-Please ensure you run the following before committing code to automatically fix lint issues and format your code:
-
-   ```bash
-   ruff check . --fix
-   ruff format .
-   ```
 
 ---
 
