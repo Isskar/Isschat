@@ -9,8 +9,8 @@ CONFLUENCE_PRIVATE_API_KEY = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
 CONFLUENCE_API_KEY = os.getenv("CONFLUENCE_PRIVATE_API_KEY")  # Alias pour compatibilité
 CONFLUENCE_SPACE_KEY = os.getenv("CONFLUENCE_SPACE_KEY")
 CONFLUENCE_SPACE_NAME = os.getenv("CONFLUENCE_SPACE_NAME")
-CONFLUENCE_USERNAME = os.getenv("EMAIL_ADRESS")  # Utilise l'email comme username
-EMAIL_ADRESS = os.getenv("EMAIL_ADRESS")
+CONFLUENCE_USERNAME = os.getenv("CONFLUENCE_EMAIL_ADRESS")  # Utilise l'email comme username
+CONFLUENCE_EMAIL_ADRESS = os.getenv("CONFLUENCE_EMAIL_ADRESS")
 
 # Chemins de fichiers et dossiers
 # Utiliser des chemins absolus pour éviter les problèmes de résolution de chemin

@@ -17,6 +17,7 @@ import json
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+import os
 
 # Ajouter le répertoire parent au chemin de recherche Python
 sys.path.append(str(Path(__file__).parent.parent))
@@ -36,7 +37,6 @@ def get_model(rebuild_db=False):
     # Afficher un spinner pendant le chargement
     with st.spinner("Chargement du modèle RAG..."):
         # Vérifier si le fichier index.faiss existe
-        import os
         import sys
         from pathlib import Path
         from config import PERSIST_DIRECTORY
@@ -47,7 +47,7 @@ def get_model(rebuild_db=False):
         - Dossier de la base vectorielle: `{PERSIST_DIRECTORY}`
         - URL Confluence: `{os.getenv('CONFLUENCE_SPACE_NAME')}`
         - Clé d'espace: `{os.getenv('CONFLUENCE_SPACE_KEY')}`
-        - Utilisateur: `{os.getenv('EMAIL_ADRESS')}`
+        - Utilisateur: `{os.getenv('CONFLUENCE_EMAIL_ADRESS')}`
         - Clé API: `{'*'*5}{os.getenv('CONFLUENCE_PRIVATE_API_KEY')[-5:] if os.getenv('CONFLUENCE_PRIVATE_API_KEY') else 'Non définie'}`
         """)
         
@@ -81,124 +81,193 @@ def get_model(rebuild_db=False):
 
 # Initialisation de l'interface utilisateur
 def main():
-    # Sidebar pour la navigation et les options
+    # Ensure user is always authenticated
+    # Even before rendering sidebar, force user auth
+    if "user" not in st.session_state:
+        # Create or retrieve admin user immediately
+        email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
+        from src.auth import get_all_users, add_user
+        
+        # Check if user exists, create if needed
+        users = get_all_users()
+        user = next((u for u in users if u["email"] == email), None)
+        
+        if not user:
+            add_user(email, "auto_generated_pwd", is_admin=True)
+            users = get_all_users()
+            user = next((u for u in users if u["email"] == email), None)
+        
+        if user:
+            st.session_state["user"] = user
+            st.session_state["user_id"] = f"user_{user['id']}"
+            st.session_state["page"] = "chat"
+        else:
+            # This should never happen but just in case
+            st.error("Critical error: Failed to create auto-login user")
+            st.stop()
+    
+    # Sidebar for navigation and options
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/confluence--v2.png", width=100)
         st.title("Assistant Confluence")
         
-        # Afficher les informations de l'utilisateur connecté
-        if "user" in st.session_state:
-            st.success(f"Connecté en tant que: {st.session_state['user']['email']}")
+        # Always display user info
+        st.success(f"Connecté en tant que: {st.session_state['user']['email']}")
+        
+        # Navigation principale
+        st.subheader("Navigation")
+        if st.button("Chat", key="nav_chat"):
+            st.session_state["page"] = "chat"
+            st.rerun()
             
-            # Navigation principale
-            st.subheader("Navigation")
-            if st.button("Chat", key="nav_chat"):
-                st.session_state["page"] = "chat"
-                st.rerun()
-                
-            if st.button("Historique", key="nav_history"):
-                st.session_state["page"] = "history"
-                st.rerun()
-                
-            # Options d'administration
-            if st.session_state["user"].get("is_admin"):
-                st.divider()
-                st.info("Statut: Administrateur")
-                if st.button("Tableau de bord admin", key="nav_admin"):
-                    st.session_state["page"] = "admin"
-                    st.rerun()
-                
-                # Option pour reconstruire la base de données
-                st.divider()
-                st.subheader("Gestion de la base de données")
-                
-                # Ajouter un bouton pour forcer la reconstruction complète
-                if st.button("Reconstruire depuis Confluence", type="primary"):
-                    with st.spinner("Reconstruction de la base de données depuis Confluence en cours..."):
-                        # Supprimer les fichiers existants
-                        import os
-                        import shutil
-                        from config import PERSIST_DIRECTORY
-                        
-                        try:
-                            if os.path.exists(PERSIST_DIRECTORY):
-                                shutil.rmtree(PERSIST_DIRECTORY)
-                                st.info(f"Dossier {PERSIST_DIRECTORY} supprimé avec succès.")
-                            os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
-                        except Exception as e:
-                            st.error(f"Erreur lors de la suppression du dossier: {str(e)}")
-                        
-                        # Forcer le rechargement du modèle avec new_db=True
-                        try:
-                            st.cache_resource.clear()
-                            model = get_model(rebuild_db=True)
-                            st.success("Base de données reconstruite avec succès depuis Confluence!")
-                            time.sleep(2)
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erreur lors de la reconstruction: {str(e)}")
-                            import traceback
-                            st.code(traceback.format_exc(), language="python")
+        if st.button("Historique", key="nav_history"):
+            st.session_state["page"] = "history"
+            st.rerun()
             
-            # Bouton de déconnexion (pour tous les utilisateurs)
+        # Options d'administration
+        if st.session_state["user"].get("is_admin"):
             st.divider()
-            if st.button("Déconnexion", key="nav_logout"):
-                logout()
+            st.info("Statut: Administrateur")
+            if st.button("Tableau de bord admin", key="nav_admin"):
+                st.session_state["page"] = "admin"
+                st.rerun()
+            
+            # Option pour reconstruire la base de données
+            st.divider()
+            st.subheader("Gestion de la base de données")
+            
+            # Ajouter un bouton pour forcer la reconstruction complète
+            if st.button("Reconstruire depuis Confluence", type="primary"):
+                with st.spinner("Reconstruction de la base de données depuis Confluence en cours..."):
+                    # Supprimer les fichiers existants
+                    import shutil
+                    from config import PERSIST_DIRECTORY
+                    
+                    try:
+                        if os.path.exists(PERSIST_DIRECTORY):
+                            shutil.rmtree(PERSIST_DIRECTORY)
+                            st.info(f"Dossier {PERSIST_DIRECTORY} supprimé avec succès.")
+                        os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
+                    except Exception as e:
+                        st.error(f"Erreur lors de la suppression du dossier: {str(e)}")
+                    
+                    # Forcer le rechargement du modèle avec new_db=True
+                    try:
+                        st.cache_resource.clear()
+                        model = get_model(rebuild_db=True)
+                        st.success("Base de données reconstruite avec succès depuis Confluence!")
+                        time.sleep(2)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur lors de la reconstruction: {str(e)}")
+                        import traceback
+                        st.code(traceback.format_exc(), language="python")
+        
+        # Bouton de déconnexion (pour tous les utilisateurs)
+        st.divider()
+        if st.button("Déconnexion", key="nav_logout"):
+            logout()
     
-    # Déterminer quelle page afficher
-    if "user" not in st.session_state:
-        login_page()
-    elif st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
+    # Déterminer quelle page afficher - user is already authenticated at the beginning of main()
+    if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
         admin_page()
     elif st.session_state.get("page") == "history":
         history_page()
     else:
+        # Default to chat page
         chat_page()
 
 def login_required(func):
     """Décorateur pour vérifier si l'utilisateur est connecté"""
     def wrapper(*args, **kwargs):
         if "user" not in st.session_state:
-            st.warning("Veuillez vous connecter pour accéder à cette page.")
-            login_page()
-            return None
+            # Auto-login instead of showing a warning
+            email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
+            from src.auth import get_all_users, add_user
+            
+            # Quick setup of an admin user
+            users = get_all_users()
+            user = next((u for u in users if u["email"] == email), None)
+            
+            if not user:
+                add_user(email, "auto_generated_pwd", is_admin=True)
+                users = get_all_users()
+                user = next((u for u in users if u["email"] == email), None)
+            
+            if user:
+                st.session_state["user"] = user
+                st.session_state["user_id"] = f"user_{user['id']}"
+                st.session_state["page"] = "chat"
+                # Continue with function execution after setting up the user
+            else:
+                st.error("Critical authentication error")
+                st.stop()
+                return None
         return func(*args, **kwargs)
     return wrapper
 
 def admin_required(func):
     """Décorateur pour vérifier si l'utilisateur est admin"""
     def wrapper(*args, **kwargs):
-        if "user" not in st.session_state or not st.session_state["user"].get("is_admin"):
-            st.error("Vous n'avez pas les droits d'administration nécessaires.")
-            st.session_state["page"] = "chat"
-            chat_page()
-            return None
+        # First ensure user is logged in with login_required decorator logic
+        if "user" not in st.session_state:
+            # Get or create admin user from .env
+            email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
+            from src.auth import get_all_users, add_user
+            
+            users = get_all_users()
+            user = next((u for u in users if u["email"] == email), None)
+            
+            if not user:
+                # Always create as admin
+                add_user(email, "auto_generated_pwd", is_admin=True)
+                users = get_all_users()
+                user = next((u for u in users if u["email"] == email), None)
+            
+            if user:
+                st.session_state["user"] = user
+                st.session_state["user_id"] = f"user_{user['id']}"
+                st.session_state["page"] = "chat"
+            else:
+                st.error("Critical authentication error")
+                st.stop()
+                return None
+        
+        # Then check if user is admin (should always be true with our setup)
+        if not st.session_state["user"].get("is_admin"):
+            # Make them admin if they aren't already
+            from src.auth import get_all_users, add_user
+            email = st.session_state["user"]["email"]
+            st.session_state["user"]["is_admin"] = True
+            
         return func(*args, **kwargs)
     return wrapper
 
 def login_page():
-    """Affiche la page de connexion"""
-    st.title("Connexion à l'Assistant Confluence")
+    """Auto-login function that skips the login UI entirely"""
+    # Directly set up the user using Confluence credentials
+    email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
+    from src.auth import get_all_users, add_user
     
-    with st.form("login_form"):
-        email = st.text_input("Email")
-        password = st.text_input("Mot de passe", type="password")
-        submit = st.form_submit_button("Se connecter")
-        
-        if submit and email and password:
-            user = verify_user(email, password)
-            if user:
-                # Utiliser l'ID utilisateur de la base de données pour assurer la persistance
-                # Pas besoin de générer un UUID aléatoire à chaque session
-                st.session_state["user"] = user
-                
-                # Utiliser l'ID utilisateur directement comme identifiant persistant
-                st.session_state["user_id"] = f"user_{user['id']}"
-                
-                st.session_state["page"] = "chat"
-                st.rerun()
-            else:
-                st.error("Email ou mot de passe incorrect.")
+    # Ensure user exists
+    users = get_all_users()
+    user = next((u for u in users if u["email"] == email), None)
+    
+    if not user:
+        add_user(email, "auto_generated_pwd", is_admin=True)
+        users = get_all_users()
+        user = next((u for u in users if u["email"] == email), None)
+    
+    if user:
+        # Set session state and go directly to chat
+        st.session_state["user"] = user
+        st.session_state["user_id"] = f"user_{user['id']}"
+        st.session_state["page"] = "chat"
+        # Force page refresh to apply changes
+        st.rerun()
+    else:
+        st.error("Failed to initialize user session. Check your .env configuration.")
+        st.stop()
 
 @login_required
 def chat_page():

@@ -9,7 +9,7 @@ load_dotenv()
 # Récupérer les informations de connexion
 confluence_url = os.getenv("CONFLUENCE_SPACE_NAME")
 api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
-username = os.getenv("EMAIL_ADRESS")
+username = os.getenv("CONFLUENCE_EMAIL_ADRESS")
 space_key = os.getenv("CONFLUENCE_SPACE_KEY")
 
 # Afficher les informations (sans la clé complète)

@@ -15,7 +15,7 @@ graph TD
     
     %% Génération de réponse
     Retriever -->|Contexte documentaire| Chain[Chaîne LangChain]
-    Chain -->|Construit le prompt| LLM[Modèle LLM<br>Ollama/llama2]
+    Chain -->|Construit le prompt| LLM[Modèle LLM<br>GPT 4o]
     LLM -->|Génère réponse| Chain
     Chain -->|Réponse formatée| Chat
     Chat -->|Affiche réponse + sources| User
