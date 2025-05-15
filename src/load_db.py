@@ -30,7 +30,6 @@ class DataLoader:
         api_key=CONFLUENCE_API_KEY,
         space_key=CONFLUENCE_SPACE_KEY,
         persist_directory=PERSIST_DIRECTORY,
-        persist_directory=PERSIST_DIRECTORY,
     ):
         self.confluence_url = confluence_url
         self.username = username

@@ -78,8 +78,6 @@ class QueryReformulator:
 
         self.patterns[category].append({"pattern": pattern, "replacement": replacement})
 
-        self.patterns[category].append({"pattern": pattern, "replacement": replacement})
-
         self._save_patterns()
 
     def reformulate_query(self, query, strategy="auto"):

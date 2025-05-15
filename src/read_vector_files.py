@@ -297,20 +297,6 @@ def main():
         help="Number of documents or items to display (default: 5)",
     )
 
-    parser.add_argument(
-        "--type",
-        choices=["auto", "faiss", "pickle", "faiss-pkl"],
-        default="auto",
-        help="Type of file to read: faiss, pickle, faiss-pkl (for index.pkl file only), or auto-detect (default)",
-    )
-    parser.add_argument(
-        "-n",
-        "--num-docs",
-        type=int,
-        default=5,
-        help="Number of documents or items to display (default: 5)",
-    )
-
     args = parser.parse_args()
 
     # Determine the file type
@@ -334,7 +320,6 @@ def main():
         # For directly examining the index.pkl file
         if not args.file_path.endswith(".pkl"):
             if os.path.isdir(args.file_path):
-                args.file_path = os.path.join(args.file_path, "index.pkl")
                 args.file_path = os.path.join(args.file_path, "index.pkl")
             else:
                 print(f"Error: {args.file_path} is not a .pkl file or a directory containing index.pkl")
