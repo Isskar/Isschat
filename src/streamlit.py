@@ -303,7 +303,7 @@ def chat_page():
     
     # Initialize message history
     if "messages" not in st.session_state:
-        st.session_state["messages"] = [{"role": "assistant", "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ?"}]  # Keeping French response as per requirements
+        st.session_state["messages"] = [{"role": "assistant", "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ?"}]  # ;)
     
     # Display message history
     for msg in st.session_state.messages:
