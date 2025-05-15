@@ -156,7 +156,9 @@ def main():
                     # Forcer le rechargement du modèle avec new_db=True
                     try:
                         st.cache_resource.clear()
-                        # model = get_model(rebuild_db=True)
+                        get_model(
+                            rebuild_db=True
+                        )  # FIXME : This is a hack, we should rebuild the db instead of calling get_model
                         st.success("Base de données reconstruite avec succès depuis Confluence!")
                         time.sleep(2)
                         st.rerun()
