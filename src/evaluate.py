@@ -55,11 +55,6 @@ def evaluate_dataset(model, dataset, verbose=True):
     return dataset
 
 
-# def run():
-#     dataset = open_evaluation_dataset(EVALUATION_DATASET)
-#     results = evaluate_dataset(model, dataset)
-
-
 if __name__ == "__main__":
     load_dotenv(find_dotenv())
     model = HelpDesk(new_db=True)

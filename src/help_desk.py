@@ -64,12 +64,6 @@ class HelpDesk:
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
 
-        # Configure OpenAI client with OpenRouter API
-        # client = OpenAI(
-        #     base_url="https://openrouter.ai/api/v1",
-        #     api_key=api_key,
-        # )
-
         # Use ChatOpenAI with the custom client
         llm = ChatOpenAI(
             model="gpt-4o",  # Vous pouvez spécifier le modèle désiré sur OpenRouter
@@ -112,7 +106,7 @@ class HelpDesk:
         return answer, sources
 
     def list_top_k_sources(self, answer, k=2):
-        sources = [f'[{res.metadata["title"]}]({res.metadata["source"]})' for res in answer["source_documents"]]
+        sources = [f"[{res.metadata['title']}]({res.metadata['source']})" for res in answer["source_documents"]]
 
         if sources:
             k = min(k, len(sources))

@@ -3,7 +3,9 @@ name = "isschat"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-author = "nicolas.lambropoulos@isskar.fr"
+authors = [
+    {name = "Nicolas Lambropoulos", email = "nicolas.lambropoulos@isskar.fr"}
+]
 requires-python = ">=3.12"
 dependencies = [
     "langchain-community>=0.2.0",

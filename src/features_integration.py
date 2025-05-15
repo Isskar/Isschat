@@ -85,12 +85,12 @@ class FeaturesManager:
             total_time = (time.time() - start_time) * 1000  # en ms
 
             # Enregistrer l'interaction dans l'historique
-            # query_id = self.query_history.add_query(
-            #     user_id=self.user_id,
-            #     question=question,
-            #     answer=answer,
-            #     sources=sources if isinstance(sources, list) else [sources],
-            # )
+            self.query_history.add_query(
+                user_id=self.user_id,
+                question=question,
+                answer=answer,
+                sources=sources if isinstance(sources, list) else [sources],
+            )
 
             # Enregistrer les métriques de performance
             self.performance_tracker.track_query(
