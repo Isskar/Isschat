@@ -64,9 +64,9 @@ class ResponseTracker:
             unsatisfactory_responses = self.get_unsatisfactory_responses()
 
         if not unsatisfactory_responses:
-            return {"message": "Aucune réponse insatisfaisante trouvée"}
+            return {"message": "Aucune réponse insatisfaisante trouvée"}  # LANGUAGE
 
-        # Extraire les questions
+        # Extraire les questions  #LANGUAGE
         questions = [resp["question"] for resp in unsatisfactory_responses]
 
         # Use TF-IDF to find similarities
@@ -74,10 +74,10 @@ class ResponseTracker:
         try:
             tfidf_matrix = vectorizer.fit_transform(questions)
 
-            # Calculer la matrice de similarité
+            # Calculer la matrice de similarité  #LANGUAGE
             similarity_matrix = cosine_similarity(tfidf_matrix)
 
-            # Trouver des clusters de questions similaires
+            # Trouver des clusters de questions similaires  #LANGUAGE
             clusters = []
             processed = set()
 
@@ -85,7 +85,7 @@ class ResponseTracker:
                 if i in processed:
                     continue
 
-                # Trouver les questions similaires (seuil de similarité > 0.3)
+                # Trouver les questions similaires (seuil de similarité > 0.3)  #LANGUAGE
                 similar_indices = [j for j in range(len(questions)) if similarity_matrix[i, j] > 0.3 and i != j]
 
                 if similar_indices:
@@ -101,12 +101,12 @@ class ResponseTracker:
                 else:
                     processed.add(i)
 
-            # Extraire les termes les plus importants
+            # Extraire les termes les plus importants  #LANGUAGE
             feature_names = vectorizer.get_feature_names_out()
             important_terms = []
 
             for i, row in enumerate(tfidf_matrix.toarray()):
-                top_indices = row.argsort()[-5:][::-1]  # Top 5 termes
+                top_indices = row.argsort()[-5:][::-1]  # Top 5 termes  #LANGUAGE
                 terms = [feature_names[idx] for idx in top_indices if row[idx] > 0]
                 if terms:
                     important_terms.extend(terms)
@@ -117,7 +117,7 @@ class ResponseTracker:
                 "common_terms": Counter(important_terms).most_common(10),
             }
         except Exception as e:
-            return {"error": str(e), "message": "Erreur lors de l'analyse des patterns"}
+            return {"error": str(e), "message": "Erreur lors de l'analyse des patterns"}  # LANGUAGE
 
     def render_tracking_dashboard(self):
         """Display the response tracking dashboard in Streamlit"""

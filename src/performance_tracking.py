@@ -257,10 +257,10 @@ def integrate_performance_tracker(help_desk):
 
         return answer, sources
 
-    # Remplacer la méthode originale
+    # Remplacer la mthode originale #LANGUAGE
     help_desk.ask_question = ask_with_performance_tracking
 
-    # Ajouter le tracker comme attribut
+    # Ajouter le tracker comme attribut  #LANGUAGE
     help_desk.performance_tracker = tracker
 
     return help_desk

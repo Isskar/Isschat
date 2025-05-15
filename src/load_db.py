@@ -212,7 +212,7 @@ class DataLoader:
                     docs.append(doc)
 
                 except Exception as page_error:
-                    print(f"Erreur lors du traitement de la page {page_title}: {str(page_error)}")
+                    print(f"Erreur lors du traitement de la page {page_title}: {str(page_error)}")  # LANGUAGE
                     import traceback
 
                     print(traceback.format_exc())
@@ -227,7 +227,7 @@ class DataLoader:
             # For debugging, let's show the full trace
             import traceback
 
-            print("Trace d'erreur complète:")
+            print("Trace d'erreur complète:")  # LANGUAGE
             print(traceback.format_exc())
             raise e
 
