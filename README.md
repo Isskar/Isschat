@@ -32,17 +32,18 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
    Copy `.env.example` to `.env` file at root with:
    
    - Confluence API key got from:
-   # https://id.atlassian.com/manage-profile/security/api-tokens)
+     https://id.atlassian.com/manage-profile/security/api-tokens)
    
    - Confluence space URL
-   CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
+     CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
    
    - Your login email
-   CONFLUENCE_EMAIL_ADRESS=firstname.lastname@your_company.com
+     CONFLUENCE_EMAIL_ADRESS=firstname.lastname@your_company.com
    
    - OpenRouter API key (for AI model access)
    OPENROUTER_API_KEY=your_openrouter_api_key
-   # Get your API key from https://openrouter.ai/
+   - Get your API key from :
+     https://openrouter.ai/
 
 
 ## Launch
