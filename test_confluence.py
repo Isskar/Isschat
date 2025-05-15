@@ -50,9 +50,7 @@ try:
     if pages:
         print("\nHere are the first 3 pages:")
         for i, page in enumerate(pages[:3]):
-            print(
-                f"  {i + 1}. {page.get('title', 'Untitled')} (ID: {page.get('id', 'N/A')})"
-            )
+            print(f"  {i + 1}. {page.get('title', 'Untitled')} (ID: {page.get('id', 'N/A')})")
 
 except Exception as e:
     print("\n==== CONNECTION ERROR ====")

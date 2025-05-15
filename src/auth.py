@@ -69,6 +69,7 @@ def add_user(email, password, is_admin=False):
         c.execute(
             "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)",
             (email, password_hash, is_admin),
+            (email, password_hash, is_admin),
         )
 
         # Commit changes and close the connection
@@ -92,9 +93,7 @@ def get_all_users():
     conn.close()
 
     # Formater les résultats
-    return [
-        {"id": u[0], "email": u[1], "is_admin": u[2], "created_at": u[3]} for u in users
-    ]
+    return [{"id": u[0], "email": u[1], "is_admin": u[2], "created_at": u[3]} for u in users]
 
 
 def delete_user(user_id):
@@ -127,9 +126,7 @@ def admin_required(func):
     """Decorator to protect pages that require administrator rights"""
 
     def wrapper(*args, **kwargs):
-        if not st.session_state.get("user") or not st.session_state["user"].get(
-            "is_admin"
-        ):
+        if not st.session_state.get("user") or not st.session_state["user"].get("is_admin"):
             st.error("You do not have administrator rights to access this page.")
             st.stop()
         return func(*args, **kwargs)

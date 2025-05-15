@@ -19,6 +19,7 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 
 ### Prerequisites
 - Install uv, on mac : `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Source your future .venv binaries with `source .venv/bin/activate` that you can add to your terminal profile
 
 ### Configuration
 
@@ -50,7 +51,7 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 
 1. **Launch Streamlit app**
    ```bash
-   uv run streamlit run src/streamlit.py
+   streamlit run src/streamlit.py
    ```
 
 2. **Reconstruct the database**

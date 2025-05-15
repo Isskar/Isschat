@@ -24,7 +24,6 @@ from src.auth import (
     get_all_users,
     add_user,
     delete_user,
-    login_page,
     login_required,
     admin_required,
 )
@@ -45,20 +44,21 @@ def get_model(rebuild_db=False):
         from config import PERSIST_DIRECTORY
 
         # Display configuration information for debugging
+        api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
+        key_display = f"*****{api_key[-5:]}" if api_key else "Not defined"
+
         st.sidebar.expander("Debug", expanded=False).write(f"""
-        **Configuration**:
-        - Vector store directory: `{PERSIST_DIRECTORY}`
-        - Confluence URL: `{os.getenv("CONFLUENCE_SPACE_NAME")}`
-        - Space key: `{os.getenv("CONFLUENCE_SPACE_KEY")}`
-        - User: `{os.getenv("CONFLUENCE_EMAIL_ADRESS")}`
-        - API key: `{"*" * 5}{os.getenv("CONFLUENCE_PRIVATE_API_KEY")[-5:] if os.getenv("CONFLUENCE_PRIVATE_API_KEY") else "Not defined"}`
-        """)
+                **Configuration**:
+                - Vector store directory: `{PERSIST_DIRECTORY}`
+                - Confluence URL: `{os.getenv("CONFLUENCE_SPACE_NAME")}`
+                - Space key: `{os.getenv("CONFLUENCE_SPACE_KEY")}`
+                - User: `{os.getenv("CONFLUENCE_EMAIL_ADRESS")}`
+                - API key: `{key_display}`
+                """)
 
         # Check if directory exists
         if not os.path.exists(PERSIST_DIRECTORY):
-            st.warning(
-                f"Directory {PERSIST_DIRECTORY} does not exist. Attempting to create it..."
-            )
+            st.warning(f"Directory {PERSIST_DIRECTORY} does not exist. Attempting to create it...")
             try:
                 os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
             except Exception as e:
@@ -153,9 +153,7 @@ def main():
                     try:
                         if os.path.exists(PERSIST_DIRECTORY):
                             shutil.rmtree(PERSIST_DIRECTORY)
-                            st.info(
-                                f"Directory {PERSIST_DIRECTORY} successfully deleted."
-                            )
+                            st.info(f"Directory {PERSIST_DIRECTORY} successfully deleted.")
                         os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
                     except Exception as e:
                         st.error(f"Error deleting directory: {str(e)}")
@@ -163,7 +161,7 @@ def main():
                     # Force model reload with new_db=True
                     try:
                         st.cache_resource.clear()
-                        model = get_model(rebuild_db=True)
+                        get_model(rebuild_db=True)
                         st.success("Database successfully rebuilt from Confluence!")
                         time.sleep(2)
                         st.rerun()
@@ -179,115 +177,13 @@ def main():
             logout()
 
     # Determine which page to display - user is already authenticated at the beginning of main()
-    if st.session_state.get("page") == "admin" and st.session_state["user"].get(
-        "is_admin"
-    ):
+    if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
         admin_page()
     elif st.session_state.get("page") == "history":
         history_page()
     else:
         # Default to chat page
         chat_page()
-
-
-def login_required(func):
-    """Decorator to verify if the user is logged in"""
-
-    def wrapper(*args, **kwargs):
-        if "user" not in st.session_state:
-            # Auto-login instead of showing a warning
-            email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
-            from src.auth import get_all_users, add_user
-
-            # Quick setup of an admin user
-            users = get_all_users()
-            user = next((u for u in users if u["email"] == email), None)
-
-            if not user:
-                add_user(email, "auto_generated_pwd", is_admin=True)
-                users = get_all_users()
-                user = next((u for u in users if u["email"] == email), None)
-
-            if user:
-                st.session_state["user"] = user
-                st.session_state["user_id"] = f"user_{user['id']}"
-                st.session_state["page"] = "chat"
-                # Continue with function execution after setting up the user
-            else:
-                st.error("Critical authentication error")
-                st.stop()
-                return None
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def admin_required(func):
-    """Decorator to verify if the user is an administrator"""
-
-    def wrapper(*args, **kwargs):
-        # First ensure user is logged in with login_required decorator logic
-        if "user" not in st.session_state:
-            # Get or create admin user from .env
-            email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
-            from src.auth import get_all_users, add_user
-
-            users = get_all_users()
-            user = next((u for u in users if u["email"] == email), None)
-
-            if not user:
-                # Always create as admin
-                add_user(email, "auto_generated_pwd", is_admin=True)
-                users = get_all_users()
-                user = next((u for u in users if u["email"] == email), None)
-
-            if user:
-                st.session_state["user"] = user
-                st.session_state["user_id"] = f"user_{user['id']}"
-                st.session_state["page"] = "chat"
-            else:
-                st.error("Critical authentication error")
-                st.stop()
-                return None
-
-        # Then check if user is admin (should always be true with our setup)
-        if not st.session_state["user"].get("is_admin"):
-            # Make them admin if they aren't already
-            from src.auth import get_all_users, add_user
-
-            email = st.session_state["user"]["email"]
-            st.session_state["user"]["is_admin"] = True
-
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def login_page():
-    """Auto-login function that skips the login UI entirely"""
-    # Directly set up the user using Confluence credentials
-    email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
-    from src.auth import get_all_users, add_user
-
-    # Ensure user exists
-    users = get_all_users()
-    user = next((u for u in users if u["email"] == email), None)
-
-    if not user:
-        add_user(email, "auto_generated_pwd", is_admin=True)
-        users = get_all_users()
-        user = next((u for u in users if u["email"] == email), None)
-
-    if user:
-        # Set session state and go directly to chat
-        st.session_state["user"] = user
-        st.session_state["user_id"] = f"user_{user['id']}"
-        st.session_state["page"] = "chat"
-        # Force page refresh to apply changes
-        st.rerun()
-    else:
-        st.error("Failed to initialize user session. Check your .env configuration.")
-        st.stop()
 
 
 @login_required
@@ -300,9 +196,7 @@ def chat_page():
 
     # Initialize the features manager
     if "features_manager" not in st.session_state:
-        user_id = st.session_state.get(
-            "user_id", f"user_{st.session_state['user']['id']}"
-        )
+        user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
         st.session_state["features_manager"] = FeaturesManager(model, user_id)
 
     features = st.session_state["features_manager"]
@@ -354,9 +248,7 @@ def chat_page():
         if sources:
             response_content += "\n\n" + sources
 
-        st.session_state.messages.append(
-            {"role": "assistant", "content": response_content}
-        )
+        st.session_state.messages.append({"role": "assistant", "content": response_content})
 
     # Chat interface
     if prompt := st.chat_input("Ask your question here..."):
@@ -375,10 +267,10 @@ def chat_page():
         if sources:
             response_content += "\n\n" + sources
 
+            response_content += "\n\n" + sources
+
         st.chat_message("assistant").write(response_content)
-        st.session_state.messages.append(
-            {"role": "assistant", "content": response_content}
-        )
+        st.session_state.messages.append({"role": "assistant", "content": response_content})
 
 
 @login_required
@@ -466,9 +358,7 @@ def admin_page():
             features = st.session_state["features_manager"]
             features.render_admin_dashboard(st)
         else:
-            st.warning(
-                "Please interact with the chatbot first to initialize the analytics features."
-            )
+            st.warning("Please interact with the chatbot first to initialize the analytics features.")
 
     # Return button
     if st.button("Return to chat"):

@@ -55,12 +55,8 @@ if st.button("Test"):
             # Display full documents
             st.subheader("Full document content")
             for i, doc in enumerate(docs[:5]):  # Limit to 5 documents for readability
-                with st.expander(
-                    f"Document {i + 1}: {doc.metadata.get('title', 'Not available')}"
-                ):
-                    st.write(
-                        f"**Source:** {doc.metadata.get('source', 'Not available')}"
-                    )
+                with st.expander(f"Document {i + 1}: {doc.metadata.get('title', 'Not available')}"):
+                    st.write(f"**Source:** {doc.metadata.get('source', 'Not available')}")
                     st.write(f"**Content:**\n{doc.page_content}")
         else:
             st.error("No documents were retrieved for this query.")

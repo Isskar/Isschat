@@ -12,13 +12,9 @@ class ConversationAnalyzer:
     def __init__(self, log_path="./logs/conversations"):
         self.log_path = log_path
         os.makedirs(log_path, exist_ok=True)
-        self.current_log_file = os.path.join(
-            log_path, f"conv_log_{datetime.now().strftime('%Y%m%d')}.jsonl"
-        )
+        self.current_log_file = os.path.join(log_path, f"conv_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
 
-    def log_interaction(
-        self, user_id, question, answer, sources, response_time, feedback=None
-    ):
+    def log_interaction(self, user_id, question, answer, sources, response_time, feedback=None):
         """Records an interaction in the log file"""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -77,9 +73,7 @@ class ConversationAnalyzer:
         hour_counts = Counter(hours)
 
         # Average response time
-        avg_response_time = sum(log.get("response_time_ms", 0) for log in logs) / len(
-            logs
-        )
+        avg_response_time = sum(log.get("response_time_ms", 0) for log in logs) / len(logs)
 
         return {
             "total_questions": len(questions),
@@ -108,9 +102,7 @@ class ConversationAnalyzer:
         with col1:
             st.metric("Total questions", analysis["total_questions"])
         with col2:
-            st.metric(
-                "Average response time", f"{analysis['avg_response_time_ms']:.0f} ms"
-            )
+            st.metric("Average response time", f"{analysis['avg_response_time_ms']:.0f} ms")
 
         # Hourly distribution chart
         st.subheader("Question distribution by hour")
@@ -123,9 +115,7 @@ class ConversationAnalyzer:
         # Most frequent words
         st.subheader("Most frequent keywords")
         if analysis["common_words"]:
-            keywords_df = pd.DataFrame(
-                analysis["common_words"], columns=["Word", "Frequency"]
-            )
+            keywords_df = pd.DataFrame(analysis["common_words"], columns=["Word", "Frequency"])
             st.dataframe(keywords_df)
         else:
             st.info("Not enough data for keyword analysis")
@@ -143,9 +133,7 @@ def integrate_conversation_analyzer(help_desk, user_id):
         start_time = datetime.now()
         answer, sources = original_ask(question, verbose)
         end_time = datetime.now()
-        response_time = (
-            end_time - start_time
-        ).total_seconds() * 1000  # in milliseconds
+        response_time = (end_time - start_time).total_seconds() * 1000  # in milliseconds
 
         # Log the interaction
         analyzer.log_interaction(

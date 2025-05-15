@@ -30,6 +30,7 @@ class DataLoader:
         api_key=CONFLUENCE_API_KEY,
         space_key=CONFLUENCE_SPACE_KEY,
         persist_directory=PERSIST_DIRECTORY,
+        persist_directory=PERSIST_DIRECTORY,
     ):
         self.confluence_url = confluence_url
         self.username = username
@@ -57,9 +58,7 @@ class DataLoader:
             print(f"URL: {self.confluence_url}")
             print(f"Username: {self.username}")
             print(f"Space Key: {self.space_key}")
-            print(
-                f"API Key: {'*' * 5}{self.api_key[-5:] if self.api_key else 'Not defined'}"
-            )
+            print(f"API Key: {'*' * 5}{self.api_key[-5:] if self.api_key else 'Not defined'}")
 
             # Ensure the URL is in the correct format (without the specific path)
             base_url = self.confluence_url
@@ -97,9 +96,7 @@ class DataLoader:
 
             while True:
                 # Retrieve a batch of pages
-                batch = confluence.get_all_pages_from_space(
-                    self.space_key, start=start, limit=limit, expand="version"
-                )
+                batch = confluence.get_all_pages_from_space(self.space_key, start=start, limit=limit, expand="version")
 
                 if not batch:
                     break  # No more pages to retrieve
@@ -126,27 +123,19 @@ class DataLoader:
                     page_id = page.get("id")
                     # Retrieve the children of this page
                     try:
-                        children = confluence.get_page_child_by_type(
-                            page_id, type="page"
-                        )
+                        children = confluence.get_page_child_by_type(page_id, type="page")
                         if children and len(children) > 0:
                             child_pages.extend(children)
                     except Exception as e:
-                        print(
-                            f"Error retrieving sub-pages for {page.get('title', 'Untitled')}: {str(e)}"
-                        )
+                        print(f"Error retrieving sub-pages for {page.get('title', 'Untitled')}: {str(e)}")
 
                 # Add sub-pages to our main list (avoiding duplicates)
                 existing_ids = {p.get("id") for p in pages}
-                new_child_pages = [
-                    p for p in child_pages if p.get("id") not in existing_ids
-                ]
+                new_child_pages = [p for p in child_pages if p.get("id") not in existing_ids]
 
                 if new_child_pages:
                     pages.extend(new_child_pages)
-                    print(
-                        f"Added {len(new_child_pages)} additional sub-pages. Total: {len(pages)} pages."
-                    )
+                    print(f"Added {len(new_child_pages)} additional sub-pages. Total: {len(pages)} pages.")
 
             # Convert pages to LangChain documents
             docs = []
@@ -177,9 +166,7 @@ class DataLoader:
                     )
 
                     # Extract HTML content
-                    content = (
-                        page_data.get("body", {}).get("storage", {}).get("value", "")
-                    )
+                    content = page_data.get("body", {}).get("storage", {}).get("value", "")
 
                     # Additional information to enrich metadata
                     space_info = page_data.get("space", {})
@@ -189,9 +176,7 @@ class DataLoader:
                     creator = version_info.get("by", {}).get("displayName", "")
 
                     # Build a navigation path (breadcrumb)
-                    breadcrumb = " > ".join(
-                        [a.get("title", "") for a in ancestors] + [page_title]
-                    )
+                    breadcrumb = " > ".join([a.get("title", "") for a in ancestors] + [page_title])
 
                     # Convert HTML to text
                     text_content = h.handle(content)
@@ -228,9 +213,7 @@ class DataLoader:
                     docs.append(doc)
 
                 except Exception as page_error:
-                    print(
-                        f"Erreur lors du traitement de la page {page_title}: {str(page_error)}"
-                    )
+                    print(f"Erreur lors du traitement de la page {page_title}: {str(page_error)}")
                     import traceback
 
                     print(traceback.format_exc())
@@ -257,9 +240,7 @@ class DataLoader:
             ("###", "Sous-titre 2"),
         ]
 
-        markdown_splitter = MarkdownHeaderTextSplitter(
-            headers_to_split_on=headers_to_split_on
-        )
+        markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
 
         # Split based on markdown and add original metadata
         md_docs = []
@@ -303,15 +284,18 @@ class DataLoader:
 
         dummy_docs = [
             Document(
-                page_content="Welcome to the Confluence Assistant. This database is a dummy version created because the connection to Confluence failed.",
+                page_content="Welcome to the Confluence Assistant. This database "
+                "is a dummy version created because the connection to Confluence failed.",
                 metadata={"source": "dummy_doc_1", "title": "Welcome"},
             ),
             Document(
-                page_content="To use the assistant with real data, check your Confluence connection settings in the .env file.",
+                page_content="To use the assistant with real data, check your Confluence "
+                "connection settings in the .env file.",
                 metadata={"source": "dummy_doc_2", "title": "Configuration"},
             ),
             Document(
-                page_content="Make sure the variables CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY, CONFLUENCE_USERNAME and CONFLUENCE_PRIVATE_API_KEY are properly configured.",
+                page_content="Make sure the variables CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY, "
+                "CONFLUENCE_USERNAME and CONFLUENCE_PRIVATE_API_KEY are properly configured.",
                 metadata={"source": "dummy_doc_3", "title": "Environment Variables"},
             ),
         ]

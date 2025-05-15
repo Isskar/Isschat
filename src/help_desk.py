@@ -37,27 +37,26 @@ class HelpDesk:
         template = """
         You are a professional and friendly virtual assistant named "Confluence Assistant".
         Your mission is to help users find information in the Confluence documentation.
-        
+
         Based on these text excerpts:
         -----
         {context}
         -----
-        
+
         Answer the following question IN FRENCH in a conversational and professional manner.
         Use a friendly but professional tone, as if you were a helpful colleague.
-        Be concise but complete. Use French phrases like "je vous suggère de..." (I suggest that you...), "vous pourriez..." (you could...), etc.
+        Be concise but complete. Use French phrases like "je vous suggère de..."
+        (I suggest that you...), "vous pourriez..." (you could...), etc.
         If you don't have the information, clearly state so and suggest alternatives.
         IMPORTANT: Always respond in French regardless of the language of the question.
-        
+
         Question: {question}
         Answer:
         """
         return template
 
     def get_prompt(self):
-        prompt = PromptTemplate(
-            template=self.template, input_variables=["context", "question"]
-        )
+        prompt = PromptTemplate(template=self.template, input_variables=["context", "question"])
         return prompt
 
     def get_embeddings(self):
@@ -70,7 +69,7 @@ class HelpDesk:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
 
         # Configure OpenAI client with OpenRouter API
-        client = OpenAI(
+        OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
         )
@@ -89,10 +88,7 @@ class HelpDesk:
         # Define a simple retrieval chain using the LCEL (LangChain Expression Language) approach
         # This avoids the Pydantic validation issues
         retrieval_chain = (
-            {"context": self.retriever, "question": RunnablePassthrough()}
-            | self.prompt
-            | self.llm
-            | StrOutputParser()
+            {"context": self.retriever, "question": RunnablePassthrough()} | self.prompt | self.llm | StrOutputParser()
         )
         return retrieval_chain
 
@@ -120,16 +116,11 @@ class HelpDesk:
         return answer, sources
 
     def list_top_k_sources(self, answer, k=2):
-        sources = [
-            f"[{res.metadata['title']}]({res.metadata['source']})"
-            for res in answer["source_documents"]
-        ]
+        sources = [f"[{res.metadata['title']}]({res.metadata['source']})" for res in answer["source_documents"]]
 
         if sources:
             k = min(k, len(sources))
-            distinct_sources = list(zip(*collections.Counter(sources).most_common()))[
-                0
-            ][:k]
+            distinct_sources = list(zip(*collections.Counter(sources).most_common()))[0][:k]
             distinct_sources_str = "  \n- ".join(distinct_sources)
 
         if len(distinct_sources) == 1:

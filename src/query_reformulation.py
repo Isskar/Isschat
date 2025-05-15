@@ -9,9 +9,7 @@ class QueryReformulator:
     def __init__(self, cache_path="./cache"):
         self.cache_path = cache_path
         os.makedirs(cache_path, exist_ok=True)
-        self.reformulation_patterns_file = os.path.join(
-            cache_path, "reformulation_patterns.json"
-        )
+        self.reformulation_patterns_file = os.path.join(cache_path, "reformulation_patterns.json")
         self.patterns = self._load_patterns()
 
     def _load_patterns(self):
@@ -20,7 +18,7 @@ class QueryReformulator:
             try:
                 with open(self.reformulation_patterns_file, "r") as f:
                     return json.load(f)
-            except:
+            except Exception:
                 return self._create_default_patterns()
         else:
             return self._create_default_patterns()
@@ -77,6 +75,8 @@ class QueryReformulator:
         """Add a new reformulation pattern"""
         if category not in self.patterns:
             self.patterns[category] = []
+
+        self.patterns[category].append({"pattern": pattern, "replacement": replacement})
 
         self.patterns[category].append({"pattern": pattern, "replacement": replacement})
 
@@ -149,9 +149,7 @@ class QueryReformulator:
         for category, patterns in self.patterns.items():
             with st.expander(f"Category: {category} ({len(patterns)} patterns)"):
                 for i, pattern_obj in enumerate(patterns):
-                    st.write(
-                        f"**Pattern {i + 1}:** `{pattern_obj['pattern']}` → `{pattern_obj['replacement']}`"
-                    )
+                    st.write(f"**Pattern {i + 1}:** `{pattern_obj['pattern']}` → `{pattern_obj['replacement']}`")
 
         st.subheader("Add a new pattern")
 

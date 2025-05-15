@@ -16,9 +16,10 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # Optional imports that might be needed depending on the file content
 try:
-    import numpy as np
+    # import numpy as np
     from langchain_community.vectorstores import FAISS
-    import faiss
+
+    # import faiss
     from langchain_core.embeddings import Embeddings
 except ImportError:
     print("Warning: Some dependencies are missing. Install with:")
@@ -54,6 +55,7 @@ def inspect_pickle_content(data: Any, num_items: int = 5) -> None:
     """
     Print information about the content of a pickle file.
 
+
     Args:
         data: The loaded pickle data
         num_items: Number of items to display for collections (default: 5)
@@ -69,7 +71,7 @@ def inspect_pickle_content(data: Any, num_items: int = 5) -> None:
     if hasattr(data, "__len__"):
         try:
             print(f"Length: {len(data)}")
-        except:
+        except Exception:
             print("Length: Unable to determine")
 
     # Try to determine if it's a dictionary or has attributes
@@ -96,14 +98,14 @@ def inspect_pickle_content(data: Any, num_items: int = 5) -> None:
                 try:
                     attr_value = getattr(data, attr)
                     print(f"  - {attr} ({type(attr_value)})")
-                except:
+                except Exception:
                     print(f"  - {attr} (Unable to access)")
 
     # For numpy arrays or other array-like structures
     if hasattr(data, "shape"):
         try:
             print(f"\nShape: {data.shape}")
-        except:
+        except Exception:
             pass
 
     # If it's a list or other collection, show sample items
@@ -125,6 +127,7 @@ def inspect_faiss_pkl(file_path: str, num_items: int = 5) -> None:
     Directly inspect a .pkl file that's part of a FAISS index.
     This is specifically for the index.pkl file that accompanies a FAISS index.
 
+
     Args:
         file_path: Path to the pickle file
         num_items: Number of items to display (default: 5)
@@ -140,6 +143,7 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
     """
     Read a FAISS index from a directory.
     The directory should contain both index.faiss and index.pkl files.
+
 
     Args:
         directory_path: Path to the directory containing the FAISS index
@@ -160,6 +164,7 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
             print(f"Error: index.faiss not found in {directory_path}")
             if os.path.exists(index_pkl_path):
                 print("Note: index.pkl exists but index.faiss is missing")
+                print("Note: index.pkl exists but index.faiss is missing")
             return None
 
         if not os.path.exists(index_pkl_path):
@@ -171,9 +176,7 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
         dummy_embeddings = DummyEmbeddings()
 
         # Load the FAISS index
-        db = FAISS.load_local(
-            directory_path, dummy_embeddings, allow_dangerous_deserialization=True
-        )
+        db = FAISS.load_local(directory_path, dummy_embeddings, allow_dangerous_deserialization=True)
 
         return db
 
@@ -188,6 +191,7 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
 def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
     """
     Print information about a FAISS index.
+
 
     Args:
         db: The FAISS index to inspect
@@ -262,35 +266,37 @@ def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
                     doc = docstore._dict[doc_id]
 
                     # Extract data (safely)
-                    truncated_id = (
-                        str(doc_id)[:id_width]
-                        if len(str(doc_id)) > id_width
-                        else str(doc_id)
-                    )
-                    title = (
-                        doc.metadata.get("title", "")[:title_width]
-                        if "title" in doc.metadata
-                        else "N/A"
-                    )
+                    truncated_id = str(doc_id)[:id_width] if len(str(doc_id)) > id_width else str(doc_id)
+                    title = doc.metadata.get("title", "")[:title_width] if "title" in doc.metadata else "N/A"
                     # Truncate content and replace newlines
                     content = (
-                        doc.page_content.replace("\n", " ")[:content_width]
-                        if hasattr(doc, "page_content")
-                        else "N/A"
+                        doc.page_content.replace("\n", " ")[:content_width] if hasattr(doc, "page_content") else "N/A"
                     )
 
                     # Print row
-                    row = f"| {truncated_id:<{id_width}} | {title:<{title_width}} | {content:<{content_width}} |"
+                    row = f"| {truncated_id: <{id_width}} | {title: <{title_width}} | {content: <{content_width}} |"
                     print(row)
     except Exception as e:
         print(f"Could not access docstore: {e}")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Read and inspect .faiss and .pkl files"
-    )
+    parser = argparse.ArgumentParser(description="Read and inspect .faiss and .pkl files")
     parser.add_argument("file_path", help="Path to the file or directory to read")
+    parser.add_argument(
+        "--type",
+        choices=["auto", "faiss", "pickle", "faiss-pkl"],
+        default="auto",
+        help="Type of file to read: faiss, pickle, faiss-pkl (for index.pkl file only), or auto-detect (default)",
+    )
+    parser.add_argument(
+        "-n",
+        "--num-docs",
+        type=int,
+        default=5,
+        help="Number of documents or items to display (default: 5)",
+    )
+
     parser.add_argument(
         "--type",
         choices=["auto", "faiss", "pickle", "faiss-pkl"],
@@ -315,9 +321,7 @@ def main():
         elif args.file_path.endswith(".pkl") or args.file_path.endswith(".pickle"):
             file_type = "pickle"
         else:
-            print(
-                f"Could not auto-detect file type for {args.file_path}. Please specify with --type."
-            )
+            print(f"Could not auto-detect file type for {args.file_path}. Please specify with --type.")
             return
 
     print(f"Reading {file_type} file: {args.file_path}")
@@ -331,10 +335,9 @@ def main():
         if not args.file_path.endswith(".pkl"):
             if os.path.isdir(args.file_path):
                 args.file_path = os.path.join(args.file_path, "index.pkl")
+                args.file_path = os.path.join(args.file_path, "index.pkl")
             else:
-                print(
-                    f"Error: {args.file_path} is not a .pkl file or a directory containing index.pkl"
-                )
+                print(f"Error: {args.file_path} is not a .pkl file or a directory containing index.pkl")
                 return
         inspect_faiss_pkl(args.file_path, args.num_docs)
     elif file_type == "pickle":

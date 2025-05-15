@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from collections import Counter
 
 
 class ResponseTracker:
@@ -13,18 +14,14 @@ class ResponseTracker:
     def __init__(self, log_path="./logs/responses"):
         self.log_path = log_path
         os.makedirs(log_path, exist_ok=True)
-        self.current_log_file = os.path.join(
-            log_path, f"response_log_{datetime.now().strftime('%Y%m%d')}.jsonl"
-        )
+        self.current_log_file = os.path.join(log_path, f"response_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
         self.feedback_thresholds = {
             "negative": 2,  # Feedback score < 2 is considered negative
             "neutral": 3,  # Feedback score = 3 is considered neutral
             "positive": 4,  # Feedback score > 3 is considered positive
         }
 
-    def log_response_quality(
-        self, user_id, question, answer, sources, feedback_score, feedback_text=None
-    ):
+    def log_response_quality(self, user_id, question, answer, sources, feedback_score, feedback_text=None):
         """Records the quality of a response based on user feedback"""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -54,9 +51,7 @@ class ResponseTracker:
                             log_entry = json.loads(line.strip())
                             log_date = datetime.fromisoformat(log_entry["timestamp"])
                             days_ago = (datetime.now() - log_date).days
-                            if days_ago <= days and not log_entry.get(
-                                "is_satisfactory", True
-                            ):
+                            if days_ago <= days and not log_entry.get("is_satisfactory", True):
                                 unsatisfactory.append(log_entry)
                         except json.JSONDecodeError:
                             continue
@@ -91,20 +86,14 @@ class ResponseTracker:
                     continue
 
                 # Trouver les questions similaires (seuil de similarité > 0.3)
-                similar_indices = [
-                    j
-                    for j in range(len(questions))
-                    if similarity_matrix[i, j] > 0.3 and i != j
-                ]
+                similar_indices = [j for j in range(len(questions)) if similarity_matrix[i, j] > 0.3 and i != j]
 
                 if similar_indices:
                     cluster = [i] + similar_indices
                     clusters.append(
                         {
                             "main_question": questions[i],
-                            "similar_questions": [
-                                questions[j] for j in similar_indices
-                            ],
+                            "similar_questions": [questions[j] for j in similar_indices],
                             "count": len(similar_indices) + 1,
                         }
                     )
@@ -157,18 +146,14 @@ class ResponseTracker:
             st.subheader("Groups of similar questions without satisfactory responses")
 
             for i, cluster in enumerate(patterns["clusters"]):
-                with st.expander(
-                    f"Group {i + 1}: {cluster['main_question']} ({cluster['count']} questions)"
-                ):
+                with st.expander(f"Group {i + 1}: {cluster['main_question']} ({cluster['count']} questions)"):
                     for q in cluster["similar_questions"]:
                         st.write(f"- {q}")
 
         # Display common terms
         if "common_terms" in patterns and patterns["common_terms"]:
             st.subheader("Frequent terms in questions without satisfactory responses")
-            terms_df = pd.DataFrame(
-                patterns["common_terms"], columns=["Term", "Frequency"]
-            )
+            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Term", "Frequency"])
             st.dataframe(terms_df)
 
         # Table of questions without satisfactory responses
@@ -178,9 +163,7 @@ class ResponseTracker:
         df = pd.DataFrame(
             [
                 {
-                    "Date": datetime.fromisoformat(item["timestamp"]).strftime(
-                        "%Y-%m-%d %H:%M"
-                    ),
+                    "Date": datetime.fromisoformat(item["timestamp"]).strftime("%Y-%m-%d %H:%M"),
                     "Question": item["question"],
                     "Score": item["feedback_score"],
                     "Comment": item.get("feedback_text", ""),
@@ -234,6 +217,3 @@ def add_feedback_widget(st, help_desk, user_id, question, answer, sources):
                 key="feedback_text",
                 placeholder="Tell us why this response was not satisfactory",
             )
-
-
-from collections import Counter

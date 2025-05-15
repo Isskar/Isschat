@@ -30,9 +30,7 @@ class FeaturesManager:
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             handlers=[
-                logging.FileHandler(
-                    f"./logs/chatbot_{datetime.now().strftime('%Y%m%d')}.log"
-                ),
+                logging.FileHandler(f"./logs/chatbot_{datetime.now().strftime('%Y%m%d')}.log"),
                 logging.StreamHandler(),
             ],
         )
@@ -87,7 +85,7 @@ class FeaturesManager:
             total_time = (time.time() - start_time) * 1000  # in ms
 
             # Record the interaction in history
-            query_id = self.query_history.add_query(
+            self.query_history.add_query(
                 user_id=self.user_id,
                 question=question,
                 answer=answer,
@@ -171,17 +169,13 @@ class FeaturesManager:
             # Performance statistics
             perf_logs = self.performance_tracker.get_performance_logs(days=30)
             if perf_logs:
-                avg_time = sum(log.get("total_time_ms", 0) for log in perf_logs) / len(
-                    perf_logs
-                )
+                avg_time = sum(log.get("total_time_ms", 0) for log in perf_logs) / len(perf_logs)
                 stats["avg_response_time"] = f"{avg_time:.0f} ms"
             else:
                 stats["avg_response_time"] = "N/A"
 
             # Feedback statistics
-            unsat_responses = self.response_tracker.get_unsatisfactory_responses(
-                days=30
-            )
+            unsat_responses = self.response_tracker.get_unsatisfactory_responses(days=30)
             stats["unsatisfactory_responses"] = len(unsat_responses)
 
             # Display statistics
@@ -223,9 +217,7 @@ class FeaturesManager:
                 self._show_question_suggestions(st, question, answer)
 
             # Log performance metrics
-            self.logger.info(
-                f"Question processed in {response_time:.0f}ms: {question[:50]}..."
-            )
+            self.logger.info(f"Question processed in {response_time:.0f}ms: {question[:50]}...")
 
             return answer, sources
 
@@ -245,9 +237,7 @@ class FeaturesManager:
         col1, col2 = st.columns([3, 1])
 
         with col1:
-            feedback_score = st.slider(
-                "Response quality", 1, 5, 3, key="feedback_score"
-            )
+            feedback_score = st.slider("Response quality", 1, 5, 3, key="feedback_score")
             feedback_text = st.text_area(
                 "Comment (optional)",
                 key="feedback_text",
@@ -270,9 +260,7 @@ class FeaturesManager:
     def _show_question_suggestions(self, st, question, answer):
         """Display follow-up question suggestions"""
         try:
-            suggestions = self.question_suggester.suggest_next_questions(
-                question, answer
-            )
+            suggestions = self.question_suggester.suggest_next_questions(question, answer)
 
             if suggestions:
                 st.write("---")

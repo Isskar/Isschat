@@ -101,8 +101,21 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except:
+            except Exception as e:
+                print(f"Error parsing sources: {e}")
                 sources = []
+
+            history.append(
+                {
+                    "id": row["id"],
+                    "timestamp": row["timestamp"],
+                    "question": row["question"],
+                    "answer": row["answer"],
+                    "sources": sources,
+                    "feedback_score": row["feedback_score"],
+                    "is_favorite": bool(row["is_favorite"]),
+                }
+            )
 
             history.append(
                 {
@@ -184,8 +197,21 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except:
+            except Exception as e:
+                print(f"Error parsing sources: {e}")
                 sources = []
+
+            favorites.append(
+                {
+                    "id": row["id"],
+                    "timestamp": row["timestamp"],
+                    "question": row["question"],
+                    "answer": row["answer"],
+                    "sources": sources,
+                    "feedback_score": row["feedback_score"],
+                    "is_favorite": True,
+                }
+            )
 
             favorites.append(
                 {
@@ -215,7 +241,6 @@ class QueryHistory:
         """,
             (feedback_score, query_id),
         )
-
         conn.commit()
         conn.close()
 
@@ -244,8 +269,21 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except:
+            except Exception as e:
+                print(f"Error parsing sources: {e}")
                 sources = []
+
+            results.append(
+                {
+                    "id": row["id"],
+                    "timestamp": row["timestamp"],
+                    "question": row["question"],
+                    "answer": row["answer"],
+                    "sources": sources,
+                    "feedback_score": row["feedback_score"],
+                    "is_favorite": bool(row["is_favorite"]),
+                }
+            )
 
             results.append(
                 {
@@ -298,9 +336,7 @@ class QueryHistory:
                     col1, col2 = st.columns(2)
                     with col1:
                         if item["is_favorite"]:
-                            if st.button(
-                                "Remove from favorites", key=f"unfav_{item['id']}"
-                            ):
+                            if st.button("Remove from favorites", key=f"unfav_{item['id']}"):
                                 self.remove_from_favorites(user_id, item["id"])
                                 st.rerun()
                         else:
@@ -309,9 +345,7 @@ class QueryHistory:
                                 st.rerun()
 
                     with col2:
-                        if st.button(
-                            "Ask this question again", key=f"reask_{item['id']}"
-                        ):
+                        if st.button("Ask this question again", key=f"reask_{item['id']}"):
                             # Store the question in the session for reuse
                             st.session_state.reuse_question = item["question"]
                             # Redirect to the main page
@@ -341,16 +375,12 @@ class QueryHistory:
                     # Actions
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button(
-                            "Remove from favorites", key=f"unfav_fav_{item['id']}"
-                        ):
+                        if st.button("Remove from favorites", key=f"unfav_fav_{item['id']}"):
                             self.remove_from_favorites(user_id, item["id"])
                             st.rerun()
 
                     with col2:
-                        if st.button(
-                            "Ask this question again", key=f"reask_fav_{item['id']}"
-                        ):
+                        if st.button("Ask this question again", key=f"reask_fav_{item['id']}"):
                             # Store the question in the session for reuse
                             st.session_state.reuse_question = item["question"]
                             # Redirect to the main page
@@ -370,9 +400,7 @@ def integrate_query_history(help_desk, user_id):
         answer, sources = original_ask(question, verbose)
 
         # Record the query in history
-        query_id = history.add_query(
-            user_id=user_id, question=question, answer=answer, sources=sources
-        )
+        query_id = history.add_query(user_id=user_id, question=question, answer=answer, sources=sources)
 
         return answer, sources, query_id
 

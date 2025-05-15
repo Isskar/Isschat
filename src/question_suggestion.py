@@ -9,15 +9,11 @@ from collections import Counter
 class QuestionSuggester:
     """Suggests relevant questions based on conversation context"""
 
-    def __init__(
-        self, log_path="./logs/conversations", suggestion_cache_path="./cache"
-    ):
+    def __init__(self, log_path="./logs/conversations", suggestion_cache_path="./cache"):
         self.log_path = log_path
         self.suggestion_cache_path = suggestion_cache_path
         os.makedirs(suggestion_cache_path, exist_ok=True)
-        self.suggestion_cache_file = os.path.join(
-            suggestion_cache_path, "question_suggestions.json"
-        )
+        self.suggestion_cache_file = os.path.join(suggestion_cache_path, "question_suggestions.json")
         self.popular_questions = self._load_popular_questions()
 
     def _load_popular_questions(self):
@@ -26,7 +22,7 @@ class QuestionSuggester:
             try:
                 with open(self.suggestion_cache_file, "r") as f:
                     return json.load(f)
-            except:
+            except Exception:
                 return {"popular": [], "by_topic": {}}
         else:
             return {"popular": [], "by_topic": {}}
@@ -50,7 +46,7 @@ class QuestionSuggester:
                             log_entry = json.loads(line.strip())
                             if "question" in log_entry:
                                 all_questions.append(log_entry["question"])
-                        except:
+                        except Exception:
                             continue
 
         if not all_questions:
@@ -88,7 +84,8 @@ class QuestionSuggester:
                         topics[term] = questions[:5]
 
                 self.popular_questions["by_topic"] = topics
-            except:
+            except Exception as e:
+                print(f"Error while updating question database: {e}")
                 pass  # In case of error, keep the old data
 
         # Save the results
@@ -150,9 +147,7 @@ class QuestionSuggester:
 
         return keywords
 
-    def suggest_next_questions(
-        self, current_question, current_answer, history=None, max_suggestions=3
-    ):
+    def suggest_next_questions(self, current_question, current_answer, history=None, max_suggestions=3):
         """Suggests follow-up questions based on the current question and answer"""
         suggestions = []
 

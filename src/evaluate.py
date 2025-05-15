@@ -13,23 +13,18 @@ def predict(model, question):
 
 def open_evaluation_dataset(filepath):
     df = pd.read_csv(filepath, delimiter="\t")
+    df = pd.read_csv(filepath, delimiter="\t")
     return df
 
 
 def get_levenshtein_distance(model, reference_text, prediction_text):
     evaluator = load_evaluator("string_distance")
-    return evaluator.evaluate_strings(
-        prediction=prediction_text, reference=reference_text
-    )
+    return evaluator.evaluate_strings(prediction=prediction_text, reference=reference_text)
 
 
 def get_cosine_distance(model, reference_text, prediction_text):
-    evaluator = load_evaluator(
-        "embedding_distance", distance_metric=EmbeddingDistance.COSINE
-    )
-    return evaluator.evaluate_strings(
-        prediction=prediction_text, reference=reference_text
-    )
+    evaluator = load_evaluator("embedding_distance", distance_metric=EmbeddingDistance.COSINE)
+    return evaluator.evaluate_strings(prediction=prediction_text, reference=reference_text)
 
 
 def evaluate_dataset(model, dataset, verbose=True):
@@ -38,26 +33,33 @@ def evaluate_dataset(model, dataset, verbose=True):
     cosine_distances = []
     for i, row in dataset.iterrows():
         prediction_text = predict(model, row["Questions"])
+        prediction_text = predict(model, row["Questions"])
 
         # Distances
-        levenshtein_distance = get_levenshtein_distance(
-            model, row["Réponses"].strip(), prediction_text.strip()
-        )
-        cosine_distance = get_cosine_distance(
-            model, row["Réponses"].strip(), prediction_text.strip()
-        )
+        levenshtein_distance = get_levenshtein_distance(model, row["Réponses"].strip(), prediction_text.strip())
+        cosine_distance = get_cosine_distance(model, row["Réponses"].strip(), prediction_text.strip())
 
         if verbose:
             print("\n QUESTIONS \n", row["Questions"])
             print("\n REPONSES \n", row["Réponses"])
+            print("\n QUESTIONS \n", row["Questions"])
+            print("\n REPONSES \n", row["Réponses"])
             print("\n PREDICTION \n", prediction_text)
+            print("\n LEV DISTANCE \n", levenshtein_distance["score"])
+            print("\n COS DISTANCE \n", cosine_distance["score"])
             print("\n LEV DISTANCE \n", levenshtein_distance["score"])
             print("\n COS DISTANCE \n", cosine_distance["score"])
 
         predictions.append(prediction_text)
         levenshtein_distances.append(levenshtein_distance["score"])
         cosine_distances.append(cosine_distance["score"])
+        levenshtein_distances.append(levenshtein_distance["score"])
+        cosine_distances.append(cosine_distance["score"])
 
+    dataset["Prédiction"] = predictions
+    dataset["Levenshtein_Distance"] = levenshtein_distances
+    dataset["Cosine_Distance"] = cosine_distances
+    dataset.to_csv(EVALUATION_DATASET, index=False, sep="\t")
     dataset["Prédiction"] = predictions
     dataset["Levenshtein_Distance"] = levenshtein_distances
     dataset["Cosine_Distance"] = cosine_distances
@@ -67,7 +69,7 @@ def evaluate_dataset(model, dataset, verbose=True):
 
 def run():
     dataset = open_evaluation_dataset(EVALUATION_DATASET)
-    results = evaluate_dataset(model, dataset)
+    evaluate_dataset(model, dataset)
 
 
 if __name__ == "__main__":
@@ -75,6 +77,9 @@ if __name__ == "__main__":
     model = HelpDesk(new_db=True)
     dataset = open_evaluation_dataset(EVALUATION_DATASET)
     evaluate_dataset(model, dataset)
+
+    print("Mean Levenshtein distance: ", dataset["Levenshtein_Distance"].mean())
+    print("Mean Cosine distance: ", dataset["Cosine_Distance"].mean())
 
     print("Mean Levenshtein distance: ", dataset["Levenshtein_Distance"].mean())
     print("Mean Cosine distance: ", dataset["Cosine_Distance"].mean())

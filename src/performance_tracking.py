@@ -14,9 +14,7 @@ class PerformanceTracker:
     def __init__(self, log_path="./logs/performance"):
         self.log_path = log_path
         os.makedirs(log_path, exist_ok=True)
-        self.current_log_file = os.path.join(
-            log_path, f"perf_log_{datetime.now().strftime('%Y%m%d')}.jsonl"
-        )
+        self.current_log_file = os.path.join(log_path, f"perf_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
 
     def log_performance(self, metrics):
         """Records performance metrics of a query"""
@@ -152,13 +150,9 @@ class PerformanceTracker:
         with col1:
             st.metric("Average response time", f"{metrics['avg_total_time_ms']:.0f} ms")
         with col2:
-            st.metric(
-                "Average retrieval time", f"{metrics['avg_retrieval_time_ms']:.0f} ms"
-            )
+            st.metric("Average retrieval time", f"{metrics['avg_retrieval_time_ms']:.0f} ms")
         with col3:
-            st.metric(
-                "Average generation time", f"{metrics['avg_generation_time_ms']:.0f} ms"
-            )
+            st.metric("Average generation time", f"{metrics['avg_generation_time_ms']:.0f} ms")
 
         # Time evolution chart
         st.subheader("Response Time Evolution")
@@ -217,9 +211,7 @@ class PerformanceTracker:
         hourly_data = pd.DataFrame(analysis["hourly_metrics"])
         if not hourly_data.empty:
             fig, ax = plt.subplots(figsize=(10, 6))
-            sns.barplot(
-                x="hour", y="total_time_ms", data=hourly_data, ax=ax, color="skyblue"
-            )
+            sns.barplot(x="hour", y="total_time_ms", data=hourly_data, ax=ax, color="skyblue")
             ax.set_xlabel("Hour of day")
             ax.set_ylabel("Average response time (ms)")
             ax.set_title("Average response time by hour")
