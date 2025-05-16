@@ -34,12 +34,12 @@ def evaluate_dataset(model, dataset, verbose=True):
         prediction_text = predict(model, row["Questions"])
 
         # Distances
-        levenshtein_distance = get_levenshtein_distance(model, row["Réponses"].strip(), prediction_text.strip())
-        cosine_distance = get_cosine_distance(model, row["Réponses"].strip(), prediction_text.strip())
+        levenshtein_distance = get_levenshtein_distance(model, row["Answers"].strip(), prediction_text.strip())
+        cosine_distance = get_cosine_distance(model, row["Answers"].strip(), prediction_text.strip())
 
         if verbose:
             print("\n QUESTIONS \n", row["Questions"])
-            print("\n REPONSES \n", row["Réponses"])
+            print("\n REPONSES \n", row["Answers"])
             print("\n PREDICTION \n", prediction_text)
             print("\n LEV DISTANCE \n", levenshtein_distance["score"])
             print("\n COS DISTANCE \n", cosine_distance["score"])
@@ -48,7 +48,7 @@ def evaluate_dataset(model, dataset, verbose=True):
         levenshtein_distances.append(levenshtein_distance["score"])
         cosine_distances.append(cosine_distance["score"])
 
-    dataset["Prédiction"] = predictions
+    dataset["Prediction"] = predictions
     dataset["Levenshtein_Distance"] = levenshtein_distances
     dataset["Cosine_Distance"] = cosine_distances
     dataset.to_csv(EVALUATION_DATASET, index=False, sep="\t")

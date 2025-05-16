@@ -1,39 +1,39 @@
 graph TD
-    %% Utilisateurs et Interface
-    User([Utilisateur]) -->|Se connecte| Login[Page de Login]
-    Login -->|Vérifie identifiants| AuthDB[(Base de données SQLite<br>Utilisateurs)]
-    Login -->|Authentification réussie| Chat[Interface de Chat]
-    Login -->|Accès admin| Admin[Gestion des Utilisateurs]
+    %% Users and Interface
+    User([User]) -->|Connects| Login[Login Page]
+    Login -->|Verifies credentials| AuthDB[(SQLite Database<br>Users)]
+    Login -->|Authentication successful| Chat[Chat Interface]
+    Login -->|Admin access| Admin[User Management]
     
-    %% Flux de la question
-    User -->|Pose une question| Chat
-    Chat -->|Envoie la requête| Retriever[Retriever FAISS]
+    %% Question Flow
+    User -->|Asks a question| Chat
+    Chat -->|Sends query| Retriever[FAISS Retriever]
     
-    %% Recherche de documents
-    Retriever -->|Recherche similitude vectorielle| VectorDB[(Base de données<br>vectorielle FAISS)]
-    VectorDB -->|Documents pertinents| Retriever
+    %% Document Search
+    Retriever -->|Vector similarity search| VectorDB[(FAISS Vector<br>Database)]
+    VectorDB -->|Relevant documents| Retriever
     
-    %% Génération de réponse
-    Retriever -->|Contexte documentaire| Chain[Chaîne LangChain]
-    Chain -->|Construit le prompt| LLM[Modèle LLM<br>GPT 4o]
-    LLM -->|Génère réponse| Chain
-    Chain -->|Réponse formatée| Chat
-    Chat -->|Affiche réponse + sources| User
+    %% Response Generation
+    Retriever -->|Document context| Chain[LangChain Chain]
+    Chain -->|Builds prompt| LLM[LLM Model<br>GPT 4o]
+    LLM -->|Generates response in French| Chain
+    Chain -->|Formatted response| Chat
+    Chat -->|Displays response + sources| User
     
-    %% Initialisation et mise à jour de la base
-    ConfluenceAPI[API Confluence] -->|Récupère pages| DataLoader[DataLoader]
-    DataLoader -->|Traite documents| TextSplitter[Text Splitter]
-    TextSplitter -->|Découpe en chunks| Embedder[Embeddings<br>HuggingFace]
-    Embedder -->|Vecteurs + Métadonnées| VectorDB
+    %% Database Initialization and Update
+    ConfluenceAPI[Confluence API] -->|Retrieves pages| DataLoader[DataLoader]
+    DataLoader -->|Processes documents| TextSplitter[Text Splitter]
+    TextSplitter -->|Splits into chunks| Embedder[Embeddings<br>HuggingFace]
+    Embedder -->|Vectors + Metadata| VectorDB
     
-    %% Gestion des utilisateurs
-    Admin -->|Ajoute/Supprime| AuthDB
+    %% User Management
+    Admin -->|Add/Remove| AuthDB
     
-    %% Options avancées
-    RebuildDB[Option: Reconstruire DB] -.->|Déclenche| DataLoader
+    %% Advanced Options
+    RebuildDB[Option: Rebuild DB] -.->|Triggers| DataLoader
     
-    %% Sous-graphes pour organiser
-    subgraph "Interface Utilisateur"
+    %% Subgraphs for organization
+    subgraph "User Interface"
         User
         Login
         Chat
@@ -41,25 +41,24 @@ graph TD
         RebuildDB
     end
     
-    subgraph "Traitement RAG"
+    subgraph "RAG Processing"
         Retriever
         Chain
         LLM
     end
     
-    subgraph "Stockage de Données"
+    subgraph "Data Storage"
         VectorDB
         AuthDB
     end
     
-    subgraph "Ingestion de Données"
+    subgraph "Data ingestion"
         ConfluenceAPI
         DataLoader
         TextSplitter
         Embedder
     end
     
-    %% Styles pour une meilleure lisibilité
     classDef interface fill:#f9f,stroke:#333,stroke-width:1px
     classDef processing fill:#bbf,stroke:#333,stroke-width:1px
     classDef storage fill:#bfb,stroke:#333,stroke-width:1px

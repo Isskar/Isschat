@@ -23,30 +23,34 @@ class HelpDesk:
         else:
             self.db = load_db.DataLoader().get_db(self.embeddings)
 
-        # Optimiser le retriever pour des réponses plus rapides
+        # Optimize the retriever for faster responses
         self.retriever = self.db.as_retriever(
             search_kwargs={
-                "k": 3,  # Réduire le nombre de documents récupérés (par défaut 4)
-                "fetch_k": 5,  # Réduire le nombre de documents à considérer avant de sélectionner les k meilleurs
+                "k": 3,  # Reduce the number of retrieved documents (default 4)
+                "fetch_k": 5,  # Reduce the number of documents to consider before selecting the best k
             }
         )
         self.retrieval_qa_chain = self.get_retrieval_qa()
 
     def get_template(self):
         template = """
-        Tu es un assistant virtuel professionnel et amical nommé "Confluence Assistant".
-        Ta mission est d'aider les utilisateurs à trouver des informations dans la documentation Confluence.
-        À partir de ces extraits de texte :
+        You are a professional and friendly virtual assistant named "Confluence Assistant".
+        Your mission is to help users find information in the Confluence documentation.
+
+        Based on these text excerpts:
         -----
         {context}
         -----
-        Réponds à la question suivante en français de manière conversationnelle et professionnelle.
-        Utilise un ton amical mais professionnel, comme si tu étais un collègue serviable.
-        Sois concis mais complet. Utilise des formulations comme "je vous suggère de...", "vous pourriez...", etc.
-        Si tu n'as pas l'information, dis-le clairement et propose des alternatives.
 
-        Question : {question}
-        Réponse :
+        Answer the following question IN FRENCH in a conversational and professional manner.
+        Use a friendly but professional tone, as if you were a helpful colleague.
+        Be concise but complete. Use French phrases like "je vous suggère de..."
+        (I suggest that you...), "vous pourriez..." (you could...), etc.
+        If you don't have the information, clearly state so and suggest alternatives.
+        IMPORTANT: Always respond in French regardless of the language of the question.
+
+        Question: {question}
+        Answer:
         """
         return template
 
@@ -59,18 +63,17 @@ class HelpDesk:
         return embeddings
 
     def get_llm(self):
-        # Utiliser OpenRouter avec l'API OpenAI
         api_key = os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
 
         # Use ChatOpenAI with the custom client
         llm = ChatOpenAI(
-            model="deepseek/deepseek-chat",  # Vous pouvez spécifier le modèle désiré sur OpenRouter
-            temperature=0.1,  # Réduire la température pour des réponses plus déterministes
-            max_tokens=512,  # Limiter la longueur de la réponse
-            openai_api_key=api_key,  # Utiliser la clé API OpenRouter
-            openai_api_base="https://openrouter.ai/api/v1",  # Préciser l'URL de base OpenRouter
+            model="deepseek/deepseek-chat",
+            temperature=0.1,
+            max_tokens=512,
+            openai_api_key=api_key,
+            openai_api_base="https://openrouter.ai/api/v1",
         )
         return llm
 
@@ -86,14 +89,14 @@ class HelpDesk:
         # Get the source documents directly from the retriever
         docs = self.retriever.get_relevant_documents(question)
 
-        # Ajouter des logs pour vérifier les documents récupérés
+        # Add logs to verify the retrieved documents
         if verbose:
-            print(f"\n=== Documents récupérés pour la question: '{question}' ===\n")
-            for i, doc in enumerate(docs[:3]):  # Afficher les 3 premiers documents
+            print(f"\n=== Documents retrieved for the question: '{question}' ===\n")
+            for i, doc in enumerate(docs[:3]):  # Display the first 3 documents
                 print(f"Document {i + 1}:")
-                print(f"Titre: {doc.metadata.get('title', 'Non disponible')}")
-                print(f"Source: {doc.metadata.get('source', 'Non disponible')}")
-                print(f"Contenu (extrait): {doc.page_content[:150]}...\n")
+                print(f"Title: {doc.metadata.get('title', 'Not available')}")
+                print(f"Source: {doc.metadata.get('source', 'Not available')}")
+                print(f"Content (excerpt): {doc.page_content[:150]}...\n")
 
         # Get the answer from the chain
         answer = self.retrieval_qa_chain.invoke(question)
@@ -114,10 +117,10 @@ class HelpDesk:
             distinct_sources_str = "  \n- ".join(distinct_sources)
 
         if len(distinct_sources) == 1:
-            return f"Voici la source qui pourrait t'être utile: \n- {distinct_sources_str}"
+            return f"Here is the source that might be useful for you:  \n- {distinct_sources_str}"
 
         elif len(distinct_sources) > 1:
-            return f"Voici {len(distinct_sources)} sources qui pourraient t'être utiles: \n- {distinct_sources_str}"
+            return f"Here are {len(distinct_sources)} sources that might be useful for you:  \n- {distinct_sources_str}"
 
         else:
-            return "Désolé je n'ai trouvé aucune ressource pour répondre à ta question"
+            return "Sorry, I couldn't find any resources to answer your question"
