@@ -65,7 +65,7 @@ def add_user(email, password, is_admin=False):
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
 
-            # Add user
+        # Add user
         c.execute(
             "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)",
             (email, password_hash, is_admin),
