@@ -87,7 +87,6 @@ RAG-Chatbot-with-Confluence/
 - **Performance tracking**: Response time and accuracy metrics
 - **Feedback system**: User response evaluation
 - **Query history**: Previous search consultation
-- **Question suggestions**: Related question proposals
 
 ## Model Integration
 

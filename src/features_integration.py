@@ -7,7 +7,6 @@ from datetime import datetime
 # Import all feature modules
 from src.conversation_analysis import ConversationAnalyzer
 from src.response_tracking import ResponseTracker
-from src.question_suggestion import QuestionSuggester
 from src.performance_tracking import PerformanceTracker
 from src.query_history import QueryHistory
 
@@ -41,7 +40,6 @@ class FeaturesManager:
         # Create feature objects directly as attributes of this class
         self.analyzer = ConversationAnalyzer()
         self.response_tracker = ResponseTracker()
-        self.question_suggester = QuestionSuggester()
         self.performance_tracker = PerformanceTracker()
         self.query_history = QueryHistory()
 
@@ -193,32 +191,18 @@ class FeaturesManager:
         except Exception as e:
             st.error(f"Error collecting statistics: {str(e)}")
 
-    def process_question(self, question, show_suggestions=True, show_feedback=True):
-        """Process a question and add user feedback system"""
+    def process_question(self, question, show_feedback=True):
+        """Process a question and return the answer and sources"""
         try:
             # 1. Get the answer
             start_time = datetime.now()
             answer, sources = self.help_desk.retrieval_qa_inference(question)
             response_time = (datetime.now() - start_time).total_seconds() * 1000
 
-            # 2. Display the answer
-            st.markdown(answer)
-
-            # 3. Display sources
-            if sources:
-                st.write(sources)
-
-            # 4. Display feedback widget if enabled
-            if show_feedback:
-                self._add_feedback_widget(st, question, answer, sources)
-
-            # 5. Display question suggestions if enabled
-            if show_suggestions:
-                self._show_question_suggestions(st, question, answer)
-
-            # Log performance metrics
+            # 2. Log performance metrics
             self.logger.info(f"Question processed in {response_time:.0f}ms: {question[:50]}...")
 
+            # 3. Return the response
             return answer, sources
 
         except Exception as e:
@@ -256,23 +240,6 @@ class FeaturesManager:
                     feedback_text=feedback_text,
                 )
                 st.success("Thank you for your feedback!")
-
-    def _show_question_suggestions(self, st, question, answer):
-        """Display follow-up question suggestions"""
-        try:
-            suggestions = self.question_suggester.suggest_next_questions(question, answer)
-
-            if suggestions:
-                st.write("---")
-                st.write("### Suggested questions")
-
-                for i, suggestion in enumerate(suggestions):
-                    if st.button(suggestion, key=f"suggest_{i}"):
-                        # Store the question in the session for reuse
-                        return suggestion
-        except Exception as e:
-            self.logger.error(f"Error displaying suggestions: {str(e)}")
-            return None
 
 
 # Function to integrate the feature manager into the main application
