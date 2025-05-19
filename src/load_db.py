@@ -1,31 +1,36 @@
 import sys
 import logging
 import shutil
-import os
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche Python
+# Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Importer les variables depuis config.py
-from config import (CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY,
-                    CONFLUENCE_USERNAME, CONFLUENCE_API_KEY, PERSIST_DIRECTORY)
+# Import variables from config.py
+from config import (
+    CONFLUENCE_SPACE_NAME,
+    CONFLUENCE_SPACE_KEY,
+    CONFLUENCE_USERNAME,
+    CONFLUENCE_API_KEY,
+    PERSIST_DIRECTORY,
+)
 
-from langchain_community.document_loaders import ConfluenceLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_community.vectorstores import FAISS
-class DataLoader():
+
+
+class DataLoader:
     """Create, load, save the DB using the confluence Loader"""
+
     def __init__(
         self,
         confluence_url=CONFLUENCE_SPACE_NAME,
         username=CONFLUENCE_USERNAME,
         api_key=CONFLUENCE_API_KEY,
         space_key=CONFLUENCE_SPACE_KEY,
-        persist_directory=PERSIST_DIRECTORY
+        persist_directory=PERSIST_DIRECTORY,
     ):
-
         self.confluence_url = confluence_url
         self.username = username
         self.api_key = api_key
@@ -35,191 +40,194 @@ class DataLoader():
     def load_from_confluence_loader(self):
         """Load HTML files from Confluence using direct Atlassian API"""
         try:
-            # Configurer le logging pour afficher les messages dans la console
+            # Configure logging to display messages in the console
             import sys
             from atlassian import Confluence
             from langchain_core.documents import Document
-            from bs4 import BeautifulSoup
             import html2text
-            
-            logging.basicConfig(level=logging.INFO, stream=sys.stdout, 
-                              format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            
-            # Afficher les informations de connexion pour le débogage (sans la clé API)
-            print(f"\n==== DéTAILS DE CONNEXION CONFLUENCE ====")
+
+            logging.basicConfig(
+                level=logging.INFO,
+                stream=sys.stdout,
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            )
+
+            # Display connection information for debugging (without the API key)
+            print("\n==== CONFLUENCE CONNECTION DETAILS ====")
             print(f"URL: {self.confluence_url}")
             print(f"Username: {self.username}")
             print(f"Space Key: {self.space_key}")
-            print(f"API Key: {'*' * 5}{self.api_key[-5:] if self.api_key else 'Non définie'}")
-            
-            # S'assurer que l'URL est au bon format (sans le chemin spécifique)
+            print(f"API Key: {'*' * 5}{self.api_key[-5:] if self.api_key else 'Not defined'}")
+
+            # Ensure the URL is in the correct format (without the specific path)
             base_url = self.confluence_url
             if "/wiki" in base_url:
                 base_url = base_url.split("/wiki")[0]
-                print(f"URL ajustée: {base_url}")
-            
-            # Vérifier que les paramètres sont corrects
+                print(f"Adjusted URL: {base_url}")
+
+            # Verify that the parameters are correct
             if not base_url or not base_url.startswith("http"):
-                raise ValueError(f"URL Confluence invalide: {base_url}")
+                raise ValueError(f"Invalid Confluence URL: {base_url}")
             if not self.username:
-                raise ValueError("Nom d'utilisateur Confluence manquant")
+                raise ValueError("Missing Confluence username")
             if not self.api_key:
-                raise ValueError("Clé API Confluence manquante")
+                raise ValueError("Missing Confluence API key")
             if not self.space_key:
-                raise ValueError("Clé d'espace Confluence manquante")
-            
-            print(f"\n==== TENTATIVE DE CONNEXION À CONFLUENCE ====")
-            # Créer une instance Confluence avec l'API Atlassian
+                raise ValueError("Missing Confluence space key")
+
+            print("\n==== ATTEMPTING CONNECTION TO CONFLUENCE ====")
+            # Create a Confluence instance with the Atlassian API
             confluence = Confluence(
                 url=base_url,
                 username=self.username,
                 password=self.api_key,
-                cloud=True  # Spécifier que c'est une instance cloud
+                cloud=True,  # Specify that it's a cloud instance
             )
-            
-            # Récupérer toutes les pages de l'espace avec pagination
-            print(f"Récupération des pages de l'espace {self.space_key}...")
-            
-            # Utiliser la pagination pour récupérer toutes les pages
-            # La méthode get_all_pages_from_space peut avoir des limites
+
+            # Retrieve all pages from the space with pagination
+            print(f"Retrieving pages from space {self.space_key}...")
+
+            # Use pagination to retrieve all pages
+            # The get_all_pages_from_space method may have limitations
             start = 0
-            limit = 100  # Nombre maximum de pages à récupérer par requête
+            limit = 100  # Maximum number of pages to retrieve per request
             all_pages = []
-            
+
             while True:
-                # Récupérer un lot de pages
-                batch = confluence.get_all_pages_from_space(self.space_key, start=start, limit=limit, expand='version')
-                
+                # Retrieve a batch of pages
+                batch = confluence.get_all_pages_from_space(self.space_key, start=start, limit=limit, expand="version")
+
                 if not batch:
-                    break  # Plus de pages à récupérer
-                    
+                    break  # No more pages to retrieve
+
                 all_pages.extend(batch)
-                print(f"  Récupéré {len(all_pages)} pages jusqu'à présent...")
-                
-                # Mettre à jour l'index de départ pour la prochaine requête
+                print(f"  Retrieved {len(all_pages)} pages so far...")
+
+                # Update the starting index for the next request
                 start += len(batch)
-                
-                # Si le nombre de pages récupérées est inférieur à la limite, nous avons tout récupéré
+
+                # If the number of pages retrieved is less than the limit, we've retrieved everything
                 if len(batch) < limit:
                     break
-            
+
             pages = all_pages
-            print(f"Récupération réussie! {len(pages)} pages trouvées au total.")
-            
-            # Récupérer également les pages d'enfants (sous-pages) si nécessaire
+            print(f"Retrieval successful! {len(pages)} pages found in total.")
+
+            # Also retrieve child pages (sub-pages) if necessary
             if len(pages) > 0:
-                print("Recherche de sous-pages supplémentaires...")
+                print("Searching for additional sub-pages...")
                 child_pages = []
-                
+
                 for page in pages:
-                    page_id = page.get('id')
-                    # Récupérer les enfants de cette page
+                    page_id = page.get("id")
+                    # Retrieve the children of this page
                     try:
-                        children = confluence.get_page_child_by_type(page_id, type='page')
+                        children = confluence.get_page_child_by_type(page_id, type="page")
                         if children and len(children) > 0:
                             child_pages.extend(children)
                     except Exception as e:
-                        print(f"Erreur lors de la récupération des sous-pages pour {page.get('title', 'Sans titre')}: {str(e)}")
-                
-                # Ajouter les sous-pages à notre liste principale (en évitant les doublons)
-                existing_ids = {p.get('id') for p in pages}
-                new_child_pages = [p for p in child_pages if p.get('id') not in existing_ids]
-                
+                        print(f"Error retrieving sub-pages for {page.get('title', 'Untitled')}: {str(e)}")
+
+                # Add sub-pages to our main list (avoiding duplicates)
+                existing_ids = {p.get("id") for p in pages}
+                new_child_pages = [p for p in child_pages if p.get("id") not in existing_ids]
+
                 if new_child_pages:
                     pages.extend(new_child_pages)
-                    print(f"Ajout de {len(new_child_pages)} sous-pages supplémentaires. Total: {len(pages)} pages.")
-            
-            
-            # Convertir les pages en documents LangChain
+                    print(f"Added {len(new_child_pages)} additional sub-pages. Total: {len(pages)} pages.")
+
+            # Convert pages to LangChain documents
             docs = []
             h = html2text.HTML2Text()
             h.ignore_links = False
             h.ignore_images = False
             h.ignore_tables = False
-            h.body_width = 0  # Pas de limite de largeur pour conserver la mise en forme
-            
-            # Nombre total de pages à traiter
+            h.body_width = 0  # No width limit to preserve formatting
+
+            # Total number of pages to process
             total_pages = len(pages)
-            print(f"Traitement du contenu de {total_pages} pages...")
-            
+            print(f"Processing content of {total_pages} pages...")
+
             for i, page in enumerate(pages):
                 try:
-                    # Récupérer les informations de base de la page
-                    page_id = page.get('id')
-                    page_title = page.get('title', 'Sans titre')
-                    
-                    # Afficher la progression régulièrement
+                    # Retrieve basic information about the page
+                    page_id = page.get("id")
+                    page_title = page.get("title", "Untitled")
+
+                    # Display progress regularly
                     if i % 10 == 0 or i == total_pages - 1:
-                        print(f"Traitement de la page {i+1}/{total_pages}: {page_title}")
-                    
-                    # Récupérer le contenu complet de la page avec les propriétés et les pièces jointes
+                        print(f"Processing page {i + 1}/{total_pages}: {page_title}")
+
+                    # Retrieve the complete content of the page with properties and attachments
                     page_data = confluence.get_page_by_id(
-                        page_id, 
-                        expand='body.storage,history,space,version,ancestors,children.page,children.attachment,metadata.properties'
+                        page_id,
+                        expand="body.storage,history,space,version,ancestors,children.page,children.attachment,metadata.properties",
                     )
-                    
-                    # Extraire le contenu HTML
-                    content = page_data.get('body', {}).get('storage', {}).get('value', '')
-                    
-                    # Informations supplémentaires pour enrichir les métadonnées
-                    space_info = page_data.get('space', {})
-                    version_info = page_data.get('version', {})
-                    ancestors = page_data.get('ancestors', [])
-                    last_updated = version_info.get('when', '')
-                    creator = version_info.get('by', {}).get('displayName', '')
-                    
-                    # Construire un chemin de navigation (breadcrumb)
-                    breadcrumb = ' > '.join([a.get('title', '') for a in ancestors] + [page_title])
-                    
-                    # Convertir HTML en texte
+
+                    # Extract HTML content
+                    content = page_data.get("body", {}).get("storage", {}).get("value", "")
+
+                    # Additional information to enrich metadata
+                    space_info = page_data.get("space", {})
+                    version_info = page_data.get("version", {})
+                    ancestors = page_data.get("ancestors", [])
+                    last_updated = version_info.get("when", "")
+                    creator = version_info.get("by", {}).get("displayName", "")
+
+                    # Build a navigation path (breadcrumb)
+                    breadcrumb = " > ".join([a.get("title", "") for a in ancestors] + [page_title])
+
+                    # Convert HTML to text
                     text_content = h.handle(content)
-                    
-                    # Ajouter des informations structurées au début du contenu pour améliorer la recherche
+
+                    # Add structured information at the beginning of the content to improve search
                     structured_header = f"# {page_title}\n\n"
                     if breadcrumb:
-                        structured_header += f"**Chemin:** {breadcrumb}\n\n"
+                        structured_header += f"**Path:** {breadcrumb}\n\n"
                     if creator:
-                        structured_header += f"**Auteur:** {creator}\n\n"
+                        structured_header += f"**Author:** {creator}\n\n"
                     if last_updated:
-                        structured_header += f"**Dernière mise à jour:** {last_updated}\n\n"
-                    
+                        structured_header += f"**Last updated:** {last_updated}\n\n"
+
                     structured_header += "---\n\n"
-                    
-                    # Combiner l'en-tête structurée avec le contenu
+
+                    # Combine the structured header with the content
                     enhanced_content = structured_header + text_content
-                    
-                    # Créer un document LangChain avec des métadonnées enrichies
+
+                    # Create a LangChain document with enriched metadata
                     doc = Document(
                         page_content=enhanced_content,
                         metadata={
-                            'source': f"{base_url}/wiki/spaces/{self.space_key}/pages/{page_id}",
-                            'title': page_title,
-                            'id': page_id,
-                            'space_name': space_info.get('name', ''),
-                            'space_key': space_info.get('key', ''),
-                            'last_updated': last_updated,
-                            'creator': creator,
-                            'breadcrumb': breadcrumb,
-                            'url': f"{base_url}/wiki/spaces/{self.space_key}/pages/{page_id}"
-                        }
+                            "source": f"{base_url}/wiki/spaces/{self.space_key}/pages/{page_id}",
+                            "title": page_title,
+                            "id": page_id,
+                            "space_name": space_info.get("name", ""),
+                            "space_key": space_info.get("key", ""),
+                            "last_updated": last_updated,
+                            "creator": creator,
+                            "breadcrumb": breadcrumb,
+                            "url": f"{base_url}/wiki/spaces/{self.space_key}/pages/{page_id}",
+                        },
                     )
                     docs.append(doc)
-                    
+
                 except Exception as page_error:
-                    print(f"Erreur lors du traitement de la page {page_title}: {str(page_error)}")
+                    print(f"Error processing page {page_title}: {str(page_error)}")
                     import traceback
+
                     print(traceback.format_exc())
-            
-            print(f"Chargement réussi: {len(docs)} documents récupérés")
+
+            print(f"Loading successful: {len(docs)} documents retrieved")
             return docs
-            
+
         except Exception as e:
-            print(f"\n==== ERREUR DE CONNEXION CONFLUENCE ====")
-            print(f"Type d'erreur: {type(e).__name__}")
-            print(f"Message d'erreur: {str(e)}")
-            # Pour le débogage, affichons la trace complète
+            print("\n==== CONFLUENCE CONNECTION ERROR ====")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error message: {str(e)}")
+            # For debugging, let's show the full trace
             import traceback
-            print("Trace d'erreur complète:")
+
+            print("Complete error trace:")
             print(traceback.format_exc())
             raise e
 
@@ -246,7 +254,7 @@ class DataLoader():
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=512,
             chunk_overlap=20,
-            separators=["\n\n", "\n", "(?<=\. )", " ", ""]
+            separators=["\n\n", "\n", r"(?<=\. )", " ", ""],
         )
 
         splitted_docs = splitter.split_documents(md_docs)
@@ -254,42 +262,43 @@ class DataLoader():
 
     def save_to_db(self, splitted_docs, embeddings):
         """Save chunks to Chroma DB"""
-        from langchain_community.vectorstores import FAISS
         db = FAISS.from_documents(splitted_docs, embeddings)
         db.save_local(self.persist_directory)
         return db
 
     def load_from_db(self, embeddings):
         """Loader chunks to Chroma DB"""
-        from langchain_community.vectorstores import FAISS
         db = FAISS.load_local(
-            self.persist_directory, 
-            embeddings, 
-            allow_dangerous_deserialization=True  # Nécessaire pour les versions récentes de LangChain
+            self.persist_directory,
+            embeddings,
+            allow_dangerous_deserialization=True,  # Necessary for recent versions of LangChain
         )
         return db
 
     def create_dummy_docs(self):
-        """Crée un jeu de données factice pour permettre le démarrage de l'application"""
+        """Creates a dummy dataset to allow the application to start"""
         from langchain_core.documents import Document
-        
-        logging.warning("Création d'un jeu de données factice pour permettre le démarrage de l'application")
-        
+
+        logging.warning("Creating dummy dataset to allow the application to start")
+
         dummy_docs = [
             Document(
-                page_content="Bienvenue dans l'assistant Confluence. Cette base de données est une version factice créée car la connexion à Confluence a échoué.",
-                metadata={"source": "dummy_doc_1", "title": "Bienvenue"}
+                page_content="Welcome to the Confluence Assistant. This database "
+                "is a dummy version created because the connection to Confluence failed.",
+                metadata={"source": "dummy_doc_1", "title": "Welcome"},
             ),
             Document(
-                page_content="Pour utiliser l'assistant avec les vraies données, vérifiez vos paramètres de connexion à Confluence dans le fichier .env.",
-                metadata={"source": "dummy_doc_2", "title": "Configuration"}
+                page_content="To use the assistant with real data, check your Confluence "
+                "connection settings in the .env file.",
+                metadata={"source": "dummy_doc_2", "title": "Configuration"},
             ),
             Document(
-                page_content="Assurez-vous que les variables CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY, CONFLUENCE_USERNAME et CONFLUENCE_PRIVATE_API_KEY sont correctement configurées.",
-                metadata={"source": "dummy_doc_3", "title": "Variables d'environnement"}
+                page_content="Make sure the variables CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY, "
+                "CONFLUENCE_USERNAME and CONFLUENCE_PRIVATE_API_KEY are properly configured.",
+                metadata={"source": "dummy_doc_3", "title": "Environment Variables"},
             ),
         ]
-        
+
         return dummy_docs
 
     def set_db(self, embeddings):
@@ -303,9 +312,9 @@ class DataLoader():
             # Load docs from Confluence
             docs = self.load_from_confluence_loader()
         except Exception as e:
-            logging.error(f"Erreur lors du chargement depuis Confluence: {str(e)}")
-            logging.warning("Utilisation d'un jeu de données factice pour permettre le démarrage de l'application")
-            # Créer un jeu de données factice
+            logging.error(f"Error when loading from the Confluence {str(e)}")
+            logging.warning("Using a dummy dataset to allow the application to start")
+            # Create a dummy dataset
             docs = self.create_dummy_docs()
 
         # Split Docs

@@ -1,101 +1,97 @@
 # RAG Chatbot with Confluence
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Isskar/RAG-Chatbot-with-Confluence/blob/main/LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Isskar/Isschat/main/LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
-Un chatbot intelligent qui interagit avec la base de connaissances Confluence de Kanbios en utilisant la technologie RAG (Retrieval-Augmented Generation).
+An intelligent chatbot that interacts with Kanbios' Confluence knowledge base using RAG (Retrieval-Augmented Generation) technology.
 
-## Fonctionnalités
+## Features
 
-- Recherche sémantique dans la documentation Confluence
-- Interface conversationnelle intuitive avec Streamlit
-- Mise en cache des embeddings pour des performances accrues
-- Tableau de bord d'administration
-- Système d'authentification utilisateur
-- Historique des requêtes et feedback utilisateur
-- Analyse des performances et des interactions
+- Semantic search in Confluence documentation
+- Intuitive conversational interface with Streamlit
+- Embedding caching for improved performance
+- Admin dashboard
+- User authentication system
+- Query history and user feedback
+- Performance and interaction analysis
 
 ## Installation
 
-### Prérequis
-- Python 3.10+
-- Compte Confluence avec permissions API
-- Ollama installé localement
+### Prerequisites
+- Install uv, on mac : `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Source your future .venv binaries with `source .venv/bin/activate` that you can add to your terminal profile
 
 ### Configuration
 
-1. **Cloner le dépôt**
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/Isskar/RAG-Chatbot-with-Confluence.git
-   cd RAG-Chatbot-with-Confluence
+   git clone https://github.com/Isskar/Isschat.git
+   cd Isschat
    ```
 
-2. **Créer un environnement virtuel**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Sur Linux/Mac
-   # .\.venv\Scripts\activate  # Sur Windows
-   ```
-
-3. **Installer les dépendances**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configurer les variables d'environnement**
-   Créez un fichier `.env` à la racine du projet avec les variables suivantes :
-   ```env
-   # Clé API de votre compte Confluence (récupérable sur :
-   # https://id.atlassian.com/manage-profile/security/api-tokens)
-   CONFLUENCE_PRIVATE_API_KEY=votre_api_key
+2. **Configure environment variables**
+   Copy `.env.example` to `.env` file at root with:
    
-   # URL de votre espace Confluence
-   CONFLUENCE_SPACE_NAME=https://kanbios.atlassian.net
+   - Confluence API key got from:
+     https://id.atlassian.com/manage-profile/security/api-tokens)
    
-   # Votre email de connexion
-   EMAIL_ADRESS=prenom.nomfamilles@isskar.fr
-   ```
+   - Confluence space URL
+     CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
+   
+   - Your login email
+     CONFLUENCE_EMAIL_ADRESS=firstname.lastname@your_company.com
+   
+   - OpenRouter API key (for AI model access)
+   OPENROUTER_API_KEY=your_openrouter_api_key
+   - Get your API key from :
+     https://openrouter.ai/
 
-## Lancement
 
-1. **Démarrer le serveur Ollama** (dans un terminal séparé)
-   ```bash
-   ollama serve
-   ```
+## Launch
 
-2. **Lancer l'application Streamlit**
+1. **Launch Streamlit app**
    ```bash
    streamlit run src/streamlit.py
    ```
 
-3. **Accéder à l'application**
-   Ouvrez votre navigateur à l'adresse : http://localhost:8501
+2. **Reconstruct the database**
+
+   Click on the button "Rebuild from Confluence"  
+
+3. **Launch the chatbot**
+
+   Ask your question to the chatbot 
+   
 
 ## Architecture
 
 ```
 RAG-Chatbot-with-Confluence/
-├── data/                    # Dossier pour les données persistantes
-│   ├── cache/               # Cache des embeddings
-│   └── history.db           # Base de données SQLite pour l'historique
+├── data/                    # Persistent data
+│   ├── cache/               # Embedding cache
+│   └── history.db           # SQLite database for history
 ├── src/
-│   ├── auth.py             # Gestion de l'authentification
-│   ├── help_desk.py         # Logique principale du chatbot
-│   ├── streamlit.py         # Interface utilisateur Streamlit
-│   ├── features_integration.py # Intégration des fonctionnalités avancées
+│   ├── auth.py             # Authentication
+│   ├── help_desk.py         # Main chatbot logic
+│   ├── streamlit.py         # Streamlit UI
+│   ├── features_integration.py # Advanced features
 │   └── ...
-├── .env.example           # Exemple de configuration
-├── requirements.txt        # Dépendances Python
-└── README.md              # Ce fichier
+├── .env.example           # Configuration example
+├── requirements.txt        # Python dependencies
+└── README.md              # This file
 ```
 
-## Fonctionnalités avancées
+## Advanced Features
 
-- **Analyse conversationnelle** : Suivi des interactions utilisateur
-- **Suivi des performances** : Mesure des temps de réponse et précision
-- **Système de feedback** : Évaluation des réponses par les utilisateurs
-- **Historique des requêtes** : Consultation des recherches précédentes
-- **Suggestion de questions** : Propositions de questions connexes
+- **Conversation analysis**: User interaction tracking
+- **Performance tracking**: Response time and accuracy metrics
+- **Feedback system**: User response evaluation
+- **Query history**: Previous search consultation
+- **Question suggestions**: Related question proposals
+
+## Model Integration
+
+This project uses OpenRouter.ai as the AI model provider, which gives access to various large language models including ChatGPT. The OpenRouter integration is configured in `src/help_desk.py` and requires an API key from [OpenRouter](https://openrouter.ai/).
 
 ## License
 
@@ -104,4 +100,4 @@ Added in [commit f801768](https://github.com/Isskar/Isschat/commit/f801768).
 
 ---
 
-Développé par Nicolas Lambropoulos
+Developed by Nicolas Lambropoulos

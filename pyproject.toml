@@ -1,0 +1,45 @@
+[project]
+name = "isschat"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    {name = "Nicolas Lambropoulos", email = "nicolas.lambropoulos@isskar.fr"},
+    {name = "Emin Calyaka", email = "emin.calyaka@isskar.fr"}
+]
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-community>=0.2.0",
+    "langchain>=0.2.0",
+    "streamlit>=1.31.0",
+    "langchain-core>=0.2.0",
+    "langchain-text-splitters>=0.2.0",
+    "faiss-cpu>=1.7.4",
+    "pandas>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "huggingface-hub>=0.19.0",
+    "sentence-transformers>=2.2.2",
+    "openai>=1.0.0",
+    "atlassian-python-api>=3.41.0",
+    "lxml>=5.1.0",
+    "beautifulsoup4>=4.12.0",
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+    "tqdm>=4.65.0",
+    "watchdog>=3.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "scikit-learn>=1.2.0",
+    "html2text>=2025.4.15",
+    "langchain-huggingface>=0.2.0",
+    "langchain-openai>=0.3.16",
+    "pre-commit>=4.2.0",
+    "ruff>=0.11.9",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = []
