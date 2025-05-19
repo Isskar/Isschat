@@ -1,6 +1,6 @@
 # RAG Chatbot with Confluence
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Isskar/Isschat/blob/main/LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
 An intelligent chatbot that interacts with Kanbios' Confluence knowledge base using RAG (Retrieval-Augmented Generation) technology.
@@ -19,6 +19,7 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 
 ### Prerequisites
 - Install uv, on mac : `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Source your future .venv binaries with `source .venv/bin/activate` that you can add to your terminal profile
 
 ### Configuration
 
@@ -32,29 +33,30 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
    Copy `.env.example` to `.env` file at root with:
    
    - Confluence API key got from:
-   # https://id.atlassian.com/manage-profile/security/api-tokens)
+     https://id.atlassian.com/manage-profile/security/api-tokens)
    
    - Confluence space URL
-   CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
+     CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
    
    - Your login email
-   CONFLUENCE_EMAIL_ADRESS=firstname.lastname@your_company.com
+     CONFLUENCE_EMAIL_ADRESS=firstname.lastname@your_company.com
    
    - OpenRouter API key (for AI model access)
    OPENROUTER_API_KEY=your_openrouter_api_key
-   # Get your API key from https://openrouter.ai/
+   - Get your API key from :
+     https://openrouter.ai/
 
 
 ## Launch
 
 1. **Launch Streamlit app**
    ```bash
-   uv run streamlit run src/streamlit.py
+   streamlit run src/streamlit.py
    ```
 
 2. **Reconstruct the database**
 
-   Click on the button "reconstruire base de donnée"
+   Click on the button "Rebuild from Confluence"  
 
 3. **Launch the chatbot**
 
@@ -79,49 +81,6 @@ RAG-Chatbot-with-Confluence/
 └── README.md              # This file
 ```
 
-## Development
-
-### Testing
-
-This project uses `pytest` for testing. Tests are located in the `tests/` directory.
-
-#### Prerequisites
-
-- Python 3.12 or higher
-- UV package manager
-
-#### Setting up the development environment
-
-1. Install UV if you haven't already:
-   ```bash
-   curl -sSf https://astral.sh/uv/install.sh | sh
-   ```
-
-2. Install the project in development mode with test dependencies:
-   ```bash
-   uv pip install -e ".[test]"
-   ```
-
-#### Running tests
-
-To run all tests:
-```bash
-uv run pytest
-```
-
-To run tests with coverage report:
-```bash
-uv run pytest --cov=src
-```
-
-To run a specific test file:
-```bash
-uv run pytest tests/test_basic.py -v
-```
-To test your confluence api : 
-```bash
-uv run test_confluence.py
-```
 ## Advanced Features
 
 - **Conversation analysis**: User interaction tracking
@@ -133,6 +92,11 @@ uv run test_confluence.py
 ## Model Integration
 
 This project uses OpenRouter.ai as the AI model provider, which gives access to various large language models including ChatGPT. The OpenRouter integration is configured in `src/help_desk.py` and requires an API key from [OpenRouter](https://openrouter.ai/).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
+Added in [commit f801768](https://github.com/Isskar/Isschat/commit/f801768).
 
 ---
 

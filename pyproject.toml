@@ -3,10 +3,11 @@ name = "isschat"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
 authors = [
-    {name = "Nicolas Lambropoulos", email = "nicolas.lambropoulos@isskar.fr"}
+    {name = "Nicolas Lambropoulos", email = "nicolas.lambropoulos@isskar.fr"},
+    {name = "Emin Calyaka", email = "emin.calyaka@isskar.fr"}
 ]
+requires-python = ">=3.12"
 dependencies = [
     "langchain-community>=0.2.0",
     "langchain>=0.2.0",
@@ -30,16 +31,33 @@ dependencies = [
     "seaborn>=0.12.0",
     "scikit-learn>=1.2.0",
     "html2text>=2025.4.15",
+    "langchain-huggingface>=0.2.0",
+    "langchain-openai>=0.3.16",
+    "pre-commit>=4.2.0",
+    "ruff>=0.11.9",
+    "mypy>=1.15.0",
+    "pandas-stubs>=2.2.3.250308",
+    "types-seaborn>=0.13.2.20250516",
 ]
 
-[project.optional-dependencies]
-test = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-]
+[tool.ruff]
+line-length = 120
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = "test_*.py"
-python_functions = "test_*"
-addopts = "-v"
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "help_desk.*"
+follow_untyped_imports = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "load_db.*"
+follow_untyped_imports = true
+ignore_missing_imports = true

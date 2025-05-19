@@ -3,60 +3,61 @@ import sys
 from dotenv import load_dotenv
 from atlassian import Confluence
 
-# Charger les variables d'environnement
+# Load environment variables
 load_dotenv()
 
-# Récupérer les informations de connexion
+# Retrieve connection information
 confluence_url = os.getenv("CONFLUENCE_SPACE_NAME")
 api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
 username = os.getenv("CONFLUENCE_EMAIL_ADRESS")
 space_key = os.getenv("CONFLUENCE_SPACE_KEY")
 
-# Afficher les informations (sans la clé complète)
-print(f"==== INFORMATIONS DE CONNEXION ====")
+# Display information (without the complete key)
+print("==== CONNECTION INFORMATION ====")
 print(f"URL: {confluence_url}")
 print(f"Username: {username}")
 print(f"Space Key: {space_key}")
-print(f"API Key: {'*' * 5}{api_key[-5:] if api_key else 'Non définie'}")
+print(f"API Key: {'*' * 5}{api_key[-5:] if api_key else 'Not defined'}")
 
-# S'assurer que l'URL est au bon format (sans le chemin spécifique)
-if "/wiki" in confluence_url:
+# Make sure the URL is in the correct format (without the specific path)
+if confluence_url and "/wiki" in confluence_url:
     base_url = confluence_url.split("/wiki")[0]
-    print(f"URL ajustée: {base_url}")
+    print(f"Adjusted URL: {base_url}")
 else:
-    base_url = confluence_url
+    base_url = confluence_url if confluence_url else ""
 
 try:
-    print("\n==== TENTATIVE DE CONNEXION À CONFLUENCE ====")
-    # Créer une instance Confluence
+    print("\n==== ATTEMPTING CONNECTION TO CONFLUENCE ====")
+    # Create a Confluence instance
     confluence = Confluence(
         url=base_url,
         username=username,
         password=api_key,
-        cloud=True  # Spécifier que c'est une instance cloud
+        cloud=True,  # Specify that it's a cloud instance
     )
-    
-    # Tester la connexion en récupérant les espaces
-    print("Test de connexion: récupération des espaces...")
+
+    # Test the connection by retrieving spaces
+    print("Connection test: retrieving spaces...")
     spaces = confluence.get_all_spaces()
-    print(f"Connexion réussie! {len(spaces)} espaces trouvés.")
-    
-    # Tester la récupération des pages dans l'espace spécifié
-    print(f"\nRécupération des pages dans l'espace {space_key}...")
+    print(f"Connection successful! {len(spaces)} spaces found.")
+
+    # Test retrieving pages in the specified space
+    print(f"\nRetrieving pages in space {space_key}...")
     pages = confluence.get_all_pages_from_space(space_key)
-    print(f"Récupération réussie! {len(pages)} pages trouvées.")
-    
-    # Afficher quelques informations sur les pages
+    print(f"Retrieval successful! {len(pages)} pages found.")
+
+    # Display some information about the pages
     if pages:
-        print("\nVoici les 3 premières pages:")
+        print("\nHere are the first 3 pages:")
         for i, page in enumerate(pages[:3]):
-            print(f"  {i+1}. {page.get('title', 'Sans titre')} (ID: {page.get('id', 'N/A')})")
-    
+            print(f"  {i + 1}. {page.get('title', 'Untitled')} (ID: {page.get('id', 'N/A')})")
+
 except Exception as e:
-    print(f"\n==== ERREUR DE CONNEXION ====")
-    print(f"Type d'erreur: {type(e).__name__}")
-    print(f"Message d'erreur: {str(e)}")
+    print("\n==== CONNECTION ERROR ====")
+    print(f"Error type: {type(e).__name__}")
+    print(f"Error message: {str(e)}")
     import traceback
-    print("\nTrace d'erreur complète:")
+
+    print("\nComplete error trace:")
     print(traceback.format_exc())
     sys.exit(1)
