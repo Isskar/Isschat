@@ -271,18 +271,15 @@ class FeaturesManager:
             suggestions = self.question_suggester.suggest_next_questions(question, answer)
 
             if suggestions:
-                pass
-                # st.write("---")
-                # st.write("### Suggested questions")
+                st.write("---")
+                st.write("### Suggested questions")
 
-                # for i, suggestion in enumerate(suggestions):
-                #     # if st.button(suggestion, key=f"suggest_{i}"):
-                #     #     # Store the question in the session for reuse
-                #     #     return suggestion
-                #     pass
+                for i, suggestion in enumerate(suggestions):
+                    if st.button(suggestion, key=f"suggest_{i}"):
+                        # Store the question in the session for reuse
+                        return suggestion
         except Exception as e:
             self.logger.error(f"Error displaying suggestions: {str(e)}")
-            return None
         return None
 
 
