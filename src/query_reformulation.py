@@ -1,19 +1,20 @@
 import re
 import json
 import os
+from typing import Optional, Callable
 
 
 class QueryReformulator:
-    """Automatically reformulates queries to improve response quality"""
+    """Reformule automatiquement les requêtes pour améliorer la qualité des réponses"""
 
-    def __init__(self, cache_path="./cache"):
+    def __init__(self, cache_path: str = "./cache") -> None:
         self.cache_path = cache_path
         os.makedirs(cache_path, exist_ok=True)
         self.reformulation_patterns_file = os.path.join(cache_path, "reformulation_patterns.json")
         self.patterns = self._load_patterns()
 
     def _load_patterns(self):
-        """Load reformulation patterns from cache or create default patterns"""
+        """Charge les patterns de reformulation depuis le cache ou crée des patterns par défaut"""
         if os.path.exists(self.reformulation_patterns_file):
             try:
                 with open(self.reformulation_patterns_file, "r") as f:
@@ -24,39 +25,45 @@ class QueryReformulator:
             return self._create_default_patterns()
 
     def _create_default_patterns(self):
-        """Create default reformulation patterns"""
+        """Crée des patterns de reformulation par défaut"""
         default_patterns = {
             "expansion": [
-                {"pattern": r"\b(\w+)\b", "replacement": r"detailed context \1"},
-                {"pattern": r"how (.+)", "replacement": r"explain in detail how \1"},
+                {"pattern": r"\b(\w+)\b", "replacement": r"contexte \1 détaillé"},
                 {
-                    "pattern": r"what is (.+)",
-                    "replacement": r"define and explain in detail \1",
+                    "pattern": r"comment (.+)",
+                    "replacement": r"explique en détail comment \1",
                 },
-                {"pattern": r"why (.+)", "replacement": r"explain the reasons why \1"},
+                {
+                    "pattern": r"qu'est-ce que (.+)",
+                    "replacement": r"définis et explique en détail \1",
+                },
+                {
+                    "pattern": r"pourquoi (.+)",
+                    "replacement": r"explique les raisons pour lesquelles \1",
+                },
             ],
             "precision": [
                 {
-                    "pattern": r"information about (.+)",
-                    "replacement": r"specific and detailed information about \1",
+                    "pattern": r"information sur (.+)",
+                    "replacement": r"informations spécifiques et détaillées sur \1",
                 },
                 {
-                    "pattern": r"talk about (.+)",
-                    "replacement": r"explain in detail \1 with concrete examples",
+                    "pattern": r"parle de (.+)",
+                    "replacement": r"explique en détail \1 avec des exemples concrets",
                 },
                 {
-                    "pattern": r"I want to know (.+)",
-                    "replacement": r"provide detailed information about \1",
+                    "pattern": r"je veux savoir (.+)",
+                    "replacement": r"fournir des informations détaillées sur \1",
                 },
             ],
             "context": [
                 {
-                    "pattern": r"(.+) project (.+)",
-                    "replacement": r"\1 project \2 in the context of our company",
+                    "pattern": r"(.+) projet (.+)",
+                    "replacement": r"\1 projet \2 dans le contexte de notre entreprise",
                 },
                 {
-                    "pattern": r"(.+) process (.+)",
-                    "replacement": r"\1 process \2 according to our internal documentation",
+                    "pattern": r"(.+) processus (.+)",
+                    "replacement": r"\1 processus \2 selon notre documentation interne",
                 },
             ],
         }
@@ -66,13 +73,13 @@ class QueryReformulator:
 
         return default_patterns
 
-    def _save_patterns(self):
-        """Save the reformulation patterns to cache"""
+    def _save_patterns(self) -> None:
+        """Sauvegarde les patterns de reformulation dans le cache"""
         with open(self.reformulation_patterns_file, "w") as f:
             json.dump(self.patterns, f)
 
-    def add_pattern(self, category, pattern, replacement):
-        """Add a new reformulation pattern"""
+    def add_pattern(self, category: str, pattern: str, replacement: str) -> None:
+        """Ajoute un nouveau pattern de reformulation"""
         if category not in self.patterns:
             self.patterns[category] = []
 
@@ -80,55 +87,57 @@ class QueryReformulator:
 
         self._save_patterns()
 
-    def reformulate_query(self, query, strategy="auto"):
-        """Reformulate a query according to the specified strategy"""
+    def reformulate_query(self, query: str, strategy: str = "auto") -> str:
+        """Reformule une requête selon la stratégie spécifiée"""
         original_query = query
 
         if strategy == "auto":
-            # Automatically determine the best strategy
+            # Déterminer automatiquement la meilleure stratégie
             if len(query.split()) <= 3:
-                strategy = "expansion"  # Short query -> expansion
-            elif any(word in query.lower() for word in ["how", "why", "what", "who"]):
-                strategy = "precision"  # Question -> precision
+                strategy = "expansion"  # Requête courte -> expansion
+            elif any(word in query.lower() for word in ["comment", "pourquoi", "quoi", "qui"]):
+                strategy = "precision"  # Question -> précision
             else:
-                strategy = "context"  # Default -> context
+                strategy = "context"  # Par défaut -> contexte
 
-        # Apply patterns from the chosen strategy
+        # Appliquer les patterns de la stratégie choisie
         if strategy in self.patterns:
             for pattern_obj in self.patterns[strategy]:
                 pattern = pattern_obj["pattern"]
                 replacement = pattern_obj["replacement"]
                 query = re.sub(pattern, replacement, query, flags=re.IGNORECASE)
 
-        # Avoid identical or too long reformulations
+        # Éviter les reformulations identiques ou trop longues
         if query == original_query or len(query) > 3 * len(original_query):
             return original_query
 
         return query
 
-    def suggest_reformulations(self, query, max_suggestions=3):
-        """Suggests multiple possible reformulations"""
+    def suggest_reformulations(self, query: str, max_suggestions: int = 3) -> list:
+        """Suggère plusieurs reformulations possibles"""
         suggestions = []
 
+        # Appliquer chaque stratégie
         for strategy in self.patterns:
             reformulation = self.reformulate_query(query, strategy)
             if reformulation != query and reformulation not in suggestions:
                 suggestions.append(reformulation)
 
+        # Limiter le nombre de suggestions
         return suggestions[:max_suggestions]
 
-    def render_reformulation_widget(self, st, query, callback=None):
-        """Display a reformulation widget with suggestions"""
+    def render_reformulation_widget(self, st, query: str, callback: Optional[Callable] = None) -> str:
+        """Affiche un widget de reformulation dans Streamlit"""
         suggestions = self.suggest_reformulations(query)
 
         if not suggestions:
             return query
 
         st.write("---")
-        st.write("### Suggested Reformulations")
-        st.write("Your query could be more precise. Try these reformulations:")
+        st.write("### Reformulations suggérées")
+        st.write("Votre requête pourrait être plus précise. Essayez ces reformulations:")
 
-        selected_query = query
+        selected_query = query  # Par défaut, on garde la requête originale
 
         for i, suggestion in enumerate(suggestions):
             if st.button(suggestion, key=f"reform_{i}"):
@@ -138,64 +147,69 @@ class QueryReformulator:
 
         return selected_query
 
-    def render_admin_interface(self, st):
-        """Display the administration interface for reformulation patterns"""
-        st.title("Reformulation Configuration")
+    def render_admin_interface(self, st) -> None:
+        """Affiche l'interface d'administration des patterns de reformulation"""
+        st.title("Configuration des Reformulations")
 
-        st.subheader("Existing reformulation patterns")
+        # Afficher les patterns existants
+        st.subheader("Patterns de reformulation existants")
 
         for category, patterns in self.patterns.items():
-            with st.expander(f"Category: {category} ({len(patterns)} patterns)"):
+            with st.expander(f"Catégorie: {category} ({len(patterns)} patterns)"):
                 for i, pattern_obj in enumerate(patterns):
                     st.write(f"**Pattern {i + 1}:** `{pattern_obj['pattern']}` → `{pattern_obj['replacement']}`")
 
-        st.subheader("Add a new pattern")
+        # Ajouter un nouveau pattern
+        st.subheader("Ajouter un nouveau pattern")
 
-        categories = list(self.patterns.keys()) + ["New category"]
-        selected_category = st.selectbox("Category", categories)
+        # Sélection de la catégorie
+        categories = list(self.patterns.keys()) + ["Nouvelle catégorie"]
+        selected_category = st.selectbox("Catégorie", categories)
 
-        if selected_category == "New category":
-            new_category = st.text_input("Name of the new category")
+        if selected_category == "Nouvelle catégorie":
+            new_category = st.text_input("Nom de la nouvelle catégorie")
             if new_category:
                 selected_category = new_category
 
-        # Pattern and replacement input
-        pattern = st.text_input("Regular expression (pattern)")
-        replacement = st.text_input("Replacement text")
+        # Saisie du pattern et du remplacement
+        pattern = st.text_input("Expression régulière (pattern)")
+        replacement = st.text_input("Texte de remplacement")
 
-        if st.button("Add pattern") and pattern and replacement:
+        if st.button("Ajouter le pattern") and pattern and replacement:
             self.add_pattern(selected_category, pattern, replacement)
-            st.success(f"Pattern added to category '{selected_category}'")
+            st.success(f"Pattern ajouté à la catégorie '{selected_category}'")
             st.rerun()
 
 
-# Function to integrate the reformulator into the main application
+# Fonction pour intégrer le reformulateur dans l'application principale
 def integrate_query_reformulator(help_desk):
-    """Integrates the query reformulator into the help_desk"""
+    """Intègre le reformulateur de requêtes au help_desk"""
     reformulator = QueryReformulator()
 
-    # Wrapper function for ask_question that reformulates queries
+    # Fonction wrapper pour ask_question qui reformule les requêtes
     original_ask = help_desk.ask_question
 
-    def ask_with_reformulation(question, verbose=False, auto_reformulate=True):
+    def ask_with_reformulation(
+        question: str, verbose: bool = False, auto_reformulate: bool = True
+    ) -> tuple[str, list[str]]:
         if auto_reformulate:
-            # Automatically reformulate the question
+            # Reformuler automatiquement la question
             reformulated_question = reformulator.reformulate_query(question)
             if verbose and reformulated_question != question:
-                print(f"Reformulated question: {reformulated_question}")
+                print(f"Question reformulée: {reformulated_question}")
 
-            # Use the reformulated question
+            # Utiliser la question reformulée
             answer, sources = original_ask(reformulated_question, verbose)
         else:
-            # Use the original question
+            # Utiliser la question originale
             answer, sources = original_ask(question, verbose)
 
         return answer, sources
 
-    # Replace the original method
+    # Remplacer la méthode originale
     help_desk.ask_question_with_reformulation = ask_with_reformulation
 
-    # Add the reformulator as an attribute
+    # Ajouter le reformulateur comme attribut
     help_desk.query_reformulator = reformulator
 
     return help_desk
