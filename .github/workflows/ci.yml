@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint with ruff and mypy
+    runs-on: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install uv
+      run: |
+        pip install uv
+    
+    - name: Install dependencies
+      run: |
+        uv pip install -e .
+    
+    - name: Lint with ruff
+      run: |
+        uv pip install ruff
+        ruff check .
+        ruff format --check .
+    
+    - name: Type check with mypy
+      run: |
+        uv pip install mypy pandas-stubs types-seaborn
+        mypy src/
