@@ -32,7 +32,8 @@ class HelpDesk:
         )
         self.retrieval_qa_chain = self.get_retrieval_qa()
 
-    def get_template(self) -> str:
+    @staticmethod
+    def get_template() -> str:
         template = """
         You are a professional and friendly virtual assistant named "Confluence Assistant".
         Your mission is to help users find information in the Confluence documentation.
