@@ -55,6 +55,7 @@ def inspect_pickle_content(data: Any, num_items: int = 5) -> None:
     """
     Print information about the content of a pickle file.
 
+
     Args:
         data: The loaded pickle data
         num_items: Number of items to display for collections (default: 5)
@@ -126,6 +127,7 @@ def inspect_faiss_pkl(file_path: str, num_items: int = 5) -> None:
     Directly inspect a .pkl file that's part of a FAISS index.
     This is specifically for the index.pkl file that accompanies a FAISS index.
 
+
     Args:
         file_path: Path to the pickle file
         num_items: Number of items to display (default: 5)
@@ -141,6 +143,7 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
     """
     Read a FAISS index from a directory.
     The directory should contain both index.faiss and index.pkl files.
+
 
     Args:
         directory_path: Path to the directory containing the FAISS index
@@ -160,6 +163,7 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
         if not os.path.exists(index_faiss_path):
             print(f"Error: index.faiss not found in {directory_path}")
             if os.path.exists(index_pkl_path):
+                print("Note: index.pkl exists but index.faiss is missing")
                 print("Note: index.pkl exists but index.faiss is missing")
             return None
 
@@ -187,6 +191,7 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
 def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
     """
     Print information about a FAISS index.
+
 
     Args:
         db: The FAISS index to inspect
@@ -237,7 +242,7 @@ def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
                 if hasattr(sample_doc, "metadata"):
                     print("  Metadata fields:")
                     for key in sample_doc.metadata:
-                        print(f"    - {key}")  # noqa
+                        print(f"    - {key}")
 
                 # Display the documents in a table
                 print(f"\n===== First {num_docs} Documents =====")
@@ -251,9 +256,7 @@ def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
                 content_width = 50
 
                 # Print table header
-                header = (
-                    f"| {'ID': <{id_width}} | {'Title': <{title_width}} | {'Content (truncated)': <{content_width}} |"
-                )
+                header = f"| {'ID':<{id_width}} | {'Title':<{title_width}} | {'Content (truncated)':<{content_width}} |"
                 separator = f"|-{'-' * id_width}-|-{'-' * title_width}-|-{'-' * content_width}-|"
                 print(header)
                 print(separator)

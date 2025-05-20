@@ -14,74 +14,79 @@ import os
 import sys
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche Python
+# Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Import des modules personnalisés
+# Import custom modules
 from src.help_desk import HelpDesk
 from src.auth import (
     logout,
     get_all_users,
     add_user,
     delete_user,
+    login_required,
+    admin_required,
 )
+
+# Import new features
 from src.features_integration import FeaturesManager
 
-# Configuration de la page Streamlit - doit être la première commande Streamlit
+# Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Assistant Confluence", page_icon="🤖", layout="wide")
 
 
-# Pas de cache pour forcer le rechargement à chaque lancement
+# No cache to force reload on each launch
 def get_model(rebuild_db=False):
-    # Afficher un spinner pendant le chargement
-    with st.spinner("Chargement du modèle RAG..."):
-        # Vérifier si le fichier index.faiss existe
+    # Display a spinner during loading
+    with st.spinner("Loading RAG model..."):
+        # Check if the index.faiss file exists
         import sys
         from config import PERSIST_DIRECTORY
 
-        # Afficher les informations de configuration pour le débogage
-        st.sidebar.expander("Débogage", expanded=False).write(
-            f"""
-            **Configuration**: 
-        - Dossier de la base vectorielle: `{PERSIST_DIRECTORY}`
-        - URL Confluence: `{os.getenv("CONFLUENCE_SPACE_NAME")}`
-        - Clé d'espace: `{os.getenv("CONFLUENCE_SPACE_KEY")}`
-        - Utilisateur: `{os.getenv("CONFLUENCE_EMAIL_ADRESS")}`
-        - Clé API: `{"*" * 5}{os.getenv("CONFLUENCE_PRIVATE_API_KEY")[-5:] if os.getenv("CONFLUENCE_PRIVATE_API_KEY") else "Non définie"}`
-        """  # noqa
-        )
+        # Display configuration information for debugging
+        api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
+        key_display = f"*****{api_key[-5:]}" if api_key else "Not defined"
 
-        # Vérifier que le dossier existe
+        st.sidebar.expander("Debug", expanded=False).write(f"""
+                **Configuration**:
+                - Vector store directory: `{PERSIST_DIRECTORY}`
+                - Confluence URL: `{os.getenv("CONFLUENCE_SPACE_NAME")}`
+                - Space key: `{os.getenv("CONFLUENCE_SPACE_KEY")}`
+                - User: `{os.getenv("CONFLUENCE_EMAIL_ADRESS")}`
+                - API key: `{key_display}`
+                """)
+
+        # Check if directory exists
         if not os.path.exists(PERSIST_DIRECTORY):
-            st.warning(f"Le dossier {PERSIST_DIRECTORY} n'existe pas. Tentative de création...")
+            st.warning(f"Directory {PERSIST_DIRECTORY} does not exist. Attempting to create it...")
             try:
                 os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
             except Exception as e:
-                st.error(f"Erreur lors de la création du dossier: {str(e)}")
+                st.error(f"Error creating directory: {str(e)}")
 
-        # Vérifier si les fichiers d'index existent
+        # Check if index files exist
         index_faiss_path = os.path.join(PERSIST_DIRECTORY, "index.faiss")
         index_pkl_path = os.path.join(PERSIST_DIRECTORY, "index.pkl")
 
         if not os.path.exists(index_faiss_path) or not os.path.exists(index_pkl_path):
-            st.warning("Base de données vectorielle non trouvée. Reconstruction en cours...")
+            st.warning("Vector database not found. Rebuilding...")
             rebuild_db = True
         else:
-            st.success("Base de données vectorielle trouvée!")
+            st.success("Vector database found!")
 
-        # Créer le modèle
+        # Create the model
         try:
             model = HelpDesk(new_db=rebuild_db)
             return model
         except Exception as e:
-            st.error(f"Erreur lors du chargement du modèle: {str(e)}")
+            st.error(f"Error loading model: {str(e)}")
             import traceback
 
             st.code(traceback.format_exc(), language="python")
             sys.exit(1)
 
 
-# Initialisation de l'interface utilisateur
+# User interface initialization
 def main():
     # Ensure user is always authenticated
     # Even before rendering sidebar, force user auth
@@ -111,69 +116,67 @@ def main():
     # Sidebar for navigation and options
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/confluence--v2.png", width=100)
-        st.title("Assistant Confluence")
+        st.title("Confluence Assistant")
 
         # Always display user info
-        st.success(f"Connecté en tant que: {st.session_state['user']['email']}")
+        st.success(f"Connected as: {st.session_state['user']['email']}")
 
-        # Navigation principale
+        # Main navigation
         st.subheader("Navigation")
         if st.button("Chat", key="nav_chat"):
             st.session_state["page"] = "chat"
             st.rerun()
 
-        if st.button("Historique", key="nav_history"):
+        if st.button("History", key="nav_history"):
             st.session_state["page"] = "history"
             st.rerun()
 
-        # Options d'administration
+        # Admin options
         if st.session_state["user"].get("is_admin"):
             st.divider()
-            st.info("Statut: Administrateur")
-            if st.button("Tableau de bord admin", key="nav_admin"):
+            st.info("Status: Administrator")
+            if st.button("Admin Dashboard", key="nav_admin"):
                 st.session_state["page"] = "admin"
                 st.rerun()
 
-            # Option pour reconstruire la base de données
+            # Option to rebuild the database
             st.divider()
-            st.subheader("Gestion de la base de données")
+            st.subheader("Database Management")
 
-            # Ajouter un bouton pour forcer la reconstruction complète
-            if st.button("Reconstruire depuis Confluence", type="primary"):
-                with st.spinner("Reconstruction de la base de données depuis Confluence en cours..."):
-                    # Supprimer les fichiers existants
+            # Add button to force complete reconstruction
+            if st.button("Rebuild from Confluence", type="primary"):
+                with st.spinner("Rebuilding database from Confluence..."):
+                    # Delete existing files
                     import shutil
                     from config import PERSIST_DIRECTORY
 
                     try:
                         if os.path.exists(PERSIST_DIRECTORY):
                             shutil.rmtree(PERSIST_DIRECTORY)
-                            st.info(f"Dossier {PERSIST_DIRECTORY} supprimé avec succès.")
+                            st.info(f"Directory {PERSIST_DIRECTORY} successfully deleted.")
                         os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
                     except Exception as e:
-                        st.error(f"Erreur lors de la suppression du dossier: {str(e)}")
+                        st.error(f"Error deleting directory: {str(e)}")
 
-                    # Forcer le rechargement du modèle avec new_db=True
+                    # Force model reload with new_db=True
                     try:
                         st.cache_resource.clear()
-                        get_model(
-                            rebuild_db=True
-                        )  # FIXME : This is a hack, we should rebuild the db instead of calling get_model
-                        st.success("Base de données reconstruite avec succès depuis Confluence!")
+                        get_model(rebuild_db=True)
+                        st.success("Database successfully rebuilt from Confluence!")
                         time.sleep(2)
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Erreur lors de la reconstruction: {str(e)}")
+                        st.error(f"Error during reconstruction: {str(e)}")
                         import traceback
 
                         st.code(traceback.format_exc(), language="python")
 
-        # Bouton de déconnexion (pour tous les utilisateurs)
+        # Logout button (for all users)
         st.divider()
-        if st.button("Déconnexion", key="nav_logout"):
+        if st.button("Logout", key="nav_logout"):
             logout()
 
-    # Déterminer quelle page afficher - user is already authenticated at the beginning of main()
+    # Determine which page to display - user is already authenticated at the beginning of main()
     if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
         admin_page()
     elif st.session_state.get("page") == "history":
@@ -183,182 +186,87 @@ def main():
         chat_page()
 
 
-def login_required(func):
-    """Décorateur pour vérifier si l'utilisateur est connecté"""
-
-    def wrapper(*args, **kwargs):
-        if "user" not in st.session_state:
-            # Auto-login instead of showing a warning
-            email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
-            from src.auth import get_all_users, add_user
-
-            # Quick setup of an admin user
-            users = get_all_users()
-            user = next((u for u in users if u["email"] == email), None)
-
-            if not user:
-                add_user(email, "auto_generated_pwd", is_admin=True)
-                users = get_all_users()
-                user = next((u for u in users if u["email"] == email), None)
-
-            if user:
-                st.session_state["user"] = user
-                st.session_state["user_id"] = f"user_{user['id']}"
-                st.session_state["page"] = "chat"
-                # Continue with function execution after setting up the user
-            else:
-                st.error("Critical authentication error")
-                st.stop()
-                return None
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def admin_required(func):
-    """Décorateur pour vérifier si l'utilisateur est admin"""
-
-    def wrapper(*args, **kwargs):
-        # First ensure user is logged in with login_required decorator logic
-        if "user" not in st.session_state:
-            # Get or create admin user from .env
-            email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
-            from src.auth import get_all_users, add_user
-
-            users = get_all_users()
-            user = next((u for u in users if u["email"] == email), None)
-
-            if not user:
-                # Always create as admin
-                add_user(email, "auto_generated_pwd", is_admin=True)
-                users = get_all_users()
-                user = next((u for u in users if u["email"] == email), None)
-
-            if user:
-                st.session_state["user"] = user
-                st.session_state["user_id"] = f"user_{user['id']}"
-                st.session_state["page"] = "chat"
-            else:
-                st.error("Critical authentication error")
-                st.stop()
-                return None
-
-        # Then check if user is admin (should always be true with our setup)
-        if not st.session_state["user"].get("is_admin"):
-            # Make them admin if they aren't already
-            from src.auth import get_all_users, add_user
-
-            email = st.session_state["user"]["email"]
-            st.session_state["user"]["is_admin"] = True
-
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def login_page():
-    """Auto-login function that skips the login UI entirely"""
-    # Directly set up the user using Confluence credentials
-    email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
-    from src.auth import get_all_users, add_user
-
-    # Ensure user exists
-    users = get_all_users()
-    user = next((u for u in users if u["email"] == email), None)
-
-    if not user:
-        add_user(email, "auto_generated_pwd", is_admin=True)
-        users = get_all_users()
-        user = next((u for u in users if u["email"] == email), None)
-
-    if user:
-        # Set session state and go directly to chat
-        st.session_state["user"] = user
-        st.session_state["user_id"] = f"user_{user['id']}"
-        st.session_state["page"] = "chat"
-        # Force page refresh to apply changes
-        st.rerun()
-    else:
-        st.error("Failed to initialize user session. Check your .env configuration.")
-        st.stop()
-
-
 @login_required
 def chat_page():
-    # Réinitialiser la page si nécessaire
+    # Reset page if necessary
     st.session_state["page"] = "chat"
 
-    # Charger le modèle
+    # Load the model
     model = get_model()
 
-    # Initialiser le gestionnaire de fonctionnalités
+    # Initialize the features manager
     if "features_manager" not in st.session_state:
         user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
         st.session_state["features_manager"] = FeaturesManager(model, user_id)
 
     features = st.session_state["features_manager"]
 
-    # Créer la mise en page
-    st.title("Assistant de Recherche Confluence")
+    # Create layout
+    st.title("Confluence Search Assistant")
 
-    # Barre latérale pour les options avancées
+    # Sidebar for advanced options
     with st.sidebar:
-        st.subheader("Options avancées")
-        show_suggestions = st.toggle("Suggestions de questions", value=True)
-        show_feedback = st.toggle("Feedback sur les réponses", value=True)
+        st.subheader("Advanced Options")
+        show_suggestions = st.toggle("Question suggestions", value=True)
+        show_feedback = st.toggle("Response feedback", value=True)
 
-        # Historique des requêtes
-        if st.button("Historique des requêtes"):
+        # Query history
+        if st.button("Query History"):
             st.session_state["page"] = "history"
             st.rerun()
 
-    # Afficher l'interface principale
-    st.subheader("Posez vos questions sur la documentation Confluence")
+    # Display main interface
+    st.subheader("Ask questions about Confluence documentation")
 
-    # Initialiser l'historique des messages
+    # Initialize message history
     if "messages" not in st.session_state:
         st.session_state["messages"] = [
-            {"role": "assistant", "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ?"}
-        ]
+            {
+                "role": "assistant",
+                "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ?",
+            }
+        ]  # ;)
 
-    # Afficher l'historique des messages
+    # Display message history
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
 
-    # Vérifier s'il y a une question à réutiliser depuis l'historique
+    # Check if there's a question to reuse from history
     if "reuse_question" in st.session_state:
         prompt = st.session_state.pop("reuse_question")
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
 
-        # Traiter la question avec toutes les fonctionnalités
-        with st.spinner("Analyse en cours..."):
+        # Process the question with all features
+        with st.spinner("Analysis in progress..."):
             result, sources = features.process_question(
                 prompt, show_suggestions=show_suggestions, show_feedback=show_feedback
             )
 
-        # Ajouter la réponse aux messages
+        # Add response to messages
         response_content = result
         if sources:
             response_content += "\n\n" + sources
 
         st.session_state.messages.append({"role": "assistant", "content": response_content})
 
-    # Interface de chat
-    if prompt := st.chat_input("Posez votre question ici..."):
-        # Ajouter la question
+    # Chat interface
+    if prompt := st.chat_input("Ask your question here..."):
+        # Add the question
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
 
-        # Traiter la question avec toutes les fonctionnalités
-        with st.spinner("Analyse en cours..."):
+        # Process the question with all features
+        with st.spinner("Analysis in progress..."):
             result, sources = features.process_question(
                 prompt, show_suggestions=show_suggestions, show_feedback=show_feedback
             )
 
-        # Ajouter la réponse aux messages
+        # Add the response to messages
         response_content = result
         if sources:
+            response_content += "\n\n" + sources
+
             response_content += "\n\n" + sources
 
         st.chat_message("assistant").write(response_content)
@@ -367,63 +275,63 @@ def chat_page():
 
 @login_required
 def history_page():
-    """Affiche la page d'historique des requêtes"""
-    # Réinitialiser la page si nécessaire
+    """Display the query history page"""
+    # Reset the page if necessary
     st.session_state["page"] = "history"
 
-    # Récupérer le gestionnaire de fonctionnalités
+    # Get the features manager
     if "features_manager" not in st.session_state:
-        st.error("Erreur: Gestionnaire de fonctionnalités non initialisé")
+        st.error("Error: Features manager not initialized")
         st.session_state["page"] = "chat"
         st.rerun()
 
     features = st.session_state["features_manager"]
     user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
 
-    # Afficher l'historique des requêtes
+    # Display query history
     features.query_history.render_history_page(st, user_id)
 
-    # Bouton de retour
-    if st.button("Retour au chat", key="return_from_history"):
+    # Return button
+    if st.button("Return to chat", key="return_from_history"):
         st.session_state["page"] = "chat"
         st.rerun()
 
 
 @admin_required
 def admin_page():
-    """Affiche la page d'administration"""
-    st.title("Tableau de bord d'administration")
+    """Display the administration page"""
+    st.title("Administration Dashboard")
 
-    # Créer des onglets pour séparer les différentes fonctionnalités
-    tab1, tab2 = st.tabs(["Gestion des utilisateurs", "Analyse et performances"])
+    # Create tabs to separate different features
+    tab1, tab2 = st.tabs(["User Management", "Analytics and Performance"])
 
     with tab1:
-        st.header("Gestion des utilisateurs")
+        st.header("User Management")
 
-        # Formulaire pour ajouter un utilisateur
-        with st.expander("Ajouter un utilisateur", expanded=True):
+        # Form to add a user
+        with st.expander("Add User", expanded=True):
             with st.form("add_user_form"):
                 email = st.text_input("Email")
-                password = st.text_input("Mot de passe", type="password")
-                is_admin = st.checkbox("Administrateur")
-                submit = st.form_submit_button("Ajouter")
+                password = st.text_input("Password", type="password")
+                is_admin = st.checkbox("Administrator")
+                submit = st.form_submit_button("Add")
 
                 if submit and email and password:
                     success = add_user(email, password, is_admin)
                     if success:
-                        st.success(f"Utilisateur {email} ajouté avec succès.")
+                        st.success(f"User {email} added successfully.")
                     else:
-                        st.error(f"L'email {email} existe déjà.")
+                        st.error(f"Email {email} already exists.")
 
-        # Liste des utilisateurs
-        st.subheader("Liste des utilisateurs")
+        # User list
+        st.subheader("User List")
         users = get_all_users()
 
         if users:
-            # Créer un tableau pour afficher les utilisateurs
+            # Create a table to display users
             cols = st.columns([3, 2, 1, 1])
             cols[0].write("**Email**")
-            cols[1].write("**Date de création**")
+            cols[1].write("**Creation Date**")
             cols[2].write("**Admin**")
             cols[3].write("**Actions**")
 
@@ -431,33 +339,33 @@ def admin_page():
                 cols = st.columns([3, 2, 1, 1])
                 cols[0].write(user["email"])
                 cols[1].write(user["created_at"])
-                cols[2].write("Oui" if user["is_admin"] else "Non")
+                cols[2].write("Yes" if user["is_admin"] else "No")
 
-                # Ne pas permettre de supprimer l'utilisateur connecté
+                # Don't allow deleting the currently logged in user
                 if user["id"] != st.session_state["user"]["id"]:
-                    if cols[3].button("Supprimer", key=f"delete_{user['id']}"):
+                    if cols[3].button("Delete", key=f"delete_{user['id']}"):
                         delete_user(user["id"])
-                        st.success(f"Utilisateur {user['email']} supprimé.")
+                        st.success(f"User {user['email']} deleted.")
                         st.rerun()
                 else:
-                    cols[3].write("(Vous)")
+                    cols[3].write("(You)")
         else:
-            st.info("Aucun utilisateur trouvé.")
+            st.info("No users found.")
 
     with tab2:
-        # Vérifier si le gestionnaire de fonctionnalités est initialisé
+        # Check if the features manager is initialized
         if "features_manager" in st.session_state:
             features = st.session_state["features_manager"]
             features.render_admin_dashboard(st)
         else:
-            st.warning("Veuillez d'abord interagir avec le chatbot pour initialiser les fonctionnalités d'analyse.")
+            st.warning("Please interact with the chatbot first to initialize the analytics features.")
 
-    # Bouton de retour
-    if st.button("Retour au chat"):
+    # Return button
+    if st.button("Return to chat"):
         st.session_state["page"] = "chat"
         st.rerun()
 
 
-# Lancer l'application
+# Launch the application
 if __name__ == "__main__":
     main()

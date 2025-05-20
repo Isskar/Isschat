@@ -1,12 +1,13 @@
 import re
 import json
 import os
+from typing import Optional, Callable
 
 
 class QueryReformulator:
     """Reformule automatiquement les requêtes pour améliorer la qualité des réponses"""
 
-    def __init__(self, cache_path="./cache"):
+    def __init__(self, cache_path: str = "./cache") -> None:
         self.cache_path = cache_path
         os.makedirs(cache_path, exist_ok=True)
         self.reformulation_patterns_file = os.path.join(cache_path, "reformulation_patterns.json")
@@ -72,12 +73,12 @@ class QueryReformulator:
 
         return default_patterns
 
-    def _save_patterns(self):
+    def _save_patterns(self) -> None:
         """Sauvegarde les patterns de reformulation dans le cache"""
         with open(self.reformulation_patterns_file, "w") as f:
             json.dump(self.patterns, f)
 
-    def add_pattern(self, category, pattern, replacement):
+    def add_pattern(self, category: str, pattern: str, replacement: str) -> None:
         """Ajoute un nouveau pattern de reformulation"""
         if category not in self.patterns:
             self.patterns[category] = []
@@ -86,7 +87,7 @@ class QueryReformulator:
 
         self._save_patterns()
 
-    def reformulate_query(self, query, strategy="auto"):
+    def reformulate_query(self, query: str, strategy: str = "auto") -> str:
         """Reformule une requête selon la stratégie spécifiée"""
         original_query = query
 
@@ -112,7 +113,7 @@ class QueryReformulator:
 
         return query
 
-    def suggest_reformulations(self, query, max_suggestions=3):
+    def suggest_reformulations(self, query: str, max_suggestions: int = 3) -> list:
         """Suggère plusieurs reformulations possibles"""
         suggestions = []
 
@@ -125,7 +126,7 @@ class QueryReformulator:
         # Limiter le nombre de suggestions
         return suggestions[:max_suggestions]
 
-    def render_reformulation_widget(self, st, query, callback=None):
+    def render_reformulation_widget(self, st, query: str, callback: Optional[Callable] = None) -> str:
         """Affiche un widget de reformulation dans Streamlit"""
         suggestions = self.suggest_reformulations(query)
 
@@ -146,7 +147,7 @@ class QueryReformulator:
 
         return selected_query
 
-    def render_admin_interface(self, st):
+    def render_admin_interface(self, st) -> None:
         """Affiche l'interface d'administration des patterns de reformulation"""
         st.title("Configuration des Reformulations")
 
@@ -188,7 +189,9 @@ def integrate_query_reformulator(help_desk):
     # Fonction wrapper pour ask_question qui reformule les requêtes
     original_ask = help_desk.ask_question
 
-    def ask_with_reformulation(question, verbose=False, auto_reformulate=True):
+    def ask_with_reformulation(
+        question: str, verbose: bool = False, auto_reformulate: bool = True
+    ) -> tuple[str, list[str]]:
         if auto_reformulate:
             # Reformuler automatiquement la question
             reformulated_question = reformulator.reformulate_query(question)

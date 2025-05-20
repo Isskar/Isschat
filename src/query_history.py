@@ -5,11 +5,11 @@ import sqlite3
 
 
 class QueryHistory:
-    """Gère l'historique des requêtes des utilisateurs"""
+    """Manages user query history"""
 
     def __init__(self, db_path=None):
         if db_path is None:
-            # Utiliser un chemin absolu par défaut
+            # Use an absolute path by default
             self.db_path = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                 "data",
@@ -18,18 +18,17 @@ class QueryHistory:
         else:
             self.db_path = db_path
 
-        # Créer le dossier parent si nécessaire
+        # Create parent folder if necessary
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self._init_db()
 
     def _init_db(self):
-        """Initialise la base de données SQLite"""
+        """Initialize the SQLite database"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Créer la table des requêtes si elle n'existe pas
-        cursor.execute(
-            """
+        # Create the query table if it doesn't exist
+        cursor.execute("""
         CREATE TABLE IF NOT EXISTS query_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT,
@@ -39,12 +38,10 @@ class QueryHistory:
             sources TEXT,
             feedback_score INTEGER DEFAULT NULL
         )
-        """
-        )
+        """)
 
-        # Créer la table des favoris si elle n'existe pas
-        cursor.execute(
-            """
+        # Create the favorites table if it doesn't exist
+        cursor.execute("""
         CREATE TABLE IF NOT EXISTS favorites (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT,
@@ -52,18 +49,17 @@ class QueryHistory:
             timestamp TEXT,
             FOREIGN KEY (query_id) REFERENCES query_history (id)
         )
-        """
-        )
+        """)
 
         conn.commit()
         conn.close()
 
     def add_query(self, user_id, question, answer, sources):
-        """Ajoute une requête à l'historique"""
+        """Add a query to the history"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Convertir les sources en JSON
+        # Convert sources to JSON
         sources_json = json.dumps([str(s) for s in sources]) if sources else "[]"
 
         cursor.execute(
@@ -81,9 +77,9 @@ class QueryHistory:
         return query_id
 
     def get_user_history(self, user_id, limit=50):
-        """Récupère l'historique des requêtes d'un utilisateur"""
+        """Retrieve the query history for a user"""
         conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # Pour obtenir les résultats sous forme de dictionnaire
+        conn.row_factory = sqlite3.Row  # To get results as dictionaries
         cursor = conn.cursor()
 
         cursor.execute(
@@ -105,8 +101,21 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except Exception:
+            except Exception as e:
+                print(f"Error parsing sources: {e}")
                 sources = []
+
+            history.append(
+                {
+                    "id": row["id"],
+                    "timestamp": row["timestamp"],
+                    "question": row["question"],
+                    "answer": row["answer"],
+                    "sources": sources,
+                    "feedback_score": row["feedback_score"],
+                    "is_favorite": bool(row["is_favorite"]),
+                }
+            )
 
             history.append(
                 {
@@ -124,11 +133,11 @@ class QueryHistory:
         return history
 
     def add_to_favorites(self, user_id, query_id):
-        """Ajoute une requête aux favoris"""
+        """Add a query to favorites"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Vérifier si déjà dans les favoris
+        # Check if already in favorites
         cursor.execute(
             """
         SELECT id FROM favorites
@@ -150,7 +159,7 @@ class QueryHistory:
         conn.close()
 
     def remove_from_favorites(self, user_id, query_id):
-        """Retire une requête des favoris"""
+        """Remove a query from favorites"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -166,7 +175,7 @@ class QueryHistory:
         conn.close()
 
     def get_favorites(self, user_id):
-        """Récupère les requêtes favorites d'un utilisateur"""
+        """Retrieve a user's favorite queries"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -188,8 +197,21 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except Exception:
+            except Exception as e:
+                print(f"Error parsing sources: {e}")
                 sources = []
+
+            favorites.append(
+                {
+                    "id": row["id"],
+                    "timestamp": row["timestamp"],
+                    "question": row["question"],
+                    "answer": row["answer"],
+                    "sources": sources,
+                    "feedback_score": row["feedback_score"],
+                    "is_favorite": True,
+                }
+            )
 
             favorites.append(
                 {
@@ -207,7 +229,7 @@ class QueryHistory:
         return favorites
 
     def update_feedback(self, query_id, feedback_score):
-        """Met à jour le score de feedback d'une requête"""
+        """Updates the feedback score of a query"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -219,17 +241,16 @@ class QueryHistory:
         """,
             (feedback_score, query_id),
         )
-
         conn.commit()
         conn.close()
 
     def search_history(self, user_id, search_term):
-        """Recherche dans l'historique des requêtes"""
+        """Searches in the query history"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        # Recherche dans les questions et les réponses
+        # Search in questions and answers
         cursor.execute(
             """
         SELECT h.id, h.timestamp, h.question, h.answer, h.sources, h.feedback_score,
@@ -248,8 +269,21 @@ class QueryHistory:
         for row in rows:
             try:
                 sources = json.loads(row["sources"])
-            except Exception:
+            except Exception as e:
+                print(f"Error parsing sources: {e}")
                 sources = []
+
+            results.append(
+                {
+                    "id": row["id"],
+                    "timestamp": row["timestamp"],
+                    "question": row["question"],
+                    "answer": row["answer"],
+                    "sources": sources,
+                    "feedback_score": row["feedback_score"],
+                    "is_favorite": bool(row["is_favorite"]),
+                }
+            )
 
             results.append(
                 {
@@ -267,32 +301,30 @@ class QueryHistory:
         return results
 
     def render_history_page(self, st, user_id):
-        """Affiche la page d'historique des requêtes dans Streamlit"""
-        st.title("Historique des Requêtes")
+        """Displays the query history page in Streamlit"""
+        st.title("Query History")
 
-        # Onglets pour l'historique et les favoris
-        tab1, tab2 = st.tabs(["Historique", "Favoris"])
+        tab1, tab2 = st.tabs(["History", "Favorites"])
 
         with tab1:
-            # Barre de recherche
-            search_term = st.text_input("Rechercher dans l'historique", key="history_search")
+            search_term = st.text_input("Search in history", key="history_search")
 
             if search_term:
                 history = self.search_history(user_id, search_term)
-                st.write(f"{len(history)} résultats trouvés pour '{search_term}'")
+                st.write(f"{len(history)} results found for '{search_term}'")
             else:
                 history = self.get_user_history(user_id)
 
             if not history:
-                st.info("Aucune requête dans l'historique")
+                st.info("No queries in history")
                 return
 
-            # Afficher l'historique
+            # Display history
             for item in history:
                 with st.expander(
                     f"{item['question']} - {datetime.fromisoformat(item['timestamp']).strftime('%d/%m/%Y %H:%M')}"
                 ):
-                    st.write("**Réponse:**")
+                    st.write("**Answer:**")
                     st.write(item["answer"])
 
                     if item["sources"]:
@@ -304,19 +336,19 @@ class QueryHistory:
                     col1, col2 = st.columns(2)
                     with col1:
                         if item["is_favorite"]:
-                            if st.button("Retirer des favoris", key=f"unfav_{item['id']}"):
+                            if st.button("Remove from favorites", key=f"unfav_{item['id']}"):
                                 self.remove_from_favorites(user_id, item["id"])
                                 st.rerun()
                         else:
-                            if st.button("Ajouter aux favoris", key=f"fav_{item['id']}"):
+                            if st.button("Add to favorites", key=f"fav_{item['id']}"):
                                 self.add_to_favorites(user_id, item["id"])
                                 st.rerun()
 
                     with col2:
-                        if st.button("Reposer cette question", key=f"reask_{item['id']}"):
-                            # Stocker la question dans la session pour la réutiliser
+                        if st.button("Ask this question again", key=f"reask_{item['id']}"):
+                            # Store the question in the session for reuse
                             st.session_state.reuse_question = item["question"]
-                            # Rediriger vers la page principale
+                            # Redirect to the main page
                             st.session_state.page = "chat"
                             st.rerun()
 
@@ -324,15 +356,15 @@ class QueryHistory:
             favorites = self.get_favorites(user_id)
 
             if not favorites:
-                st.info("Aucune requête dans vos favoris")
+                st.info("No queries in your favorites")
                 return
 
-            # Afficher les favoris
+            # Display favorites
             for item in favorites:
                 with st.expander(
                     f"{item['question']} - {datetime.fromisoformat(item['timestamp']).strftime('%d/%m/%Y %H:%M')}"
                 ):
-                    st.write("**Réponse:**")
+                    st.write("**Answer:**")
                     st.write(item["answer"])
 
                     if item["sources"]:
@@ -343,39 +375,39 @@ class QueryHistory:
                     # Actions
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("Retirer des favoris", key=f"unfav_fav_{item['id']}"):
+                        if st.button("Remove from favorites", key=f"unfav_fav_{item['id']}"):
                             self.remove_from_favorites(user_id, item["id"])
                             st.rerun()
 
                     with col2:
-                        if st.button("Reposer cette question", key=f"reask_fav_{item['id']}"):
-                            # Stocker la question dans la session pour la réutiliser
+                        if st.button("Ask this question again", key=f"reask_fav_{item['id']}"):
+                            # Store the question in the session for reuse
                             st.session_state.reuse_question = item["question"]
-                            # Rediriger vers la page principale
+                            # Redirect to the main page
                             st.session_state.page = "chat"
                             st.rerun()
 
 
-# Fonction pour intégrer l'historique dans l'application principale
+# Function to integrate history into the main application
 def integrate_query_history(help_desk, user_id):
-    """Intègre l'historique des requêtes au help_desk"""
+    """Integrates query history into the help_desk"""
     history = QueryHistory()
 
-    # Fonction wrapper pour ask_question qui enregistre les requêtes
+    # Wrapper function for ask_question that records queries
     original_ask = help_desk.ask_question
 
     def ask_with_history(question, verbose=False):
         answer, sources = original_ask(question, verbose)
 
-        # Enregistrer la requête dans l'historique
+        # Record the query in history
         query_id = history.add_query(user_id=user_id, question=question, answer=answer, sources=sources)
 
         return answer, sources, query_id
 
-    # Remplacer la méthode originale
+    # Replace the original method
     help_desk.ask_question_with_history = ask_with_history
 
-    # Ajouter l'historique comme attribut
+    # Add history as an attribute
     help_desk.query_history = history
 
     return help_desk
