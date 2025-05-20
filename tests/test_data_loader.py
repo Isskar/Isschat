@@ -8,14 +8,6 @@ from src.load_db import DataLoader
 
 class TestDataLoader:
     @pytest.fixture
-    def mock_embeddings(self):
-        """Create mock embeddings object"""
-        mock = MagicMock()
-        mock.embed_documents.return_value = [[0.1] * 384]  # Return dummy embedding vectors
-        mock.embed_query.return_value = [0.1] * 384
-        return mock
-
-    @pytest.fixture
     def sample_docs(self):
         """Create sample documents for testing"""
         return [
