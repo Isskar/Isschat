@@ -53,7 +53,7 @@ class HelpDesk:
         """
         # If we have a config from rag_evaluation, use its rag_template
         if hasattr(self, "config") and self.config and hasattr(self.config, "prompts"):
-            return self.config.prompts.rag_template
+            return self.config
         # Otherwise use the default template from config.py
         return LLMPrompt.PROMPT_TEMPLATE
 
