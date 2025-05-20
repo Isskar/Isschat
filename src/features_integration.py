@@ -15,7 +15,7 @@ from src.query_history import QueryHistory
 class FeaturesManager:
     """Central manager for all advanced chatbot features"""
 
-    def __init__(self, help_desk, user_id):
+    def __init__(self, help_desk, user_id: str) -> None:
         """Initialize and integrate all features into the help_desk"""
         self.help_desk = help_desk
         self.user_id = user_id
@@ -48,7 +48,7 @@ class FeaturesManager:
         # Integrate necessary features
         self._integrate_selected_features()
 
-    def _integrate_selected_features(self):
+    def _integrate_selected_features(self) -> None:
         """Integrate selected features into the help_desk"""
         try:
             # Add user feedback system
@@ -65,21 +65,25 @@ class FeaturesManager:
 
             self.logger.error(traceback.format_exc())
 
-    def _add_feedback_system(self):
+    def _add_feedback_system(self) -> None:
         """Add a user feedback system"""
         # Store the original method
-        self.original_ask = self.help_desk.retrieval_qa_inference
+        self.original_ask = (
+            self.help_desk.retrieval_qa_inference if hasattr(self.help_desk, "retrieval_qa_inference") else None
+        )
 
-    def _wrap_ask_question(self):
+    def _wrap_ask_question(self) -> None:
         """Wrap the ask_question method to record performance metrics"""
-        original_ask = self.help_desk.retrieval_qa_inference
+        original_ask = (
+            self.help_desk.retrieval_qa_inference if hasattr(self.help_desk, "retrieval_qa_inference") else None
+        )
 
         def wrapped_ask(question, verbose=False):
             # Measure total time
             start_time = time.time()
 
             # Call the original function
-            answer, sources = original_ask(question, verbose)
+            answer, sources = original_ask(question, verbose) if original_ask else ("No answer", [])
 
             # Calculate total time
             total_time = (time.time() - start_time) * 1000  # in ms
@@ -113,9 +117,10 @@ class FeaturesManager:
             return answer, sources
 
         # Replace the original method
-        self.help_desk.retrieval_qa_inference = wrapped_ask
+        if hasattr(self.help_desk, "retrieval_qa_inference"):
+            self.help_desk.retrieval_qa_inference = wrapped_ask
 
-    def render_admin_dashboard(self, st):
+    def render_admin_dashboard(self, st) -> None:
         """Display the administration dashboard with all features"""
         st.title("Administration Dashboard")
 
@@ -154,7 +159,7 @@ class FeaturesManager:
         with tabs[3]:
             self._render_general_statistics(st)
 
-    def _render_general_statistics(self, st):
+    def _render_general_statistics(self, st) -> None:
         """Display general statistics about chatbot usage"""
         st.subheader("General Statistics")
 
@@ -170,9 +175,9 @@ class FeaturesManager:
             perf_logs = self.performance_tracker.get_performance_logs(days=30)
             if perf_logs:
                 avg_time = sum(log.get("total_time_ms", 0) for log in perf_logs) / len(perf_logs)
-                stats["avg_response_time"] = f"{avg_time:.0f} ms"
+                stats["avg_response_time"] = int(avg_time)
             else:
-                stats["avg_response_time"] = "N/A"
+                stats["avg_response_time"] = 0
 
             # Feedback statistics
             unsat_responses = self.response_tracker.get_unsatisfactory_responses(days=30)
@@ -193,7 +198,9 @@ class FeaturesManager:
         except Exception as e:
             st.error(f"Error collecting statistics: {str(e)}")
 
-    def process_question(self, question, show_suggestions=True, show_feedback=True):
+    def process_question(
+        self, question: str, show_suggestions: bool = True, show_feedback: bool = True
+    ) -> tuple[str, list]:
         """Process a question and add user feedback system"""
         try:
             # 1. Get the answer
@@ -214,7 +221,7 @@ class FeaturesManager:
 
             # 5. Display question suggestions if enabled
             if show_suggestions:
-                self._show_question_suggestions(st, question, answer)
+                self._show_question_suggestions(question, answer)
 
             # Log performance metrics
             self.logger.info(f"Question processed in {response_time:.0f}ms: {question[:50]}...")
@@ -229,7 +236,7 @@ class FeaturesManager:
             self.logger.error(traceback.format_exc())
             return "Sorry, an error occurred while processing your question.", []
 
-    def _add_feedback_widget(self, st, question, answer, sources):
+    def _add_feedback_widget(self, st, question: str, answer: str, sources: list) -> None:
         """Add a feedback widget to evaluate the quality of the response"""
         st.write("---")
         st.write("### Rate this response")
@@ -255,9 +262,10 @@ class FeaturesManager:
                     feedback_score=feedback_score,
                     feedback_text=feedback_text,
                 )
-                st.success("Thank you for your feedback!")
+                # st.success("Thank you for your feedback!")
+                pass
 
-    def _show_question_suggestions(self, st, question, answer):
+    def _show_question_suggestions(self, question: str, answer: str) -> str | None:
         """Display follow-up question suggestions"""
         try:
             suggestions = self.question_suggester.suggest_next_questions(question, answer)
@@ -272,10 +280,10 @@ class FeaturesManager:
                         return suggestion
         except Exception as e:
             self.logger.error(f"Error displaying suggestions: {str(e)}")
-            return None
+        return None
 
 
 # Function to integrate the feature manager into the main application
-def setup_features(help_desk, user_id):
+def setup_features(help_desk, user_id: str) -> FeaturesManager:
     """Configure and return a feature manager for the application"""
     return FeaturesManager(help_desk, user_id)

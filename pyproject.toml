@@ -35,6 +35,9 @@ dependencies = [
     "langchain-openai>=0.3.16",
     "pre-commit>=4.2.0",
     "ruff>=0.11.9",
+    "mypy>=1.15.0",
+    "pandas-stubs>=2.2.3.250308",
+    "types-seaborn>=0.13.2.20250516",
 ]
 
 [tool.ruff]
@@ -43,3 +46,18 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "W"]
 ignore = []
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "help_desk.*"
+follow_untyped_imports = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "load_db.*"
+follow_untyped_imports = true
+ignore_missing_imports = true

@@ -31,13 +31,13 @@ class DataLoader:
         space_key=CONFLUENCE_SPACE_KEY,
         persist_directory=PERSIST_DIRECTORY,
     ):
-        self.confluence_url = confluence_url
-        self.username = username
-        self.api_key = api_key
-        self.space_key = space_key
-        self.persist_directory = persist_directory
+        self.confluence_url: str = confluence_url
+        self.username: str = username
+        self.api_key: str = api_key
+        self.space_key: str = space_key
+        self.persist_directory: str = persist_directory
 
-    def load_from_confluence_loader(self):
+    def load_from_confluence_loader(self) -> list:
         """Load HTML files from Confluence using direct Atlassian API"""
         try:
             # Configure logging to display messages in the console
@@ -231,7 +231,7 @@ class DataLoader:
             print(traceback.format_exc())
             raise e
 
-    def split_docs(self, docs):
+    def split_docs(self, docs: list):
         # Markdown
         headers_to_split_on = [
             ("#", "Titre 1"),
@@ -260,13 +260,13 @@ class DataLoader:
         splitted_docs = splitter.split_documents(md_docs)
         return splitted_docs
 
-    def save_to_db(self, splitted_docs, embeddings):
+    def save_to_db(self, splitted_docs: list, embeddings: object) -> FAISS:
         """Save chunks to Chroma DB"""
         db = FAISS.from_documents(splitted_docs, embeddings)
         db.save_local(self.persist_directory)
         return db
 
-    def load_from_db(self, embeddings):
+    def load_from_db(self, embeddings: object) -> FAISS:
         """Loader chunks to Chroma DB"""
         db = FAISS.load_local(
             self.persist_directory,
@@ -275,7 +275,7 @@ class DataLoader:
         )
         return db
 
-    def create_dummy_docs(self):
+    def create_dummy_docs(self) -> list:
         """Creates a dummy dataset to allow the application to start"""
         from langchain_core.documents import Document
 
@@ -301,7 +301,7 @@ class DataLoader:
 
         return dummy_docs
 
-    def set_db(self, embeddings):
+    def set_db(self, embeddings: object) -> FAISS:
         """Create, save, and load db"""
         try:
             shutil.rmtree(self.persist_directory)
@@ -325,7 +325,7 @@ class DataLoader:
 
         return db
 
-    def get_db(self, embeddings):
+    def get_db(self, embeddings: object) -> FAISS:
         """Create, save, and load db"""
         db = self.load_from_db(embeddings)
         return db

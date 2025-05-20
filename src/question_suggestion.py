@@ -1,7 +1,7 @@
 import numpy as np
 import json
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
 import re
 from collections import Counter
 
@@ -147,7 +147,7 @@ class QuestionSuggester:
 
         return keywords
 
-    def suggest_next_questions(self, current_question, current_answer, history=None, max_suggestions=3):
+    def suggest_next_questions(self, current_question, current_answer, history=None, max_suggestions=3) -> list[str]:
         """Suggests follow-up questions based on the current question and answer"""
         suggestions = []
 

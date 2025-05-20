@@ -10,6 +10,7 @@
 
 import streamlit as st
 import time
+import signal
 import os
 import sys
 from pathlib import Path
@@ -169,6 +170,13 @@ def main():
                         import traceback
 
                         st.code(traceback.format_exc(), language="python")
+
+        # Close Button
+        st.divider()
+        if st.button("Close App", key="nav_close_app"):
+            st.warning("Shutting down the Streamlit app...")
+            time.sleep(1)
+            os.kill(os.getpid(), signal.SIGKILL)
 
     # Determine which page to display - user is already authenticated at the beginning of main()
     if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
