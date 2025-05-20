@@ -9,23 +9,40 @@ on:
 
 jobs:
   lint:
-    name: Lint with ruff and mypy
+    name: Ruff lint and format
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install project and dependencies
-      run: |
-        uv venv
-    
-    - name: Lint with ruff
-      run: |
-        uv run ruff check .
-    
-    - name: Type check with mypy
-      run: |
-        uv run mypy .
-  
+      - uses: actions/checkout@v4
+
+      - name: Install project and dependencies
+        run: |
+          uv pip install --system ruff
+
+      - name: Lint with Ruff
+        run: |
+          ruff check .
+
+      - name: Check formatting with Ruff
+        run: |
+          ruff format --check .
+
+  typecheck:
+    name: Type check with mypy
+    needs: lint
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install project and dependencies
+        run: |
+          uv pip install --system mypy
+
+      - name: Run mypy
+        run: |
+          mypy .
