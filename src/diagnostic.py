@@ -11,7 +11,7 @@ st.subheader("Visualize retrieved documents and similarity scores")
 
 # Initialize the model
 @st.cache_resource
-def get_model():
+def get_model() -> HelpDesk:
     model = HelpDesk(new_db=False)  # Use existing database
     return model
 

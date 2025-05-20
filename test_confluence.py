@@ -20,11 +20,11 @@ print(f"Space Key: {space_key}")
 print(f"API Key: {'*' * 5}{api_key[-5:] if api_key else 'Not defined'}")
 
 # Make sure the URL is in the correct format (without the specific path)
-if "/wiki" in confluence_url:
+if confluence_url and "/wiki" in confluence_url:
     base_url = confluence_url.split("/wiki")[0]
     print(f"Adjusted URL: {base_url}")
 else:
-    base_url = confluence_url
+    base_url = confluence_url if confluence_url else ""
 
 try:
     print("\n==== ATTEMPTING CONNECTION TO CONFLUENCE ====")

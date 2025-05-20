@@ -1,6 +1,6 @@
 # RAG Chatbot with Confluence
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Isskar/Isschat/blob/main/LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
 An intelligent chatbot that interacts with Kanbios' Confluence knowledge base using RAG (Retrieval-Augmented Generation) technology.
@@ -51,7 +51,7 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 
 1. **Launch Streamlit app**
    ```bash
-   streamlit run src/streamlit.py
+   streamlit run src/isschat_webapp.py
    ```
 
 2. **Reconstruct the database**
@@ -73,7 +73,7 @@ RAG-Chatbot-with-Confluence/
 ├── src/
 │   ├── auth.py             # Authentication
 │   ├── help_desk.py         # Main chatbot logic
-│   ├── streamlit.py         # Streamlit UI
+│   ├── isschat_webapp.py         # Streamlit UI
 │   ├── features_integration.py # Advanced features
 │   └── ...
 ├── .env.example           # Configuration example
@@ -91,6 +91,11 @@ RAG-Chatbot-with-Confluence/
 ## Model Integration
 
 This project uses OpenRouter.ai as the AI model provider, which gives access to various large language models including ChatGPT. The OpenRouter integration is configured in `src/help_desk.py` and requires an API key from [OpenRouter](https://openrouter.ai/).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
+Added in [commit f801768](https://github.com/Isskar/Isschat/commit/f801768).
 
 ---
 

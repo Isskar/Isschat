@@ -8,8 +8,8 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Import custom modules
-from src.help_desk import HelpDesk  # noqa: E402
-from src.auth import (  # noqa: E402
+from src.help_desk import HelpDesk
+from src.auth import (
     logout,
     get_all_users,
     add_user,
@@ -19,7 +19,7 @@ from src.auth import (  # noqa: E402
 )
 
 # Import new features
-from src.features_integration import FeaturesManager  # noqa: E402
+from features_integration import FeaturesManager
 
 # Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")

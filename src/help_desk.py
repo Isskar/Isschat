@@ -11,7 +11,7 @@ import os
 class HelpDesk:
     """Create the necessary objects to create a QARetrieval chain"""
 
-    def __init__(self, new_db=True):
+    def __init__(self, new_db: bool = True) -> None:
         self.new_db = new_db
         self.template = self.get_template()
         self.embeddings = self.get_embeddings()
@@ -32,7 +32,7 @@ class HelpDesk:
         )
         self.retrieval_qa_chain = self.get_retrieval_qa()
 
-    def get_template(self):
+    def get_template(self) -> str:
         template = """
         You are a professional and friendly virtual assistant named "ISSCHAT".
         Your mission is to help users find information in the Confluence documentation.
@@ -54,11 +54,11 @@ class HelpDesk:
         """
         return template
 
-    def get_prompt(self):
+    def get_prompt(self) -> PromptTemplate:
         prompt = PromptTemplate(template=self.template, input_variables=["context", "question"])
         return prompt
 
-    def get_embeddings(self):
+    def get_embeddings(self) -> HuggingFaceEmbeddings:
         embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         return embeddings
 
@@ -85,7 +85,7 @@ class HelpDesk:
         )
         return retrieval_chain
 
-    def retrieval_qa_inference(self, question, verbose=True):
+    def retrieval_qa_inference(self, question: str, verbose: bool = True) -> tuple[str, str]:
         # Get the source documents directly from the retriever
         docs = self.retriever.get_relevant_documents(question)
 
@@ -108,7 +108,7 @@ class HelpDesk:
 
         return answer, sources
 
-    def list_top_k_sources(self, answer, k=2):
+    def list_top_k_sources(self, answer: dict, k: int = 2) -> str:
         sources = [f"[{res.metadata['title']}]({res.metadata['source']})" for res in answer["source_documents"]]
 
         if sources:
