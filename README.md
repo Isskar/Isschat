@@ -51,7 +51,7 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
 
 1. **Launch Streamlit app**
    ```bash
-   streamlit run src/streamlit.py
+   streamlit run src/isschat_webapp.py
    ```
 
 2. **Reconstruct the database**
@@ -73,7 +73,7 @@ RAG-Chatbot-with-Confluence/
 ├── src/
 │   ├── auth.py             # Authentication
 │   ├── help_desk.py         # Main chatbot logic
-│   ├── streamlit.py         # Streamlit UI
+│   ├── isschat_webapp.py         # Streamlit UI
 │   ├── features_integration.py # Advanced features
 │   └── ...
 ├── .env.example           # Configuration example
