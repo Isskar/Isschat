@@ -8,7 +8,7 @@ from pathlib import Path
 DB_PATH = Path(__file__).parent.parent / "data" / "users.db"
 
 
-def init_auth_db():
+def init_auth_db() -> None:
     """Initialize the authentication database"""
     # Create the data directory if it doesn't exist
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -33,7 +33,7 @@ def init_auth_db():
     conn.close()
 
 
-def verify_user(email, password):
+def verify_user(email: str, password: str) -> dict | None:
     """Verify user credentials"""
     # Hash the provided password
     password_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -55,7 +55,7 @@ def verify_user(email, password):
     return None
 
 
-def add_user(email, password, is_admin=False):
+def add_user(email: str, password: str, is_admin: bool = False) -> bool:
     """Add a new user to the database"""
     # Hash the password
     password_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -65,7 +65,7 @@ def add_user(email, password, is_admin=False):
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
 
-            # Add user
+        # Add user
         c.execute(
             "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)",
             (email, password_hash, is_admin),
@@ -80,7 +80,7 @@ def add_user(email, password, is_admin=False):
         return False
 
 
-def get_all_users():
+def get_all_users() -> list[dict]:
     """Retrieve all users from the database"""
     # Connect to the database
     conn = sqlite3.connect(DB_PATH)
@@ -95,7 +95,7 @@ def get_all_users():
     return [{"id": u[0], "email": u[1], "is_admin": u[2], "created_at": u[3]} for u in users]
 
 
-def delete_user(user_id):
+def delete_user(user_id: int) -> None:
     """Delete a user from the database"""
     # Connect to the database
     conn = sqlite3.connect(DB_PATH)
@@ -133,7 +133,7 @@ def admin_required(func):
     return wrapper
 
 
-def login_page():
+def login_page() -> None:
     """Displays the login page"""
     st.title("Login")
 
@@ -153,7 +153,7 @@ def login_page():
                 st.error("Incorrect email or password.")
 
 
-def logout():
+def logout() -> None:
     """Logs out the user"""
     if "user" in st.session_state:
         del st.session_state["user"]

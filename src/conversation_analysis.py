@@ -9,12 +9,20 @@ import streamlit as st
 class ConversationAnalyzer:
     """Analyzes conversations and provides insights on user-chatbot interactions"""
 
-    def __init__(self, log_path="./logs/conversations"):
+    def __init__(self, log_path: str = "./logs/conversations") -> None:
         self.log_path = log_path
         os.makedirs(log_path, exist_ok=True)
         self.current_log_file = os.path.join(log_path, f"conv_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
 
-    def log_interaction(self, user_id, question, answer, sources, response_time, feedback=None):
+    def log_interaction(
+        self,
+        user_id: str,
+        question: str,
+        answer: str,
+        sources: list[str],
+        response_time: float,
+        feedback: str | None = None,
+    ) -> None:
         """Records an interaction in the log file"""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -29,7 +37,7 @@ class ConversationAnalyzer:
         with open(self.current_log_file, "a") as f:
             f.write(json.dumps(log_entry) + "\n")
 
-    def get_recent_logs(self, days=7):
+    def get_recent_logs(self, days: int = 7) -> list[dict]:
         """Retrieves logs from the last n days"""
         logs = []
 
@@ -50,7 +58,7 @@ class ConversationAnalyzer:
 
         return logs
 
-    def analyze_questions(self, logs=None):
+    def analyze_questions(self, logs: list[dict] | None = None) -> dict:
         """Analyzes the questions asked"""
         if logs is None:
             logs = self.get_recent_logs()
@@ -82,7 +90,7 @@ class ConversationAnalyzer:
             "avg_response_time_ms": avg_response_time,
         }
 
-    def render_analysis_dashboard(self):
+    def render_analysis_dashboard(self) -> None:
         """Display the analysis dashboard in Streamlit"""
         st.title("Conversation Analysis")
 
@@ -122,7 +130,7 @@ class ConversationAnalyzer:
 
 
 # Function to integrate the analyzer in the main application
-def integrate_conversation_analyzer(help_desk, user_id):
+def integrate_conversation_analyzer(help_desk, user_id: str):
     """Integrates the conversation analyzer into the help_desk"""
     analyzer = ConversationAnalyzer()
 
