@@ -9,20 +9,12 @@ import streamlit as st
 class ConversationAnalyzer:
     """Analyzes conversations and provides insights on user-chatbot interactions"""
 
-    def __init__(self, log_path: str = "./logs/conversations") -> None:
+    def __init__(self, log_path="./logs/conversations"):
         self.log_path = log_path
         os.makedirs(log_path, exist_ok=True)
         self.current_log_file = os.path.join(log_path, f"conv_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
 
-    def log_interaction(
-        self,
-        user_id: str,
-        question: str,
-        answer: str,
-        sources: list[str],
-        response_time: float,
-        feedback: str | None = None,
-    ) -> None:
+    def log_interaction(self, user_id, question, answer, sources, response_time, feedback=None):
         """Records an interaction in the log file"""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -37,7 +29,7 @@ class ConversationAnalyzer:
         with open(self.current_log_file, "a") as f:
             f.write(json.dumps(log_entry) + "\n")
 
-    def get_recent_logs(self, days: int = 7) -> list[dict]:
+    def get_recent_logs(self, days=7):
         """Retrieves logs from the last n days"""
         logs = []
 
@@ -58,7 +50,7 @@ class ConversationAnalyzer:
 
         return logs
 
-    def analyze_questions(self, logs: list[dict] | None = None) -> dict:
+    def analyze_questions(self, logs=None):
         """Analyzes the questions asked"""
         if logs is None:
             logs = self.get_recent_logs()
@@ -90,7 +82,7 @@ class ConversationAnalyzer:
             "avg_response_time_ms": avg_response_time,
         }
 
-    def render_analysis_dashboard(self) -> None:
+    def render_analysis_dashboard(self):
         """Display the analysis dashboard in Streamlit"""
         st.title("Conversation Analysis")
 
@@ -130,16 +122,16 @@ class ConversationAnalyzer:
 
 
 # Function to integrate the analyzer in the main application
-def integrate_conversation_analyzer(help_desk, user_id: str):
+def integrate_conversation_analyzer(help_desk, user_id):
     """Integrates the conversation analyzer into the help_desk"""
     analyzer = ConversationAnalyzer()
 
     # Wrapper function for ask_question that logs interactions
-    original_ask = help_desk.ask_question if hasattr(help_desk, "ask_question") else None
+    original_ask = help_desk.ask_question
 
     def ask_with_logging(question, verbose=False):
         start_time = datetime.now()
-        answer, sources = original_ask(question, verbose) if original_ask else ("No answer", [])
+        answer, sources = original_ask(question, verbose)
         end_time = datetime.now()
         response_time = (end_time - start_time).total_seconds() * 1000  # in milliseconds
 
@@ -155,11 +147,9 @@ def integrate_conversation_analyzer(help_desk, user_id: str):
         return answer, sources
 
     # Replace the original method
-    if hasattr(help_desk, "ask_question"):
-        help_desk.ask_question = ask_with_logging
+    help_desk.ask_question = ask_with_logging
 
     # Add the analyzer as an attribute
-    if not hasattr(help_desk, "analyzer"):
-        help_desk.analyzer = analyzer
+    help_desk.analyzer = analyzer
 
     return help_desk

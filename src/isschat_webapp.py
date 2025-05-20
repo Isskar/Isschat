@@ -1,13 +1,3 @@
-# Streamlit
-# Use QARetrieval to find informations about the Confluence knowledge base
-# Enhanced with advanced features:
-# - Conversation analysis
-# - Response tracking
-# - Question suggestion
-# - Performance monitoring
-# - Query history
-# - Automatic reformulation
-
 import streamlit as st
 import time
 import os
@@ -29,10 +19,10 @@ from src.auth import (
 )
 
 # Import new features
-from src.features_integration import FeaturesManager
+from features_integration import FeaturesManager
 
 # Streamlit page configuration - must be the first Streamlit command
-st.set_page_config(page_title="Assistant Confluence", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
 
 # No cache to force reload on each launch
@@ -40,8 +30,8 @@ def get_model(rebuild_db=False):
     # Display a spinner during loading
     with st.spinner("Loading RAG model..."):
         # Check if the index.faiss file exists
-        import sys
-        from config import PERSIST_DIRECTORY
+        import sys  # noqa: E402
+        from config import PERSIST_DIRECTORY  # noqa: E402
 
         # Display configuration information for debugging
         api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
@@ -63,16 +53,6 @@ def get_model(rebuild_db=False):
                 os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
             except Exception as e:
                 st.error(f"Error creating directory: {str(e)}")
-
-        # Check if index files exist
-        index_faiss_path = os.path.join(PERSIST_DIRECTORY, "index.faiss")
-        index_pkl_path = os.path.join(PERSIST_DIRECTORY, "index.pkl")
-
-        if not os.path.exists(index_faiss_path) or not os.path.exists(index_pkl_path):
-            st.warning("Vector database not found. Rebuilding...")
-            rebuild_db = True
-        else:
-            st.success("Vector database found!")
 
         # Create the model
         try:
@@ -116,7 +96,7 @@ def main():
     # Sidebar for navigation and options
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/confluence--v2.png", width=100)
-        st.title("Confluence Assistant")
+        st.title("ISSCHAT")
 
         # Always display user info
         st.success(f"Connected as: {st.session_state['user']['email']}")
@@ -202,12 +182,11 @@ def chat_page():
     features = st.session_state["features_manager"]
 
     # Create layout
-    st.title("Confluence Search Assistant")
+    st.title("Welcome to ISSCHAT")
 
     # Sidebar for advanced options
     with st.sidebar:
         st.subheader("Advanced Options")
-        show_suggestions = st.toggle("Question suggestions", value=True)
         show_feedback = st.toggle("Response feedback", value=True)
 
         # Query history
@@ -216,14 +195,19 @@ def chat_page():
             st.rerun()
 
     # Display main interface
-    st.subheader("Ask questions about Confluence documentation")
+    st.subheader("Ask questions about our Confluence documentation")
+
+    # Extract first name from email (part before @)
+    user_email = st.session_state.get("user", {}).get("email", "")
+    first_name = user_email.split("@")[0].split(".")[0].capitalize()
+    welcome_message = f"Bonjour {first_name} ! Comment puis-je vous aider aujourd'hui ?"
 
     # Initialize message history
     if "messages" not in st.session_state:
         st.session_state["messages"] = [
             {
                 "role": "assistant",
-                "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ?",
+                "content": welcome_message,
             }
         ]  # ;)
 
@@ -239,16 +223,24 @@ def chat_page():
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = features.process_question(
-                prompt, show_suggestions=show_suggestions, show_feedback=show_feedback
-            )
+            result, sources = features.process_question(prompt)
 
-        # Add response to messages
-        response_content = result
-        if sources:
-            response_content += "\n\n" + sources
+            # Build the response content
+            response_content = result
+            if sources:
+                response_content += "\n\n" + sources
 
-        st.session_state.messages.append({"role": "assistant", "content": response_content})
+            # Display the response
+            st.chat_message("assistant").markdown(result)
+            if sources:
+                st.chat_message("assistant").write(sources)
+
+            # Add feedback widget if enabled
+            if show_feedback:
+                features._add_feedback_widget(st, prompt, result, sources)
+
+            # Add to message history
+            st.session_state.messages.append({"role": "assistant", "content": response_content})
 
     # Chat interface
     if prompt := st.chat_input("Ask your question here..."):
@@ -258,19 +250,24 @@ def chat_page():
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = features.process_question(
-                prompt, show_suggestions=show_suggestions, show_feedback=show_feedback
-            )
+            result, sources = features.process_question(prompt)
 
-        # Add the response to messages
-        response_content = result
-        if sources:
-            response_content += "\n\n" + sources
+            # Build the response content
+            response_content = result
+            if sources:
+                response_content += "\n\n" + sources
 
-            response_content += "\n\n" + sources
+            # Display the response
+            st.chat_message("assistant").markdown(result)
+            if sources:
+                st.chat_message("assistant").write(sources)
 
-        st.chat_message("assistant").write(response_content)
-        st.session_state.messages.append({"role": "assistant", "content": response_content})
+            # Add feedback widget if enabled
+            if show_feedback:
+                features._add_feedback_widget(st, prompt, result, sources)
+
+            # Add to message history
+            st.session_state.messages.append({"role": "assistant", "content": response_content})
 
 
 @login_required
