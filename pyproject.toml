@@ -38,6 +38,7 @@ dependencies = [
     "mypy>=1.15.0",
     "pandas-stubs>=2.2.3.250308",
     "types-seaborn>=0.13.2.20250516",
+    "pytest>=8.3.5",
 ]
 
 [tool.ruff]
