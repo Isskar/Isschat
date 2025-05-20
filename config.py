@@ -1,6 +1,11 @@
 import os
 from dataclasses import dataclass
-
+from enum import Enum
+from typing import Union, Tuple
+from langchain_openai import ChatOpenAI
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.settings import ModelSettings
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,10 +24,13 @@ PERSIST_DIRECTORY = os.getenv("PERSIST_DIRECTORY", os.path.join(BASE_DIR, "db"))
 EVALUATION_DATASET = os.getenv("EVALUATION_DATASET", os.path.join(BASE_DIR, "data/evaluation_dataset.tsv"))
 
 
+class LLMBackend(str, Enum):
+    LANGCHAIN = "langchain"
+    PYDANTIC_AI = "pydantic-ai"
+
+
 @dataclass
 class LLMConfig:
-    """Configuration du modèle LLM partagée par tous les composants."""
-
     model_name: str = "deepseek/deepseek-chat"
     temperature: float = 0.1
     api_key: str = ""
@@ -51,3 +59,37 @@ class LLMPrompt:
         Question: {question}
         Answer:
         """
+
+
+class LLMFactory:
+    def __init__(self, config: LLMConfig):
+        self.config = config
+
+    def create(self, backend: LLMBackend) -> Union[ChatOpenAI, OpenAIModel]:
+        if backend == LLMBackend.LANGCHAIN:
+            return self._create_langchain()
+        elif backend == LLMBackend.PYDANTIC_AI:
+            return self._create_pydantic_ai()
+        else:
+            raise ValueError(f"Unsupported backend: {backend}")
+
+    def _create_langchain(self) -> ChatOpenAI:
+        return ChatOpenAI(
+            model_name=self.config.model_name,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            openai_api_key=self.config.api_key,
+            openai_api_base=self.config.api_base,  # Important pour OpenRouter
+        )
+
+    def _create_pydantic_ai(self) -> Tuple[OpenAIModel, ModelSettings]:
+        model = OpenAIModel(
+            model_name=self.config.model_name,
+            provider=OpenAIProvider(base_url=self.config.api_base, api_key=self.config.api_key),
+        )
+
+        model_settings = ModelSettings(
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+        )
+        return model, model_settings
