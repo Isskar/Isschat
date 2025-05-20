@@ -14,18 +14,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-    
-    - name: Install uv
+    - name: Export uv path
       run: |
-        pip install uv
-    
-    - name: Install dependencies
-      run: |
-        uv pip install -e .
+        echo "PATH=/opt/uv/bin:$PATH" >> $GITHUB_ENV
     
     - name: Lint with ruff
       run: |
@@ -36,4 +27,4 @@ jobs:
     - name: Type check with mypy
       run: |
         uv pip install mypy pandas-stubs types-seaborn
-        mypy src/
+        mypy .
