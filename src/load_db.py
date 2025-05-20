@@ -275,6 +275,32 @@ class DataLoader:
         )
         return db
 
+    def create_dummy_docs(self) -> list:
+        """Creates a dummy dataset to allow the application to start"""
+        from langchain_core.documents import Document
+
+        logging.warning("Creating dummy dataset to allow the application to start")
+
+        dummy_docs = [
+            Document(
+                page_content="Welcome to the Confluence Assistant. This database "
+                "is a dummy version created because the connection to Confluence failed.",
+                metadata={"source": "dummy_doc_1", "title": "Welcome"},
+            ),
+            Document(
+                page_content="To use the assistant with real data, check your Confluence "
+                "connection settings in the .env file.",
+                metadata={"source": "dummy_doc_2", "title": "Configuration"},
+            ),
+            Document(
+                page_content="Make sure the variables CONFLUENCE_SPACE_NAME, CONFLUENCE_SPACE_KEY, "
+                "CONFLUENCE_USERNAME and CONFLUENCE_PRIVATE_API_KEY are properly configured.",
+                metadata={"source": "dummy_doc_3", "title": "Environment Variables"},
+            ),
+        ]
+
+        return dummy_docs
+
     def set_db(self, embeddings: object) -> FAISS:
         """Create, save, and load db"""
         try:
@@ -286,7 +312,10 @@ class DataLoader:
             # Load docs from Confluence
             docs = self.load_from_confluence_loader()
         except Exception as e:
-            raise Exception(f"Failed to load documents from Confluence : {e}")
+            logging.error(f"Error when loading from the Confluence {str(e)}")
+            logging.warning("Using a dummy dataset to allow the application to start")
+            # Create a dummy dataset
+            docs = self.create_dummy_docs()
 
         # Split Docs
         splitted_docs = self.split_docs(docs)
