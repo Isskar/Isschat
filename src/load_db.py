@@ -260,13 +260,13 @@ class DataLoader:
         splitted_docs = splitter.split_documents(md_docs)
         return splitted_docs
 
-    def save_to_db(self, splitted_docs: list, embeddings: object) -> FAISS:
+    def save_to_db(self, splitted_docs: list, embeddings) -> FAISS:
         """Save chunks to Chroma DB"""
         db = FAISS.from_documents(splitted_docs, embeddings)
         db.save_local(self.persist_directory)
         return db
 
-    def load_from_db(self, embeddings: object) -> FAISS:
+    def load_from_db(self, embeddings) -> FAISS:
         """Loader chunks to Chroma DB"""
         db = FAISS.load_local(
             self.persist_directory,
