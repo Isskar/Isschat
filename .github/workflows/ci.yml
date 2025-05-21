@@ -8,27 +8,15 @@ on:
     branches: [ main ]
 
 jobs:
-  setup_python_environment:
-    name: Setup Python Environment with uv
+  build_and_test:
+    name: Build, Lint, and Type Check Python Environment with uv
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
     steps:
       - uses: actions/checkout@v4
-      - name: Create uv venv and install dependencies
-        run: |
-          uv venv
 
-  lint:
-    name: Ruff lint and format
-    needs: setup_python_environment
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-
-    steps:
-      - uses: actions/checkout@v4
       - name: Lint with Ruff
         run: |
           uv run ruff check .
@@ -37,15 +25,6 @@ jobs:
         run: |
           uv run ruff format --check .
 
-  typecheck:
-    name: Type check with mypy
-    needs: setup_python_environment 
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run mypy
+      - name: Type check with mypy
         run: |
           uv run mypy .
