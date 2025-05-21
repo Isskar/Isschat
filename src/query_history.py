@@ -261,18 +261,6 @@ class QueryHistory:
                 }
             )
 
-            results.append(
-                {
-                    "id": row["id"],
-                    "timestamp": row["timestamp"],
-                    "question": row["question"],
-                    "answer": row["answer"],
-                    "sources": sources,
-                    "feedback_score": row["feedback_score"],
-                    "is_favorite": bool(row["is_favorite"]),
-                }
-            )
-
         conn.close()
         return results
 
