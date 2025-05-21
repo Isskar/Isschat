@@ -66,6 +66,7 @@ def add_user(email: str, password: str, is_admin: bool = False) -> bool:
         c = conn.cursor()
 
         # Add user
+        # Add user
         c.execute(
             "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)",
             (email, password_hash, is_admin),
@@ -150,13 +151,6 @@ def login_page() -> None:
                 st.rerun()
             else:
                 st.error("Incorrect email or password.")
-
-
-def logout() -> None:
-    """Logs out the user"""
-    if "user" in st.session_state:
-        del st.session_state["user"]
-    st.rerun()
 
 
 # Initialize the database at startup

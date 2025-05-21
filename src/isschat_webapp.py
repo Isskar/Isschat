@@ -10,6 +10,7 @@
 
 import streamlit as st
 import time
+import signal
 import os
 import sys
 from pathlib import Path
@@ -20,7 +21,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Import custom modules
 from src.help_desk import HelpDesk
 from src.auth import (
-    logout,
     get_all_users,
     add_user,
     delete_user,
@@ -171,10 +171,12 @@ def main():
 
                         st.code(traceback.format_exc(), language="python")
 
-        # Logout button (for all users)
+        # Close Button
         st.divider()
-        if st.button("Logout", key="nav_logout"):
-            logout()
+        if st.button("Close App", key="nav_close_app"):
+            st.warning("Shutting down the Streamlit app...")
+            time.sleep(1)
+            os.kill(os.getpid(), signal.SIGKILL)
 
     # Determine which page to display - user is already authenticated at the beginning of main()
     if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
