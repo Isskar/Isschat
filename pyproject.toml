@@ -49,4 +49,4 @@ ignore = []
 
 [tool.ty.rules]
 unused-ignore-comment = "warn"
-possibly-unbound-import = "ignore"
+possibly-unbound-attribute = "ignore"

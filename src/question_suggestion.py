@@ -1,7 +1,7 @@
 import numpy as np
 import json
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer  # type: ignore
+from sklearn.feature_extraction.text import TfidfVectorizer
 import re
 from collections import Counter
 

@@ -268,7 +268,7 @@ class DataLoader:
 
     def load_from_db(self, embeddings) -> FAISS:
         """Loader chunks to Chroma DB"""
-        db = FAISS.load_local(
+        db: FAISS = FAISS.load_local(
             self.persist_directory,
             embeddings,
             allow_dangerous_deserialization=True,  # Necessary for recent versions of LangChain
