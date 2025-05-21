@@ -64,6 +64,6 @@ jobs:
       - name: Install the project
         run: uv sync --locked --all-extras --dev
 
-      - name: Type check with mypy
+      - name: Type check with ty
         run: |
-          uv run mypy .
+          uv run ty check .

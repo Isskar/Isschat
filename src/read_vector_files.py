@@ -16,10 +16,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # Optional imports that might be needed depending on the file content
 try:
-    # import numpy as np
     from langchain_community.vectorstores import FAISS
-
-    # import faiss
     from langchain_core.embeddings import Embeddings
 except ImportError:
     print("Warning: Some dependencies are missing. Install with:")
@@ -191,8 +188,6 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
 def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
     """
     Print information about a FAISS index.
-
-
     Args:
         db: The FAISS index to inspect
         num_docs: Number of documents to display (default: 5)
