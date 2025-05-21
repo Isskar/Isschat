@@ -18,6 +18,7 @@ from config import (
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_community.vectorstores import FAISS
+from langchain_core.embeddings import Embeddings
 
 
 class DataLoader:
@@ -266,7 +267,7 @@ class DataLoader:
         db.save_local(self.persist_directory)
         return db
 
-    def load_from_db(self, embeddings) -> FAISS:
+    def load_from_db(self, embeddings: Embeddings) -> FAISS:
         """Loader chunks to Chroma DB"""
         db: FAISS = FAISS.load_local(
             self.persist_directory,
@@ -301,7 +302,7 @@ class DataLoader:
 
         return dummy_docs
 
-    def set_db(self, embeddings: object) -> FAISS:
+    def set_db(self, embeddings: Embeddings) -> FAISS:
         """Create, save, and load db"""
         try:
             shutil.rmtree(self.persist_directory)
