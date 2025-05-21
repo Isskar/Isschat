@@ -261,7 +261,7 @@ class DataLoader:
         splitted_docs = splitter.split_documents(md_docs)
         return splitted_docs
 
-    def save_to_db(self, splitted_docs: list, embeddings) -> FAISS:
+    def save_to_db(self, splitted_docs: list, embeddings: Embeddings) -> FAISS:
         """Save chunks to Chroma DB"""
         db = FAISS.from_documents(splitted_docs, embeddings)
         db.save_local(self.persist_directory)
