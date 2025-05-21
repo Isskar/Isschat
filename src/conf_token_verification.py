@@ -15,7 +15,7 @@ def validate_confluence_token():
     """
 
     # Force reload environment variables from .env file to avoid cached values
-    env_path = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))) / ".env"
+    env_path = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) / ".env"
 
     # Check if .env file exists
     if not env_path.exists():

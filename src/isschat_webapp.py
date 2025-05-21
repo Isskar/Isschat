@@ -20,7 +20,7 @@ from src.auth import (  # noqa: E402
 
 # Import new features
 from src.features_integration import FeaturesManager  # noqa: E402
-from src.utils.conf_token_verification import validate_confluence_token  # noqa: E402
+from src.conf_token_verification import validate_confluence_token  # noqa: E402
 
 # Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
