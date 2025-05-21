@@ -185,7 +185,7 @@ def read_faiss_file(directory_path: str) -> Optional[FAISS]:
         return None
 
 
-def inspect_faiss_index(db, num_docs: int = 5) -> None:
+def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
     """
     Print information about a FAISS index.
     Args:
