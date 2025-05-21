@@ -52,4 +52,3 @@ ignore = []
 unused-ignore-comment = "warn"
 possibly-unbound-attribute = "ignore"
 possibly-unbound-import = "warn"
-unresolved-import = "warn"
