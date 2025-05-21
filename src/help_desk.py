@@ -36,7 +36,7 @@ class HelpDesk:
 
     def get_template(self) -> str:
         template = """
-        You are a professional and friendly virtual assistant named "Confluence Assistant".
+        You are a professional and friendly virtual assistant named "ISSCHAT".
         Your mission is to help users find information in the Confluence documentation.
 
         Based on these text excerpts:
@@ -119,10 +119,10 @@ class HelpDesk:
             distinct_sources_str = "  \n- ".join(distinct_sources)
 
         if len(distinct_sources) == 1:
-            return f"Here is the source that might be useful for you:  \n- {distinct_sources_str}"
+            return f"Voici la source que j'ai utilisée pour répondre à votre question:  \n- {distinct_sources_str}"  # noqa
 
         elif len(distinct_sources) > 1:
-            return f"Here are {len(distinct_sources)} sources that might be useful for you:  \n- {distinct_sources_str}"
+            return f"Voici les {len(distinct_sources)} sources que j'ai utilisées pour répondre à votre question:  \n- {distinct_sources_str}"  # noqa
 
         else:
-            return "Sorry, I couldn't find any resources to answer your question"
+            return "Désolé, je n'ai pas trouvé de ressources utiles pour répondre à votre question"

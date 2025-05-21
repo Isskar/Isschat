@@ -38,6 +38,7 @@ dependencies = [
     "pandas-stubs>=2.2.3.250308",
     "types-seaborn>=0.13.2.20250516",
     "ty>=0.0.1a6",
+    "dotenv>=0.9.9",
 ]
 
 [tool.ruff]

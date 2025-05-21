@@ -375,6 +375,17 @@ wheels = [
 ]
 
 [[package]]
+name = "dotenv"
+version = "0.9.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dotenv" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/b7/545d2c10c1fc15e48653c91efde329a790f2eecfbbf2bd16003b5db2bab0/dotenv-0.9.9-py2.py3-none-any.whl", hash = "sha256:29cf74a087b31dafdb5a446b6d7e11cbce8ed2741540e2339c69fbef92c94ce9", size = 1892, upload-time = "2025-02-19T22:15:01.647Z" },
+]
+
+[[package]]
 name = "faiss-cpu"
 version = "1.11.0"
 source = { registry = "https://pypi.org/simple" }
@@ -655,6 +666,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "atlassian-python-api" },
     { name = "beautifulsoup4" },
+    { name = "dotenv" },
     { name = "faiss-cpu" },
     { name = "html2text" },
     { name = "huggingface-hub" },
@@ -688,6 +700,7 @@ dependencies = [
 requires-dist = [
     { name = "atlassian-python-api", specifier = ">=3.41.0" },
     { name = "beautifulsoup4", specifier = ">=4.12.0" },
+    { name = "dotenv", specifier = ">=0.9.9" },
     { name = "faiss-cpu", specifier = ">=1.7.4" },
     { name = "html2text", specifier = ">=2025.4.15" },
     { name = "huggingface-hub", specifier = ">=0.19.0" },
