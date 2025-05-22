@@ -221,33 +221,58 @@ class FeaturesManager:
             return "Sorry, an error occurred while processing your question.", []
 
     def _add_feedback_widget(self, st, question: str, answer: str, sources: list) -> None:
-        """Add a feedback widget to evaluate the quality of the response"""
-        st.write("---")
+        """Add a feedback widget to evaluate the quality of the response using a Streamlit form"""
+        st.write("--")
         st.write("### Rate this response")
 
-        col1, col2 = st.columns([3, 1])
+        # Initialiser l'état si besoin
+        if "feedback_sent" not in st.session_state:
+            st.session_state["feedback_sent"] = False
+        if "feedback_score" not in st.session_state:
+            st.session_state["feedback_score"] = 3
+        if "feedback_text" not in st.session_state:
+            st.session_state["feedback_text"] = ""
 
-        with col1:
-            feedback_score = st.slider("Response quality", 1, 5, 3, key="feedback_score")
-            feedback_text = st.text_area(
-                "Comment (optional)",
-                key="feedback_text",
-                placeholder="Tell us what you think about this response",
-            )
+        # Generate a unique key for the form based on question and answer
+        form_key = f"feedback_form_{hash(question + answer)}"
 
-        with col2:
-            if st.button("Send feedback", key="send_feedback"):
-                # Record the feedback
-                self.response_tracker.log_response_quality(
-                    user_id=self.user_id,
-                    question=question,
-                    answer=answer,
-                    sources=sources if isinstance(sources, list) else [sources],
-                    feedback_score=feedback_score,
-                    feedback_text=feedback_text,
+        if not st.session_state.get(f"feedback_sent_{form_key}", False):
+            with st.form(form_key):
+                st.info("Formulaire feedback affiché")  # Debug print
+                feedback_score = st.slider(
+                    "Response quality",
+                    1,
+                    5,
+                    st.session_state["feedback_score"],
+                    key=f"feedback_score_slider_{form_key}",  # Also use unique key for slider
                 )
-                # st.success("Thank you for your feedback!")
-                pass
+                feedback_text = st.text_area(
+                    "Comment (optional)",
+                    value=st.session_state["feedback_text"],
+                    key=f"feedback_text_area_{form_key}",  # Also use unique key for text area
+                    placeholder="Tell us what you think about this response",
+                )
+                submit = st.form_submit_button("Send feedback")
+                st.info(f"Submit button clicked: {submit}")  # Debug print
+                if submit:
+                    st.info("Submit button is True. Logging feedback...")  # Debug print
+                    # Save feedback in session state (optional, depends if we want to keep values after submit)
+                    # st.session_state["feedback_score"] = feedback_score
+                    # st.session_state["feedback_text"] = feedback_text
+                    # Log feedback
+                    self.response_tracker.log_response_quality(
+                        user_id=self.user_id,
+                        question=question,
+                        answer=answer,
+                        sources=sources if isinstance(sources, list) else [sources],
+                        feedback_score=feedback_score,
+                        feedback_text=feedback_text,
+                    )
+                    st.session_state[f"feedback_sent_{form_key}"] = True
+                    st.success("Thank you for your feedback!")
+                    st.rerun()  # Rerun to hide the form and show the success message consistently
+        else:
+            st.success("Thank you for your feedback!")  # Show success message after submission
 
 
 # Function to integrate the feature manager into the main application

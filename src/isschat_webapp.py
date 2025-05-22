@@ -261,9 +261,6 @@ def chat_page():
             st.chat_message("assistant").markdown(result)
             if sources:
                 st.chat_message("assistant").write(sources)
-
-            # Add feedback widget if enabled
-            if show_feedback:
                 features._add_feedback_widget(st, prompt, result, sources)
 
             # Add to message history

@@ -23,6 +23,8 @@ class ResponseTracker:
 
     def log_response_quality(self, user_id, question, answer, sources, feedback_score, feedback_text=None):
         """Records the quality of a response based on user feedback"""
+        st.info(f"log_response_quality called: user_id={user_id}, score={feedback_score}, text={feedback_text}")
+        print(f"log_response_quality called: user_id={user_id}, score={feedback_score}, text={feedback_text}")
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "user_id": user_id,
@@ -184,36 +186,3 @@ def integrate_response_tracker(help_desk, user_id):
     help_desk.response_tracker = tracker
 
     return help_desk
-
-
-# Function to add a feedback widget in Streamlit
-def add_feedback_widget(st, help_desk, user_id, question, answer, sources):
-    """Adds a feedback widget for the response"""
-    st.write("---")
-    st.write("### Rate this response")
-
-    col1, col2, col3 = st.columns([3, 1, 1])
-
-    with col1:
-        feedback_score = st.slider("Response quality", 1, 5, 3)
-
-    with col2:
-        if st.button("Send feedback"):
-            feedback_text = st.session_state.get("feedback_text", "")
-            help_desk.response_tracker.log_response_quality(
-                user_id=user_id,
-                question=question,
-                answer=answer,
-                sources=sources,
-                feedback_score=feedback_score,
-                feedback_text=feedback_text,
-            )
-            st.success("Thank you for your feedback!")
-
-    with col3:
-        if feedback_score <= 3:
-            feedback_text = st.text_area(
-                "Comment (optional)",
-                key="feedback_text",
-                placeholder="Tell us why this response was not satisfactory",
-            )
