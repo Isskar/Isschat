@@ -3,6 +3,7 @@ from help_desk import HelpDesk
 from dotenv import load_dotenv, find_dotenv
 from langchain.evaluation import load_evaluator
 from langchain.evaluation import EmbeddingDistance
+from langchain.evaluation import EvaluatorType
 from config import EVALUATION_DATASET
 
 
@@ -17,12 +18,12 @@ def open_evaluation_dataset(filepath):
 
 
 def get_levenshtein_distance(model, reference_text, prediction_text):
-    evaluator = load_evaluator("string_distance")
+    evaluator = load_evaluator(EvaluatorType.STRING_DISTANCE)
     return evaluator.evaluate_strings(prediction=prediction_text, reference=reference_text)
 
 
 def get_cosine_distance(model, reference_text, prediction_text):
-    evaluator = load_evaluator("embedding_distance", distance_metric=EmbeddingDistance.COSINE)
+    evaluator = load_evaluator(EvaluatorType.EMBEDDING_DISTANCE, distance_metric=EmbeddingDistance.COSINE)
     return evaluator.evaluate_strings(prediction=prediction_text, reference=reference_text)
 
 
