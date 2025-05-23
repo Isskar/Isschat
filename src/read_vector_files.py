@@ -8,22 +8,30 @@ import os
 import sys
 import pickle
 import argparse
+from typing import Dict, cast, Any, List, Optional
 from pathlib import Path
-from typing import Any, List, Optional
 
 # Add parent directory to Python path to allow importing from project
 sys.path.append(str(Path(__file__).parent.parent))
 
+# Define types as Any initially to satisfy the type checker if imports fail or are conditional
+FAISS: Any = Any
+Embeddings: Any = object  # FAISS might expect Embeddings to be a class, so object is safer than Any
+Document: Any = Any
+
 # Optional imports that might be needed depending on the file content
 try:
-    from langchain_community.vectorstores import FAISS
-    from langchain_core.embeddings import Embeddings
+    from langchain_community.vectorstores import FAISS as FAISS
+    from langchain_core.embeddings import Embeddings as Embeddings
+    from langchain_core.documents import Document as Document
+
 except ImportError:
     print("Warning: Some dependencies are missing. Install with:")
     print("pip install langchain langchain-community langchain-core faiss-cpu numpy")
+    # FAISS, Embeddings, and Document will remain as their initial 'Any' or 'object' definitions
 
 
-class DummyEmbeddings(Embeddings):
+class DummyEmbeddings(Embeddings):  # type: ignore
     """A dummy embeddings class for loading FAISS indexes without actual embeddings."""
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
@@ -223,18 +231,20 @@ def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
 
         # Try to get document count
         if hasattr(docstore, "_dict"):
-            print(f"Number of documents: {len(docstore._dict)}")
+            # Cast _dict to the expected type for the type checker
+            doc_dict = cast(Dict[str, Document], docstore._dict)
+            print(f"Number of documents: {len(doc_dict)}")
 
             # Show a sample document if available
-            if len(docstore._dict) > 0:
-                sample_id = next(iter(docstore._dict.keys()))
-                sample_doc = docstore._dict[sample_id]
+            if len(doc_dict) > 0:
+                sample_id = next(iter(doc_dict.keys()))
+                sample_doc = doc_dict[sample_id]
                 print("\nSample document:")
                 print(f"  ID: {sample_id}")
                 print(f"  Type: {type(sample_doc)}")
 
                 # Print metadata if available
-                if hasattr(sample_doc, "metadata"):
+                if hasattr(sample_doc, "metadata") and sample_doc.metadata is not None:
                     print("  Metadata fields:")
                     for key in sample_doc.metadata:
                         print(f"    - {key}")
@@ -243,7 +253,7 @@ def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
                 print(f"\n===== First {num_docs} Documents =====")
 
                 # Get the document IDs (limited by num_docs)
-                doc_ids = list(docstore._dict.keys())[:num_docs]
+                doc_ids = list(doc_dict.keys())[:num_docs]
 
                 # Determine max width for each column to format a nice table
                 id_width = 8  # Truncated ID width
@@ -258,11 +268,16 @@ def inspect_faiss_index(db: FAISS, num_docs: int = 5) -> None:
 
                 # Print each document
                 for doc_id in doc_ids:
-                    doc = docstore._dict[doc_id]
+                    doc = doc_dict[doc_id]
 
                     # Extract data (safely)
                     truncated_id = str(doc_id)[:id_width] if len(str(doc_id)) > id_width else str(doc_id)
-                    title = doc.metadata.get("title", "")[:title_width] if "title" in doc.metadata else "N/A"
+                    title = ""
+                    if hasattr(doc, "metadata") and doc.metadata is not None:
+                        title = doc.metadata.get("title", "")[:title_width]
+                    else:
+                        title = "N/A"
+
                     # Truncate content and replace newlines
                     content = (
                         doc.page_content.replace("\n", " ")[:content_width] if hasattr(doc, "page_content") else "N/A"
@@ -310,7 +325,10 @@ def main():
     # Process according to file type
     if file_type == "faiss":
         db = read_faiss_file(args.file_path)
-        inspect_faiss_index(db, args.num_docs)
+        if db is not None:
+            inspect_faiss_index(db, args.num_docs)
+        else:
+            print(f"Could not load FAISS index from {args.file_path}")
     elif file_type == "faiss-pkl":
         # For directly examining the index.pkl file
         if not args.file_path.endswith(".pkl"):
