@@ -7,6 +7,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md /app/
 COPY src /app/src
 COPY config.py /app/config.py
+COPY config_manager.py /app/config_manager.py
 
 EXPOSE 8501
 

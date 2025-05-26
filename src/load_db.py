@@ -6,14 +6,8 @@ from pathlib import Path
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Import variables from config.py
-from config import (
-    CONFLUENCE_SPACE_NAME,
-    CONFLUENCE_SPACE_KEY,
-    CONFLUENCE_USERNAME,
-    CONFLUENCE_API_KEY,
-    PERSIST_DIRECTORY,
-)
+# Import configuration manager
+from Isschat.config import get_config
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
@@ -26,17 +20,21 @@ class DataLoader:
 
     def __init__(
         self,
-        confluence_url=CONFLUENCE_SPACE_NAME,
-        username=CONFLUENCE_USERNAME,
-        api_key=CONFLUENCE_API_KEY,
-        space_key=CONFLUENCE_SPACE_KEY,
-        persist_directory=PERSIST_DIRECTORY,
+        confluence_url=None,
+        username=None,
+        api_key=None,
+        space_key=None,
+        persist_directory=None,
     ):
-        self.confluence_url: str = confluence_url
-        self.username: str = username
-        self.api_key: str = api_key
-        self.space_key: str = space_key
-        self.persist_directory: str = persist_directory
+        # Get configuration
+        config = get_config()
+
+        # Use provided values or fall back to configuration
+        self.confluence_url: str = confluence_url or config.confluence_space_name
+        self.username: str = username or config.confluence_email_address
+        self.api_key: str = api_key or config.confluence_private_api_key
+        self.space_key: str = space_key or config.confluence_space_key
+        self.persist_directory: str = persist_directory or config.persist_directory
 
     def load_from_confluence_loader(self) -> list:
         """Load HTML files from Confluence using direct Atlassian API"""

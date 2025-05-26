@@ -1,4 +1,3 @@
-import os
 import collections
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -8,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
 
 import load_db
+from Isschat.config import get_config
 
 
 class HelpDesk:
@@ -65,9 +65,10 @@ class HelpDesk:
         return embeddings
 
     def get_llm(self):
-        api_key = convert_to_secret_str(os.getenv("OPENROUTER_API_KEY", ""))
+        config = get_config()
+        api_key = convert_to_secret_str(config.openrouter_api_key)
         if not api_key:
-            raise ValueError("OPENROUTER_API_KEY not found in environment variables")
+            raise ValueError("OPENROUTER_API_KEY not found in configuration")
 
         # Use ChatOpenAI with the custom client
         llm: ChatOpenAI = ChatOpenAI(

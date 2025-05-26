@@ -1,10 +1,14 @@
 import pandas as pd
+import os
 from help_desk import HelpDesk
 from dotenv import load_dotenv, find_dotenv
 from langchain.evaluation import load_evaluator
 from langchain.evaluation import EmbeddingDistance
 from langchain.evaluation import EvaluatorType
-from config import EVALUATION_DATASET
+
+# Configuration locale pour l'évaluation
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EVALUATION_DATASET = os.path.join(BASE_DIR, "data/evaluation_dataset.tsv")
 
 
 def predict(model, question):

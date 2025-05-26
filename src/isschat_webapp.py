@@ -3,9 +3,12 @@ import time
 import os
 import sys
 from pathlib import Path
+import shutil
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
+
+from config import get_config
 
 # Import custom modules
 from src.help_desk import HelpDesk  # noqa: E402
@@ -31,26 +34,28 @@ def get_model(rebuild_db=False):
     with st.spinner("Loading RAG model..."):
         # Check if the index.faiss file exists
         import sys  # noqa: E402
-        from config import PERSIST_DIRECTORY  # noqa: E402
+        from config import get_debug_info  # noqa: E402
 
-        # Display configuration information for debugging
-        api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
-        key_display = f"*****{api_key[-5:]}" if api_key else "Not defined"
+        # Get debug info
+        config = get_config()
+        debug_info = get_debug_info()
 
         st.sidebar.expander("Debug", expanded=False).write(f"""
                 **Configuration**:
-                - Vector store directory: `{PERSIST_DIRECTORY}`
-                - Confluence URL: `{os.getenv("CONFLUENCE_SPACE_NAME")}`
-                - Space key: `{os.getenv("CONFLUENCE_SPACE_KEY")}`
-                - User: `{os.getenv("CONFLUENCE_EMAIL_ADRESS")}`
-                - API key: `{key_display}`
+                - Provider: `{debug_info["provider"]}`
+                - Vector store directory: `{debug_info["persist_directory"]}`
+                - Confluence URL: `{debug_info["confluence_url"]}`
+                - Space key: `{debug_info["space_key"]}`
+                - User: `{debug_info["user_email"]}`
+                - API key: `{debug_info["confluence_api_key"]}`
+                - OpenRouter key: `{debug_info["openrouter_api_key"]}`
                 """)
 
         # Check if directory exists
-        if not os.path.exists(PERSIST_DIRECTORY):
-            st.warning(f"Directory {PERSIST_DIRECTORY} does not exist. Attempting to create it...")
+        if not os.path.exists(config.persist_directory):
+            st.warning(f"Directory {config.persist_directory} does not exist. Attempting to create it...")
             try:
-                os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
+                os.makedirs(config.persist_directory, exist_ok=True)
             except Exception as e:
                 st.error(f"Error creating directory: {str(e)}")
 
@@ -72,7 +77,12 @@ def main():
     # Even before rendering sidebar, force user auth
     if "user" not in st.session_state:
         # Create or retrieve admin user immediately
-        email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
+        try:
+            config = get_config()
+            email = config.confluence_email_address or "admin@auto.login"
+        except RuntimeError as e:
+            st.error(f"Configuration error: {e}")
+            st.stop()
         from src.auth import get_all_users, add_user
 
         # Check if user exists, create if needed
@@ -127,14 +137,12 @@ def main():
             if st.button("Rebuild from Confluence", type="primary"):
                 with st.spinner("Rebuilding database from Confluence..."):
                     # Delete existing files
-                    import shutil
-                    from config import PERSIST_DIRECTORY
 
                     try:
-                        if os.path.exists(PERSIST_DIRECTORY):
-                            shutil.rmtree(PERSIST_DIRECTORY)
-                            st.info(f"Directory {PERSIST_DIRECTORY} successfully deleted.")
-                        os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
+                        if os.path.exists(config.persist_directory):
+                            shutil.rmtree(config.persist_directory)
+                            st.info(f"Directory {config.persist_directory} successfully deleted.")
+                        os.makedirs(config.persist_directory, exist_ok=True)
                     except Exception as e:
                         st.error(f"Error deleting directory: {str(e)}")
 
