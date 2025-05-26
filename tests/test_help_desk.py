@@ -42,7 +42,7 @@ class TestHelpDesk:
         with (
             patch("src.help_desk.HuggingFaceEmbeddings", return_value=mock_embedding),
             patch("src.help_desk.ChatOpenAI", return_value=mock_llm),
-            patch("src.help_desk.load_db.DataLoader") as mock_loader_class,  # noqa
+            patch("src.help_desk.DataLoader") as mock_loader_class,  # noqa
         ):
             # Initialize help desk with new_db=True
             help_desk = HelpDesk(new_db=True)
@@ -56,7 +56,7 @@ class TestHelpDesk:
         with (
             patch("src.help_desk.HuggingFaceEmbeddings", return_value=mock_embedding),
             patch("src.help_desk.ChatOpenAI", return_value=mock_llm),
-            patch("src.help_desk.load_db.DataLoader") as mock_loader_class,  # noqa
+            patch("src.help_desk.DataLoader") as mock_loader_class,  # noqa
         ):
             # Initialize help desk with new_db=False
             help_desk = HelpDesk(new_db=False)
@@ -81,7 +81,7 @@ class TestHelpDesk:
         with (
             patch("src.help_desk.HuggingFaceEmbeddings"),
             patch("src.help_desk.ChatOpenAI"),
-            patch("src.help_desk.load_db.DataLoader"),
+            patch("src.help_desk.DataLoader"),
         ):
             help_desk = HelpDesk()
             prompt = help_desk.prompt
@@ -95,7 +95,7 @@ class TestHelpDesk:
         with (
             patch("src.help_desk.HuggingFaceEmbeddings", return_value=mock_embedding),
             patch("src.help_desk.ChatOpenAI", return_value=mock_llm),
-            patch("src.help_desk.load_db.DataLoader") as mock_loader_class,
+            patch("src.help_desk.DataLoader") as mock_loader_class,
         ):
             # Configure the mock DataLoader
             mock_loader = MagicMock()
