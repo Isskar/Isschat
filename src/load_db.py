@@ -18,6 +18,7 @@ from config import (
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_community.vectorstores import FAISS
+from langchain_core.embeddings import Embeddings
 
 
 class DataLoader:
@@ -260,15 +261,15 @@ class DataLoader:
         splitted_docs = splitter.split_documents(md_docs)
         return splitted_docs
 
-    def save_to_db(self, splitted_docs: list, embeddings: object) -> FAISS:
+    def save_to_db(self, splitted_docs: list, embeddings: Embeddings) -> FAISS:
         """Save chunks to Chroma DB"""
         db = FAISS.from_documents(splitted_docs, embeddings)
         db.save_local(self.persist_directory)
         return db
 
-    def load_from_db(self, embeddings: object) -> FAISS:
+    def load_from_db(self, embeddings: Embeddings) -> FAISS:
         """Loader chunks to Chroma DB"""
-        db = FAISS.load_local(
+        db: FAISS = FAISS.load_local(
             self.persist_directory,
             embeddings,
             allow_dangerous_deserialization=True,  # Necessary for recent versions of LangChain
@@ -301,7 +302,7 @@ class DataLoader:
 
         return dummy_docs
 
-    def set_db(self, embeddings: object) -> FAISS:
+    def set_db(self, embeddings: Embeddings) -> FAISS:
         """Create, save, and load db"""
         try:
             shutil.rmtree(self.persist_directory)
