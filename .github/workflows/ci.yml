@@ -94,4 +94,4 @@ jobs:
 
       - name: Type check with ty
         run: |
-          uv run pytest --cov=isschat --cov-report=xml --cov-report=html --cov-report=term-missing -vv tests/
+          uv run pytest tests/
