@@ -12,9 +12,33 @@ class ResponseTracker:
     """Tracks questions without satisfactory responses and suggests improvements"""
 
     def __init__(self, log_path="./logs/responses"):
-        self.log_path = log_path
+        # Convert relative path to absolute path
+        if log_path.startswith("./"):
+            import os
+
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            log_path = os.path.join(base_dir, log_path[2:])  # Remove ./ prefix
+
+        print(f"Response tracker initialized with log_path: {log_path}")
+
+        # Ensure directory exists
         os.makedirs(log_path, exist_ok=True)
+
+        # Set current log file path
+        self.log_path = log_path
         self.current_log_file = os.path.join(log_path, f"response_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
+        print(f"Current log file: {self.current_log_file}")
+
+        # Check if directory is writable
+        try:
+            test_file = os.path.join(log_path, "test_write.tmp")
+            with open(test_file, "w") as f:
+                f.write("test")
+            os.remove(test_file)
+            print(f"Directory {log_path} is writable")
+        except Exception as e:
+            print(f"WARNING: Directory {log_path} may not be writable: {str(e)}")
+
         self.feedback_thresholds = {
             "negative": 2,  # Feedback score < 2 is considered negative
             "neutral": 3,  # Feedback score = 3 is considered neutral
@@ -22,9 +46,26 @@ class ResponseTracker:
         }
 
     def log_response_quality(self, user_id, question, answer, sources, feedback_score, feedback_text=None):
-        """Records the quality of a response based on user feedback"""
-        st.info(f"log_response_quality called: user_id={user_id}, score={feedback_score}, text={feedback_text}")
-        print(f"log_response_quality called: user_id={user_id}, score={feedback_score}, text={feedback_text}")
+        """Records the quality of a response based on user feedback
+
+        Args:
+            user_id: User identifier
+            question: The question asked
+            answer: The answer provided
+            sources: The sources used for the answer
+            feedback_score: 5 for thumbs up, 1 for thumbs down
+            feedback_text: Optional feedback text
+        """
+        print("\n==== LOGGING FEEDBACK ====")
+        print(f"Log file: {self.current_log_file}")
+        print(f"User ID: {user_id}")
+        print(f"Feedback score: {feedback_score}")
+
+        # Determine if the response was satisfactory (thumbs up = satisfactory)
+        is_satisfactory = feedback_score > 3  # thumbs up = 5, thumbs down = 1
+        print(f"Is satisfactory: {is_satisfactory}")
+
+        # Create the log entry
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "user_id": user_id,
@@ -33,11 +74,41 @@ class ResponseTracker:
             "sources_count": len(sources) if sources else 0,
             "feedback_score": feedback_score,
             "feedback_text": feedback_text,
-            "is_satisfactory": feedback_score >= self.feedback_thresholds["neutral"],
+            "is_satisfactory": is_satisfactory,
+            "feedback_type": "thumbs_up" if is_satisfactory else "thumbs_down",
         }
 
-        with open(self.current_log_file, "a") as f:
-            f.write(json.dumps(log_entry) + "\n")
+        print(f"Log entry created: {json.dumps(log_entry)[:150]}...")
+
+        # Check if directory exists
+        log_dir = os.path.dirname(self.current_log_file)
+        if not os.path.exists(log_dir):
+            print(f"Creating directory: {log_dir}")
+            os.makedirs(log_dir, exist_ok=True)
+
+        # Direct write approach for debugging
+        try:
+            print(f"Writing directly to file: {self.current_log_file}")
+            with open(self.current_log_file, "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
+            print("✓ Successfully wrote feedback to file")
+        except Exception as e:
+            print(f"❌ Error writing to file: {str(e)}")
+            import traceback
+
+            print(traceback.format_exc())
+
+            # Try with absolute path
+            try:
+                abs_path = os.path.abspath(self.current_log_file)
+                print(f"Trying with absolute path: {abs_path}")
+                with open(abs_path, "a") as f:
+                    f.write(json.dumps(log_entry) + "\n")
+                print("✓ Successfully wrote feedback to file with absolute path")
+            except Exception as e2:
+                print(f"❌ Error writing to absolute path: {str(e2)}")
+
+        print("==== END LOGGING FEEDBACK ====")
 
     def get_unsatisfactory_responses(self, days=30):
         """Retrieves unsatisfactory responses from the last n days"""
@@ -123,43 +194,52 @@ class ResponseTracker:
 
     def render_tracking_dashboard(self):
         """Display the response tracking dashboard in Streamlit"""
-        st.title("Response Tracking")
+        st.title("Suivi des réponses")
 
         # Period selection
-        days = st.slider("Analysis period (days)", 1, 90, 30, key="nonresponse_days")
+        days = st.slider("Période d'analyse (jours)", 1, 90, 30, key="nonresponse_days")
         unsatisfactory = self.get_unsatisfactory_responses(days)
 
         if not unsatisfactory:
-            st.warning("No unsatisfactory responses found for the selected period")
+            st.warning("Aucune réponse insatisfaisante trouvée pour la période sélectionnée")
             return
 
+        # Create columns for metrics
+        col1, col2 = st.columns(2)
+
         # Basic metrics
-        st.metric("Number of unsatisfactory responses", len(unsatisfactory))
+        with col1:
+            st.metric("Nombre de réponses insatisfaisantes", len(unsatisfactory))
+
+        # Count feedback with comments
+        with_comments = sum(1 for item in unsatisfactory if item.get("feedback_text"))
+        with col2:
+            st.metric("Réponses avec commentaires", with_comments)
 
         # Pattern analysis
         patterns = self.identify_patterns(unsatisfactory)
 
         if "error" in patterns:
-            st.error(f"Analysis error: {patterns['error']}")
+            st.error(f"Erreur d'analyse: {patterns['error']}")
             return
 
         # Display clusters of similar questions
         if "clusters" in patterns and patterns["clusters"]:
-            st.subheader("Groups of similar questions without satisfactory responses")
+            st.subheader("Groupes de questions similaires avec réponses insatisfaisantes")
 
             for i, cluster in enumerate(patterns["clusters"]):
-                with st.expander(f"Group {i + 1}: {cluster['main_question']} ({cluster['count']} questions)"):
+                with st.expander(f"Groupe {i + 1}: {cluster['main_question']} ({cluster['count']} questions)"):
                     for q in cluster["similar_questions"]:
                         st.write(f"- {q}")
 
         # Display common terms
         if "common_terms" in patterns and patterns["common_terms"]:
-            st.subheader("Frequent terms in questions without satisfactory responses")
-            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Term", "Frequency"])
+            st.subheader("Termes fréquents dans les questions avec réponses insatisfaisantes")
+            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Terme", "Fréquence"])
             st.dataframe(terms_df)
 
         # Table of questions without satisfactory responses
-        st.subheader("Details of questions without satisfactory responses")
+        st.subheader("Détails des questions avec réponses insatisfaisantes")
 
         # Convert to DataFrame for cleaner display
         df = pd.DataFrame(
@@ -167,14 +247,16 @@ class ResponseTracker:
                 {
                     "Date": datetime.fromisoformat(item["timestamp"]).strftime("%Y-%m-%d %H:%M"),
                     "Question": item["question"],
-                    "Score": item["feedback_score"],
-                    "Comment": item.get("feedback_text", ""),
+                    "Feedback": "👎"
+                    if item.get("feedback_type") == "thumbs_down"
+                    else "👎",  # Should always be thumbs down
+                    "Commentaire": item.get("feedback_text", ""),
                 }
                 for item in unsatisfactory
             ]
         )
 
-        st.dataframe(df)
+        st.dataframe(df, use_container_width=True)
 
 
 # Function to integrate the tracker in the main application

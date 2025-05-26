@@ -221,45 +221,50 @@ class FeaturesManager:
             return "Sorry, an error occurred while processing your question.", []
 
     def _add_feedback_widget(self, st, question: str, answer: str, sources: list) -> None:
-        """Add a feedback widget to evaluate the quality of the response using a Streamlit form"""
-        st.write("--")
-        st.write("### Rate this response")
+        """Add a feedback widget to evaluate the quality of the response using thumbs up/down"""
+        st.write("---")
 
-        # Initialiser l'état si besoin
-        if "feedback_sent" not in st.session_state:
-            st.session_state["feedback_sent"] = False
-        if "feedback_score" not in st.session_state:
-            st.session_state["feedback_score"] = 3
-        if "feedback_text" not in st.session_state:
-            st.session_state["feedback_text"] = ""
+        # Unique ID for this feedback instance
+        feedback_id = f"feedback_{hash(question + answer)}"
 
-        # Generate a unique key for the form based on question and answer
-        form_key = f"feedback_form_{hash(question + answer)}"
+        # Add debug info before feedback widget
+        print("\n==== ADDING FEEDBACK WIDGET ====")
+        print(f"Feedback ID: {feedback_id}")
+        print(f"Question: {question[:50]}..." if len(question) > 50 else f"Question: {question}")
 
-        if not st.session_state.get(f"feedback_sent_{form_key}", False):
-            with st.form(form_key):
-                st.info("Formulaire feedback affiché")  # Debug print
-                feedback_score = st.slider(
-                    "Response quality",
-                    1,
-                    5,
-                    st.session_state["feedback_score"],
-                    key=f"feedback_score_slider_{form_key}",  # Also use unique key for slider
-                )
-                feedback_text = st.text_area(
-                    "Comment (optional)",
-                    value=st.session_state["feedback_text"],
-                    key=f"feedback_text_area_{form_key}",  # Also use unique key for text area
-                    placeholder="Tell us what you think about this response",
-                )
-                submit = st.form_submit_button("Send feedback")
-                st.info(f"Submit button clicked: {submit}")  # Debug print
-                if submit:
-                    st.info("Submit button is True. Logging feedback...")  # Debug print
-                    # Save feedback in session state (optional, depends if we want to keep values after submit)
-                    # st.session_state["feedback_score"] = feedback_score
-                    # st.session_state["feedback_text"] = feedback_text
-                    # Log feedback
+        # Store the feedback value in session state to track changes
+        if f"prev_{feedback_id}" not in st.session_state:
+            st.session_state[f"prev_{feedback_id}"] = None
+
+        # Use Streamlit's feedback component with thumbs up/down
+        feedback = st.feedback(
+            options="thumbs",
+            key=feedback_id,
+            on_change=self._on_feedback_change,
+            args=(question, answer, sources, feedback_id),
+        )
+
+        # Debug the current feedback value
+        print(f"Current feedback value: {feedback}")
+        print(f"Previous feedback value: {st.session_state.get(f'prev_{feedback_id}')}")
+
+        # Check if feedback was given (0 = thumbs down, 1 = thumbs up, None = no feedback)
+        if feedback is not None:
+            # Convert to our scoring system: thumbs up (1) = 5, thumbs down (0) = 1
+            feedback_score = 5 if feedback == 1 else 1
+            feedback_text = None  # Streamlit feedback doesn't provide text directly
+
+            # Debug information
+            print(f"Feedback received: {feedback} (raw value)")
+            print(f"Converted to score: {feedback_score}")
+
+            # Check if this is a new feedback (different from previous)
+            if feedback != st.session_state.get(f"prev_{feedback_id}"):
+                print("New feedback detected! Processing...")
+                st.session_state[f"prev_{feedback_id}"] = feedback
+
+                # Log the feedback
+                try:
                     self.response_tracker.log_response_quality(
                         user_id=self.user_id,
                         question=question,
@@ -268,11 +273,83 @@ class FeaturesManager:
                         feedback_score=feedback_score,
                         feedback_text=feedback_text,
                     )
-                    st.session_state[f"feedback_sent_{form_key}"] = True
-                    st.success("Thank you for your feedback!")
-                    st.rerun()  # Rerun to hide the form and show the success message consistently
-        else:
-            st.success("Thank you for your feedback!")  # Show success message after submission
+                    print("Feedback successfully saved!")
+                except Exception as e:
+                    print(f"Error saving feedback: {str(e)}")
+                    import traceback
+
+                    print(traceback.format_exc())
+            else:
+                print("This feedback was already processed. Skipping.")
+
+        print("==== END ADDING FEEDBACK WIDGET ====")
+
+    def _on_feedback_change(self, question, answer, sources, feedback_id):
+        """Callback when feedback changes"""
+        print("\n==== FEEDBACK CHANGED ====")
+        print(f"Feedback ID: {feedback_id}")
+
+        # Get the current feedback value
+        feedback = st.session_state.get(feedback_id)
+        print(f"New feedback value: {feedback}")
+
+        if feedback is not None:
+            # Convert to our scoring system: thumbs up (1) = 5, thumbs down (0) = 1
+            feedback_score = 5 if feedback == 1 else 1
+            feedback_text = None  # Streamlit feedback doesn't provide text directly
+
+            # Log the feedback
+            try:
+                print(f"Logging feedback from callback: {feedback_score}")
+                self.response_tracker.log_response_quality(
+                    user_id=self.user_id,
+                    question=question,
+                    answer=answer,
+                    sources=sources if isinstance(sources, list) else [sources],
+                    feedback_score=feedback_score,
+                    feedback_text=feedback_text,
+                )
+                print("Feedback successfully saved from callback!")
+            except Exception as e:
+                print(f"Error saving feedback from callback: {str(e)}")
+                import traceback
+
+                print(traceback.format_exc())
+
+        print("==== END FEEDBACK CHANGED ====")
+
+        # If feedback is negative (thumbs down), show a text area for additional comments
+        if feedback is not None and feedback == 0:  # 0 = thumbs down
+            with st.expander(
+                "Pourriez-vous nous dire pourquoi cette réponse n'était pas satisfaisante ?", expanded=True
+            ):
+                comment = st.text_area(
+                    "Votre commentaire",
+                    key=f"{feedback_id}_comment",
+                    placeholder="Dites-nous comment nous pouvons améliorer cette réponse...",
+                )
+
+                if st.button("Envoyer le commentaire", key=f"{feedback_id}_submit"):
+                    if comment.strip():
+                        # Update the feedback with the comment
+                        try:
+                            print(f"Logging feedback with comment: {comment[:50]}...")
+                            self.response_tracker.log_response_quality(
+                                user_id=self.user_id,
+                                question=question,
+                                answer=answer,
+                                sources=sources if isinstance(sources, list) else [sources],
+                                feedback_score=1,  # thumbs down = 1 in our scoring system
+                                feedback_text=comment,
+                            )
+                            st.success("Merci pour votre commentaire !")
+                            print("Feedback with comment successfully saved!")
+                            st.rerun()
+                        except Exception as e:
+                            print(f"Error saving feedback with comment: {str(e)}")
+                            import traceback
+
+                            print(traceback.format_exc())
 
 
 # Function to integrate the feature manager into the main application
