@@ -6,7 +6,6 @@ WORKDIR /app
 
 COPY pyproject.toml README.md /app/
 COPY src /app/src
-COPY .env /app/.env
 COPY config.py /app/config.py
 
 EXPOSE 8501

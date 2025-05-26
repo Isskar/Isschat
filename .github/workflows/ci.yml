@@ -67,3 +67,54 @@ jobs:
       - name: Type check with ty
         run: |
           uv run ty check .
+
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Build and push image
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.REGISTRY_NAME }}.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+    
+    - name: Create .env file for container
+      run: |
+        echo "CONFLUENCE_PRIVATE_API_KEY=${{ secrets.CONFLUENCE_PRIVATE_API_KEY }}" > .env
+        echo "CONFLUENCE_SPACE_KEY=${{ secrets.CONFLUENCE_SPACE_KEY }}" >> .env
+        echo "CONFLUENCE_SPACE_NAME=${{ secrets.CONFLUENCE_SPACE_NAME }}" >> .env
+        echo "CONFLUENCE_EMAIL_ADRESS=${{ secrets.CONFLUENCE_EMAIL_ADRESS }}" >> .env
+        echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> .env
+    
+    - name: Build and push Docker image
+      run: |
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest .
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+    
+    - name: Deploy to Azure Container Instances
+      uses: azure/aci-deploy@v1
+      with:
+        resource-group: ${{ env.RESOURCE_GROUP }}
+        dns-name-label: isschat-${{ github.run_number }}
+        image: ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        name: isschat-container
+        location: france-central
+        ports: 8501
+        cpu: 2
+        memory: 4
+        environment-variables: |
+          CONFLUENCE_PRIVATE_API_KEY=${{ secrets.CONFLUENCE_PRIVATE_API_KEY }}
+          CONFLUENCE_SPACE_KEY=${{ secrets.CONFLUENCE_SPACE_KEY }}
+          CONFLUENCE_SPACE_NAME=${{ secrets.CONFLUENCE_SPACE_NAME }}
+          CONFLUENCE_EMAIL_ADRESS=${{ secrets.CONFLUENCE_EMAIL_ADRESS }}
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
