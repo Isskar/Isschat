@@ -5,33 +5,16 @@ commonly used for vector databases and embeddings.
 """
 
 import os
-import sys
 import pickle
 import argparse
 from typing import Dict, cast, Any, List, Optional
-from pathlib import Path
 
-# Add parent directory to Python path to allow importing from project
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Define types as Any initially to satisfy the type checker if imports fail or are conditional
-FAISS: Any = Any
-Embeddings: Any = object  # FAISS might expect Embeddings to be a class, so object is safer than Any
-Document: Any = Any
-
-# Optional imports that might be needed depending on the file content
-try:
-    from langchain_community.vectorstores import FAISS as FAISS
-    from langchain_core.embeddings import Embeddings as Embeddings
-    from langchain_core.documents import Document as Document
-
-except ImportError:
-    print("Warning: Some dependencies are missing. Install with:")
-    print("pip install langchain langchain-community langchain-core faiss-cpu numpy")
-    # FAISS, Embeddings, and Document will remain as their initial 'Any' or 'object' definitions
+from langchain_community.vectorstores import FAISS as FAISS
+from langchain_core.embeddings import Embeddings as Embeddings
+from langchain_core.documents import Document as Document
 
 
-class DummyEmbeddings(Embeddings):  # type: ignore
+class DummyEmbeddings(Embeddings):
     """A dummy embeddings class for loading FAISS indexes without actual embeddings."""
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
