@@ -8,10 +8,6 @@ from pathlib import Path
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Streamlit file watcher is disabled via .streamlit/config.toml
-# [server]
-# fileWatcherType = "none"
-
 # Now import streamlit after patches are applied
 import streamlit as st  # noqa: E402
 

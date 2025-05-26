@@ -69,7 +69,7 @@ class HelpDesk:
 
         # Use ChatOpenAI with the custom client
         llm = ChatOpenAI(
-            model="deepseek/deepseek-chat",
+            model="openai/gpt-4o-mini",
             temperature=0.1,
             max_tokens=512,
             openai_api_key=api_key,
@@ -86,7 +86,7 @@ class HelpDesk:
         return retrieval_chain
 
     def retrieval_qa_inference(self, question: str, verbose: bool = True) -> tuple[str, str]:
-        # Get the source documents directly from the retriever using the new invoke method
+        # Get the source documents directly from the retriever
         docs = self.retriever.invoke(question)
 
         # Add logs to verify the retrieved documents
