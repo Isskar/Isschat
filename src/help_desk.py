@@ -1,11 +1,13 @@
-import load_db
+import os
 import collections
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-import os
+from langchain_core.utils.utils import convert_to_secret_str
+
+import load_db
 
 
 class HelpDesk:
@@ -63,7 +65,7 @@ class HelpDesk:
         return embeddings
 
     def get_llm(self):
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        api_key = convert_to_secret_str(os.getenv("OPENROUTER_API_KEY", ""))
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
 
