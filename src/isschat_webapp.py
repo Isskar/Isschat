@@ -1,14 +1,35 @@
-import streamlit as st
-import time
+# Apply patches and configure environment before importing streamlit
 import os
 import sys
+import asyncio
+import time
 from pathlib import Path
 import shutil
+import streamlit as st  # noqa: E402
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from config import get_config
+
+# Set tokenizers parallelism to false to avoid deadlocks
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Fix asyncio event loop issues with Streamlit
+try:
+    # Create and set a new event loop if needed
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running event loop, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    # Set the default policy
+    asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+except Exception as e:
+    print(f"Note: asyncio configuration: {str(e)}")
+    pass  # Continue even if there's an issue with the event loop
 
 # Import custom modules
 from src.help_desk import HelpDesk  # noqa: E402
@@ -23,6 +44,7 @@ from src.auth import (  # noqa: E402
 
 # Import new features
 from src.features_integration import FeaturesManager  # noqa: E402
+from src.conf_token_verification import validate_confluence_token  # noqa: E402
 
 # Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
@@ -73,6 +95,21 @@ def get_model(rebuild_db=False):
 
 # User interface initialization
 def main():
+    # Validate Confluence API token before proceeding
+    is_valid, error_message = validate_confluence_token()
+    if not is_valid:
+        st.error("⚠️ Confluence API Token Error")
+        st.error(error_message)
+        st.markdown("""
+        ### Please generate a new Confluence API token
+        1. Go to [Atlassian Account Settings](https://id.atlassian.com/manage-profile/security/api-tokens)
+        2. Click on "Create API token"
+        3. Give it a name (e.g., "ISSCHAT Application")
+        4. Copy the generated token
+        5. Update your `.env` file with the new token value for `CONFLUENCE_PRIVATE_API_KEY`
+        Once updated, restart the application.
+        """)
+        st.stop()
     # Ensure user is always authenticated
     # Even before rendering sidebar, force user auth
     if "user" not in st.session_state:

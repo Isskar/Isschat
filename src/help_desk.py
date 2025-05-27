@@ -90,7 +90,7 @@ class HelpDesk:
 
     def retrieval_qa_inference(self, question: str, verbose: bool = True) -> tuple[str, str]:
         # Get the source documents directly from the retriever
-        docs = self.retriever.get_relevant_documents(question)
+        docs = self.retriever.invoke(question)
 
         # Add logs to verify the retrieved documents
         if verbose:
