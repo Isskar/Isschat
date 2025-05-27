@@ -133,66 +133,37 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
         """Get Azure Key Vault client with managed identity"""
         if self._client is None:
             try:
-                from azure.keyvault import KeyVaultClient
-                from msrestazure.azure_active_directory import MSIAuthentication, ServicePrincipalCredentials
-                import os
+                from azure.keyvault.secrets import SecretClient
+                from azure.identity import DefaultAzureCredential
+                import json
 
-                # Priority 1: Managed Service Identity (for Azure App Service)
-                if os.getenv("MSI_ENDPOINT") or os.getenv("IDENTITY_ENDPOINT"):
-                    logging.info("Detected Azure Managed Identity environment")
-                    credentials = MSIAuthentication()
-                    auth_method = "Managed Identity"
+                # azure credentials from environment variable
+                if os.getenv("AZURE_CREDENTIALS"):
+                    # GitHub Actions with AZURE_CREDENTIALS JSON
+                    azure_creds = json.loads(os.getenv("AZURE_CREDENTIALS", "{}"))
+                    from azure.identity import ClientSecretCredential
 
-                # Priority 2: Service Principal (with explicit credentials)
-                elif all(
-                    [os.getenv("AZURE_CLIENT_ID"), os.getenv("AZURE_CLIENT_SECRET"), os.getenv("AZURE_TENANT_ID")]
-                ):
-                    logging.info("Using Service Principal authentication")
-                    credentials = ServicePrincipalCredentials(
-                        client_id=os.getenv("AZURE_CLIENT_ID"),
-                        secret=os.getenv("AZURE_CLIENT_SECRET"),
-                        tenant=os.getenv("AZURE_TENANT_ID"),
+                    credential = ClientSecretCredential(
+                        tenant_id=azure_creds["tenantId"],
+                        client_id=azure_creds["clientId"],
+                        client_secret=azure_creds["clientSecret"],
                     )
-                    auth_method = "Service Principal"
-
-                # Priority 3: Try MSI anyway (fallback for some Azure environments)
                 else:
-                    logging.info("Attempting Managed Identity authentication (fallback)")
-                    try:
-                        credentials = MSIAuthentication()
-                        auth_method = "Managed Identity (fallback)"
-                    except Exception as msi_error:
-                        raise ValueError(
-                            f"No valid Azure authentication method found. MSI Error: {msi_error}\n"
-                            "Ensure you're running in Azure with Managed Identity enabled, or set:\n"
-                            "- AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID for Service Principal"
-                        )
+                    # DefaultAzureCredential (Managed Identity, Azure CLI, Env vars)
+                    credential = DefaultAzureCredential()
 
-                self._client = KeyVaultClient(credentials)
-                logging.info(f"Connected to Azure Key Vault using {auth_method}: {self.key_vault_url}")
+                self._client = SecretClient(vault_url=self.key_vault_url, credential=credential)
 
             except ImportError as e:
-                raise ImportError(f"Azure SDK not installed. Error: {e}")
-            except Exception as e:
-                logging.error(f"Failed to connect to Azure Key Vault: {e}")
-                raise
+                raise ImportError(f"Azure SDK not installed: {e}")
         return self._client
 
     def _get_secret(self, secret_name: str) -> str:
         """Get a secret from Azure Key Vault"""
         try:
             client = self._get_client()
-
-            # Handle different Azure SDK versions
-            if hasattr(client, "get_secret"):
-                # Newer SDK (azure-keyvault-secrets)
-                secret = client.get_secret(secret_name)
-                return secret.value if hasattr(secret, "value") else str(secret)
-            else:
-                # Older SDK (azure-keyvault)
-                secret_bundle = client.get_secret(self.key_vault_url, secret_name, "")
-                return secret_bundle.value
-
+            secret = client.get_secret(secret_name)
+            return secret.value
         except Exception as e:
             logging.error(f"Failed to retrieve secret '{secret_name}': {e}")
             return ""
@@ -204,10 +175,10 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
 
         # Key Vault secret mapping
         secret_mapping = {
-            "confluence_private_api_key": "confluence-api-key",
+            "confluence_private_api_key": "confluence-private-api-key",
             "confluence_space_key": "confluence-space-key",
             "confluence_space_name": "confluence-space-name",
-            "confluence_email_address": "confluence-email",
+            "confluence_email_address": "confluence-email-address",
             "openrouter_api_key": "openrouter-api-key",
         }
 
