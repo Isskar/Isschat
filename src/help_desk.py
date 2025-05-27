@@ -1,4 +1,4 @@
-import os
+import load_db
 import collections
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -6,8 +6,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
-
-import load_db
+import os
 
 
 class HelpDesk:
