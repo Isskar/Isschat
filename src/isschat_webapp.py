@@ -1,11 +1,34 @@
-import streamlit as st
-import time
+# Apply patches and configure environment before importing streamlit
 import os
 import sys
+import asyncio
+import time
 from pathlib import Path
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
+
+# Now import streamlit after patches are applied
+import streamlit as st  # noqa: E402
+
+# Set tokenizers parallelism to false to avoid deadlocks
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Fix asyncio event loop issues with Streamlit
+try:
+    # Create and set a new event loop if needed
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running event loop, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    # Set the default policy
+    asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+except Exception as e:
+    print(f"Note: asyncio configuration: {str(e)}")
+    pass  # Continue even if there's an issue with the event loop
 
 # Import custom modules
 from src.help_desk import HelpDesk  # noqa: E402
