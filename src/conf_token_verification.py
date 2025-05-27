@@ -114,9 +114,10 @@ class ConfluenceTokenVerifier:
             return True, None
 
         except ApiError as e:
-            if e.status_code == 401:
+            error_str = str(e).lower()
+            if e.reason == "Unauthorized" or "unauthorized" in error_str or "401" in error_str:
                 return False, "Confluence API token is invalid or expired. Please generate a new token."
-            elif e.status_code == 403:
+            elif e.reason == "Forbidden" or "forbidden" in error_str or "permission" in error_str or "403" in error_str:
                 return False, "Insufficient permissions with the provided Confluence API token."
             else:
                 return False, f"Confluence API error: {str(e)}"
