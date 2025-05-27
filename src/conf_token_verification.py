@@ -10,7 +10,6 @@ class ConfluenceTokenVerifier:
 
     def __init__(self, env_path=None):
         """Initialize the verifier with an optional custom environment file path.
-
         Args:
             env_path (str or Path, optional): Path to the .env file. If None, will use the default path.
         """
@@ -29,7 +28,6 @@ class ConfluenceTokenVerifier:
 
     def load_environment_variables(self):
         """Load environment variables from the .env file.
-
         Returns:
             tuple: (success, error_message)
                 - success (bool): True if environment variables were loaded successfully, False otherwise
@@ -62,7 +60,6 @@ class ConfluenceTokenVerifier:
 
     def _validate_environment_variables(self):
         """Validate that all required environment variables are set.
-
         Returns:
             tuple: (is_valid, error_message)
         """
@@ -91,7 +88,6 @@ class ConfluenceTokenVerifier:
 
     def create_confluence_client(self):
         """Create a Confluence client instance using the loaded credentials.
-
         Returns:
             Confluence: The Confluence client instance
         """
@@ -105,7 +101,6 @@ class ConfluenceTokenVerifier:
 
     def test_connection(self):
         """Test the connection to Confluence by making a simple API call.
-
         Returns:
             tuple: (is_successful, error_message)
         """
@@ -131,7 +126,6 @@ class ConfluenceTokenVerifier:
 
     def validate_token(self):
         """Validate the Confluence API token by loading environment variables and testing the connection.
-
         Returns:
             tuple: (is_valid, error_message)
                 - is_valid (bool): True if token is valid, False otherwise
@@ -146,16 +140,7 @@ class ConfluenceTokenVerifier:
         return self.test_connection()
 
 
-# Maintain the original function for backward compatibility
 def validate_confluence_token():
-    """Validates the Confluence API token by attempting to make a simple API call.
-
-    This function maintains backward compatibility with the original implementation.
-
-    Returns:
-        tuple: (is_valid, error_message)
-            - is_valid (bool): True if token is valid, False otherwise
-            - error_message (str): Error message if token is invalid, None otherwise
-    """
+    """Validates the Confluence API token by attempting to make a simple API call."""
     verifier = ConfluenceTokenVerifier()
     return verifier.validate_token()
