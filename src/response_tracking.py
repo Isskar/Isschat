@@ -194,14 +194,14 @@ class ResponseTracker:
 
     def render_tracking_dashboard(self):
         """Display the response tracking dashboard in Streamlit"""
-        st.title("Suivi des réponses")
+        st.title("Response Tracking")
 
         # Period selection
-        days = st.slider("Période d'analyse (jours)", 1, 90, 30, key="nonresponse_days")
+        days = st.slider("Analysis period (days)", 1, 90, 30, key="nonresponse_days")
         unsatisfactory = self.get_unsatisfactory_responses(days)
 
         if not unsatisfactory:
-            st.warning("Aucune réponse insatisfaisante trouvée pour la période sélectionnée")
+            st.warning("No unsatisfactory responses found for the selected period")
             return
 
         # Create columns for metrics
@@ -209,37 +209,37 @@ class ResponseTracker:
 
         # Basic metrics
         with col1:
-            st.metric("Nombre de réponses insatisfaisantes", len(unsatisfactory))
+            st.metric("Number of unsatisfactory responses", len(unsatisfactory))
 
         # Count feedback with comments
         with_comments = sum(1 for item in unsatisfactory if item.get("feedback_text"))
         with col2:
-            st.metric("Réponses avec commentaires", with_comments)
+            st.metric("Responses with comments", with_comments)
 
         # Pattern analysis
         patterns = self.identify_patterns(unsatisfactory)
 
         if "error" in patterns:
-            st.error(f"Erreur d'analyse: {patterns['error']}")
+            st.error(f"Analysis error: {patterns['error']}")
             return
 
         # Display clusters of similar questions
         if "clusters" in patterns and patterns["clusters"]:
-            st.subheader("Groupes de questions similaires avec réponses insatisfaisantes")
+            st.subheader("Groups of similar questions with unsatisfactory responses")
 
             for i, cluster in enumerate(patterns["clusters"]):
-                with st.expander(f"Groupe {i + 1}: {cluster['main_question']} ({cluster['count']} questions)"):
+                with st.expander(f"Group {i + 1}: {cluster['main_question']} ({cluster['count']} questions)"):
                     for q in cluster["similar_questions"]:
                         st.write(f"- {q}")
 
         # Display common terms
         if "common_terms" in patterns and patterns["common_terms"]:
-            st.subheader("Termes fréquents dans les questions avec réponses insatisfaisantes")
-            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Terme", "Fréquence"])
+            st.subheader("Frequent terms in questions with unsatisfactory responses")
+            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Term", "Frequency"])
             st.dataframe(terms_df)
 
         # Table of questions without satisfactory responses
-        st.subheader("Détails des questions avec réponses insatisfaisantes")
+        st.subheader("Details of questions with unsatisfactory responses")
 
         # Convert to DataFrame for cleaner display
         df = pd.DataFrame(
@@ -250,7 +250,7 @@ class ResponseTracker:
                     "Feedback": "👎"
                     if item.get("feedback_type") == "thumbs_down"
                     else "👎",  # Should always be thumbs down
-                    "Commentaire": item.get("feedback_text", ""),
+                    "Comment": item.get("feedback_text", ""),
                 }
                 for item in unsatisfactory
             ]

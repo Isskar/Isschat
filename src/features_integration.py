@@ -318,38 +318,55 @@ class FeaturesManager:
 
         print("==== END FEEDBACK CHANGED ====")
 
-        # If feedback is negative (thumbs down), show a text area for additional comments
+        # Store the comment in session state to preserve it between reruns
+        if f"{feedback_id}_comment" not in st.session_state:
+            st.session_state[f"{feedback_id}_comment"] = ""
+
+        # If feedback is negative (thumbs down), show a comment field directly after the feedback widget
         if feedback is not None and feedback == 0:  # 0 = thumbs down
-            with st.expander(
-                "Pourriez-vous nous dire pourquoi cette réponse n'était pas satisfaisante ?", expanded=True
-            ):
-                comment = st.text_area(
-                    "Votre commentaire",
-                    key=f"{feedback_id}_comment",
-                    placeholder="Dites-nous comment nous pouvons améliorer cette réponse...",
-                )
+            # Comment section for negative feedback
+            st.text_area(
+                "Please tell us why this response wasn't helpful",
+                key=f"{feedback_id}_comment",
+                placeholder="Help us improve our responses...",
+                value=st.session_state.get(f"{feedback_id}_comment", ""),
+                on_change=self._on_comment_change,
+                args=(feedback_id,),
+            )
 
-                if st.button("Envoyer le commentaire", key=f"{feedback_id}_submit"):
-                    if comment.strip():
-                        # Update the feedback with the comment
-                        try:
-                            print(f"Logging feedback with comment: {comment[:50]}...")
-                            self.response_tracker.log_response_quality(
-                                user_id=self.user_id,
-                                question=question,
-                                answer=answer,
-                                sources=sources if isinstance(sources, list) else [sources],
-                                feedback_score=1,  # thumbs down = 1 in our scoring system
-                                feedback_text=comment,
-                            )
-                            st.success("Merci pour votre commentaire !")
-                            print("Feedback with comment successfully saved!")
-                            st.rerun()
-                        except Exception as e:
-                            print(f"Error saving feedback with comment: {str(e)}")
-                            import traceback
+            # Submit button for the comment
+            if st.button("Submit feedback", key=f"{feedback_id}_submit"):
+                comment = st.session_state.get(f"{feedback_id}_comment", "")
+                if comment.strip():
+                    # Update the feedback with the comment
+                    try:
+                        print(f"Logging feedback with comment: {comment[:50]}...")
+                        self.response_tracker.log_response_quality(
+                            user_id=self.user_id,
+                            question=question,
+                            answer=answer,
+                            sources=sources if isinstance(sources, list) else [sources],
+                            feedback_score=1,  # thumbs down = 1 in our scoring system
+                            feedback_text=comment,
+                        )
+                        st.success("Thank you for your feedback!")
+                        print("Feedback with comment successfully saved!")
 
-                            print(traceback.format_exc())
+                        # Clear the comment field after submission
+                        st.session_state[f"{feedback_id}_comment"] = ""
+                        st.rerun()
+                    except Exception as e:
+                        print(f"Error saving feedback with comment: {str(e)}")
+                        import traceback
+
+                        print(traceback.format_exc())
+                else:
+                    st.warning("Please provide a comment before submitting.")
+
+    def _on_comment_change(self, feedback_id):
+        """Callback when comment changes"""
+        print(f"Comment changed for {feedback_id}: {st.session_state.get(f'{feedback_id}_comment', '')}")
+        # Just track the change, actual saving happens on submit
 
 
 # Function to integrate the feature manager into the main application
