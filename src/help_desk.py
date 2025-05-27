@@ -70,8 +70,8 @@ class HelpDesk:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
 
         # Use ChatOpenAI with the custom client
-        llm = ChatOpenAI(
-            model="openai/gpt-4o-mini",
+        llm: ChatOpenAI = ChatOpenAI(
+            model_name="deepseek/deepseek-chat",
             temperature=0.1,
             max_tokens=512,
             openai_api_key=api_key,
