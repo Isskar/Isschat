@@ -7,7 +7,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
 
-import load_db
+from src.load_db import DataLoader
 
 
 class HelpDesk:
@@ -21,9 +21,9 @@ class HelpDesk:
         self.prompt = self.get_prompt()
 
         if self.new_db:
-            self.db = load_db.DataLoader().set_db(self.embeddings)
+            self.db = DataLoader().set_db(self.embeddings)
         else:
-            self.db = load_db.DataLoader().get_db(self.embeddings)
+            self.db = DataLoader().get_db(self.embeddings)
 
         # Optimize the retriever for faster responses
         self.retriever = self.db.as_retriever(
@@ -34,7 +34,8 @@ class HelpDesk:
         )
         self.retrieval_qa_chain = self.get_retrieval_qa()
 
-    def get_template(self) -> str:
+    @staticmethod
+    def get_template() -> str:
         template = """
         You are a professional and friendly virtual assistant named "ISSCHAT".
         Your mission is to help users find information in the Confluence documentation.
