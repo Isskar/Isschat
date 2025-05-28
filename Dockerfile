@@ -1,13 +1,13 @@
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:0.7.8-python3.12-bookworm-slim@sha256:8973f2cef68d5d69799e37ad418c89b79c91511b7e4259697b98eba9cf714cbf
 
 ENV PATH="/root/.local/bin:$PATH"
 
 WORKDIR /app
 
-COPY pyproject.toml README.md /app/
+COPY pyproject.toml uv.lock README.md /app/
 COPY src /app/src
-COPY .env /app/.env
 COPY config.py /app/config.py
+COPY config_manager.py /app/config_manager.py
 
 EXPOSE 8501
 
