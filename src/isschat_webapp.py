@@ -13,10 +13,32 @@ import time
 import signal
 import os
 import sys
+import asyncio
 from pathlib import Path
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
+
+# Now import streamlit after patches are applied
+
+# Set tokenizers parallelism to false to avoid deadlocks
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Fix asyncio event loop issues with Streamlit
+try:
+    # Create and set a new event loop if needed
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running event loop, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    # Set the default policy
+    asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+except Exception as e:
+    print(f"Note: asyncio configuration: {str(e)}")
+    pass  # Continue even if there's an issue with the event loop
 
 # Import custom modules
 from src.help_desk import HelpDesk
@@ -29,10 +51,11 @@ from src.auth import (
 )
 
 # Import new features
-from src.features_integration import FeaturesManager
+from src.features_integration import FeaturesManager  # noqa: E402
+from src.conf_token_verification import validate_confluence_token  # noqa: E402
 
 # Streamlit page configuration - must be the first Streamlit command
-st.set_page_config(page_title="Assistant Confluence", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
 
 # No cache to force reload on each launch
@@ -40,8 +63,8 @@ def get_model(rebuild_db=False):
     # Display a spinner during loading
     with st.spinner("Loading RAG model..."):
         # Check if the index.faiss file exists
-        import sys
-        from config import PERSIST_DIRECTORY
+        import sys  # noqa: E402
+        from config import PERSIST_DIRECTORY  # noqa: E402
 
         # Display configuration information for debugging
         api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
@@ -64,16 +87,6 @@ def get_model(rebuild_db=False):
             except Exception as e:
                 st.error(f"Error creating directory: {str(e)}")
 
-        # Check if index files exist
-        index_faiss_path = os.path.join(PERSIST_DIRECTORY, "index.faiss")
-        index_pkl_path = os.path.join(PERSIST_DIRECTORY, "index.pkl")
-
-        if not os.path.exists(index_faiss_path) or not os.path.exists(index_pkl_path):
-            st.warning("Vector database not found. Rebuilding...")
-            rebuild_db = True
-        else:
-            st.success("Vector database found!")
-
         # Create the model
         try:
             model = HelpDesk(new_db=rebuild_db)
@@ -88,6 +101,21 @@ def get_model(rebuild_db=False):
 
 # User interface initialization
 def main():
+    # Validate Confluence API token before proceeding
+    is_valid, error_message = validate_confluence_token()
+    if not is_valid:
+        st.error("⚠️ Confluence API Token Error")
+        st.error(error_message)
+        st.markdown("""
+        ### Please generate a new Confluence API token
+        1. Go to [Atlassian Account Settings](https://id.atlassian.com/manage-profile/security/api-tokens)
+        2. Click on "Create API token"
+        3. Give it a name (e.g., "ISSCHAT Application")
+        4. Copy the generated token
+        5. Update your `.env` file with the new token value for `CONFLUENCE_PRIVATE_API_KEY`
+        Once updated, restart the application.
+        """)
+        st.stop()
     # Ensure user is always authenticated
     # Even before rendering sidebar, force user auth
     if "user" not in st.session_state:
@@ -116,7 +144,7 @@ def main():
     # Sidebar for navigation and options
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/confluence--v2.png", width=100)
-        st.title("Confluence Assistant")
+        st.title("ISSCHAT")
 
         # Always display user info
         st.success(f"Connected as: {st.session_state['user']['email']}")
@@ -204,12 +232,11 @@ def chat_page():
     features = st.session_state["features_manager"]
 
     # Create layout
-    st.title("Confluence Search Assistant")
+    st.title("Welcome to ISSCHAT")
 
     # Sidebar for advanced options
     with st.sidebar:
         st.subheader("Advanced Options")
-        show_suggestions = st.toggle("Question suggestions", value=True)
         show_feedback = st.toggle("Response feedback", value=True)
 
         # Query history
@@ -218,14 +245,19 @@ def chat_page():
             st.rerun()
 
     # Display main interface
-    st.subheader("Ask questions about Confluence documentation")
+    st.subheader("Ask questions about our Confluence documentation")
+
+    # Extract first name from email (part before @)
+    user_email = st.session_state.get("user", {}).get("email", "")
+    first_name = user_email.split("@")[0].split(".")[0].capitalize()
+    welcome_message = f"Bonjour {first_name} ! Comment puis-je vous aider aujourd'hui ?"
 
     # Initialize message history
     if "messages" not in st.session_state:
         st.session_state["messages"] = [
             {
                 "role": "assistant",
-                "content": "Bonjour ! Comment puis-je vous aider aujourd'hui ?",
+                "content": welcome_message,
             }
         ]  # ;)
 
@@ -241,16 +273,24 @@ def chat_page():
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = features.process_question(
-                prompt, show_suggestions=show_suggestions, show_feedback=show_feedback
-            )
+            result, sources = features.process_question(prompt)
 
-        # Add response to messages
-        response_content = result
-        if sources:
-            response_content += "\n\n" + sources
+            # Build the response content
+            response_content = result
+            if sources:
+                response_content += "\n\n" + sources
 
-        st.session_state.messages.append({"role": "assistant", "content": response_content})
+            # Display the response
+            st.chat_message("assistant").markdown(result)
+            if sources:
+                st.chat_message("assistant").write(sources)
+
+            # Add feedback widget if enabled
+            if show_feedback:
+                features._add_feedback_widget(st, prompt, result, sources)
+
+            # Add to message history
+            st.session_state.messages.append({"role": "assistant", "content": response_content})
 
     # Chat interface
     if prompt := st.chat_input("Ask your question here..."):
@@ -260,19 +300,24 @@ def chat_page():
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = features.process_question(
-                prompt, show_suggestions=show_suggestions, show_feedback=show_feedback
-            )
+            result, sources = features.process_question(prompt)
 
-        # Add the response to messages
-        response_content = result
-        if sources:
-            response_content += "\n\n" + sources
+            # Build the response content
+            response_content = result
+            if sources:
+                response_content += "\n\n" + sources
 
-            response_content += "\n\n" + sources
+            # Display the response
+            st.chat_message("assistant").markdown(result)
+            if sources:
+                st.chat_message("assistant").write(sources)
 
-        st.chat_message("assistant").write(response_content)
-        st.session_state.messages.append({"role": "assistant", "content": response_content})
+            # Add feedback widget if enabled
+            if show_feedback:
+                features._add_feedback_widget(st, prompt, result, sources)
+
+            # Add to message history
+            st.session_state.messages.append({"role": "assistant", "content": response_content})
 
 
 @login_required

@@ -5,6 +5,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
+from langchain_core.utils.utils import convert_to_secret_str
 import os
 
 
@@ -34,7 +35,7 @@ class HelpDesk:
 
     def get_template(self) -> str:
         template = """
-        You are a professional and friendly virtual assistant named "Confluence Assistant".
+        You are a professional and friendly virtual assistant named "ISSCHAT".
         Your mission is to help users find information in the Confluence documentation.
 
         Based on these text excerpts:
@@ -63,13 +64,13 @@ class HelpDesk:
         return embeddings
 
     def get_llm(self):
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        api_key = convert_to_secret_str(os.getenv("OPENROUTER_API_KEY", ""))
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
 
         # Use ChatOpenAI with the custom client
-        llm = ChatOpenAI(
-            model="deepseek/deepseek-chat",
+        llm: ChatOpenAI = ChatOpenAI(
+            model_name="deepseek/deepseek-chat",
             temperature=0.1,
             max_tokens=512,
             openai_api_key=api_key,
@@ -87,7 +88,7 @@ class HelpDesk:
 
     def retrieval_qa_inference(self, question: str, verbose: bool = True) -> tuple[str, str]:
         # Get the source documents directly from the retriever
-        docs = self.retriever.get_relevant_documents(question)
+        docs = self.retriever.invoke(question)
 
         # Add logs to verify the retrieved documents
         if verbose:
@@ -117,10 +118,10 @@ class HelpDesk:
             distinct_sources_str = "  \n- ".join(distinct_sources)
 
         if len(distinct_sources) == 1:
-            return f"Here is the source that might be useful for you:  \n- {distinct_sources_str}"
+            return f"Voici la source que j'ai utilisée pour répondre à votre question:  \n- {distinct_sources_str}"  # noqa
 
         elif len(distinct_sources) > 1:
-            return f"Here are {len(distinct_sources)} sources that might be useful for you:  \n- {distinct_sources_str}"
+            return f"Voici les {len(distinct_sources)} sources que j'ai utilisées pour répondre à votre question:  \n- {distinct_sources_str}"  # noqa
 
         else:
-            return "Sorry, I couldn't find any resources to answer your question"
+            return "Désolé, je n'ai pas trouvé de ressources utiles pour répondre à votre question"
