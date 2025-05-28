@@ -61,7 +61,17 @@ class HelpDesk:
         return prompt
 
     def get_embeddings(self) -> HuggingFaceEmbeddings:
-        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        embeddings = HuggingFaceEmbeddings(
+            model_name="all-MiniLM-L6-v2",
+            model_kwargs={
+                "device": "cpu",
+                "trust_remote_code": False,
+                "use_auth_token": False,
+                "torch_dtype": "float32",
+                "low_cpu_mem_usage": False,
+            },
+            encode_kwargs={"normalize_embeddings": True, "batch_size": 16},
+        )
         return embeddings
 
     def get_llm(self):
