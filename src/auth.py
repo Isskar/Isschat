@@ -152,12 +152,5 @@ def login_page() -> None:
                 st.error("Incorrect email or password.")
 
 
-def logout() -> None:
-    """Logs out the user"""
-    if "user" in st.session_state:
-        del st.session_state["user"]
-    st.rerun()
-
-
 # Initialize the database at startup
 init_auth_db()
