@@ -66,7 +66,6 @@ def add_user(email: str, password: str, is_admin: bool = False) -> bool:
         c = conn.cursor()
 
         # Add user
-        # Add user
         c.execute(
             "INSERT INTO users (email, password_hash, is_admin) VALUES (?, ?, ?)",
             (email, password_hash, is_admin),

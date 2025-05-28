@@ -1,13 +1,3 @@
-# Streamlit
-# Use QARetrieval to find informations about the Confluence knowledge base
-# Enhanced with advanced features:
-# - Conversation analysis
-# - Response tracking
-# - Question suggestion
-# - Performance monitoring
-# - Query history
-# - Automatic reformulation
-
 import streamlit as st
 import time
 import signal
