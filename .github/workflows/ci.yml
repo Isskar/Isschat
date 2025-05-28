@@ -8,10 +8,9 @@ on:
     branches: [ main ]
 
 env:
-  REGISTRY_NAME: "isschatacr"
+  REGISTRY_NAME: "isschat"
   IMAGE_NAME: "isschat"
   RESOURCE_GROUP: "chatbot-rg"
-  KEY_VAULT_NAME: "isschat-kv"
 
 jobs:
 
@@ -95,8 +94,8 @@ jobs:
     
     - name: Build and push Docker image
       run: |
-        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} .
-        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest .
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} --platform linux/amd64 .
+        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest --platform linux/amd64 .
         docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
         docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
     
