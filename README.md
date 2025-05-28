@@ -39,7 +39,7 @@ An intelligent chatbot that interacts with Kanbios' Confluence knowledge base us
      CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
    
    - Your login email
-     CONFLUENCE_EMAIL_ADRESS=firstname.lastname@your_company.com
+     CONFLUENCE_EMAIL_ADDRESS=firstname.lastname@your_company.com
    
    - OpenRouter API key (for AI model access)
    OPENROUTER_API_KEY=your_openrouter_api_key

@@ -20,7 +20,7 @@ class ConfluenceTokenVerifier:
         dotenv.load_dotenv(self.env_path, override=True)
 
         api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
-        username = os.getenv("CONFLUENCE_EMAIL_ADRESS")
+        username = os.getenv("CONFLUENCE_EMAIL_ADDRESS")
         base_url = os.getenv("CONFLUENCE_SPACE_NAME")
         space_key = os.getenv("CONFLUENCE_SPACE_KEY")
 

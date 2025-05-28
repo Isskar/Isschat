@@ -77,7 +77,7 @@ class LocalConfigProvider(ConfigProvider):
             "confluence_private_api_key": "CONFLUENCE_PRIVATE_API_KEY",
             "confluence_space_key": "CONFLUENCE_SPACE_KEY",
             "confluence_space_name": "CONFLUENCE_SPACE_NAME",
-            "confluence_email_address": "CONFLUENCE_EMAIL_ADRESS",  # Keep typo for compatibility
+            "confluence_email_address": "CONFLUENCE_EMAIL_ADDRESS",
             "openrouter_api_key": "OPENROUTER_API_KEY",
         }
 
