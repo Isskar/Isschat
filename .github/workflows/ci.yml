@@ -10,7 +10,7 @@ on:
 env:
   REGISTRY_NAME: "isschatacr"
   IMAGE_NAME: "isschat"
-  RESOURCE_GROUP: "isschat-rg"
+  RESOURCE_GROUP: "chatbot-rg"
   KEY_VAULT_NAME: "isschat-kv"
 
 jobs:
