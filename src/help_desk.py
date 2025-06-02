@@ -20,7 +20,6 @@ class HelpDesk:
         self.llm = self.get_llm()
         self.prompt = self.get_prompt()
 
-        # 🔍 GESTION INTELLIGENTE DE LA BASE DE DONNÉES
         try:
             if self.new_db:
                 self.db = load_db.DataLoader().set_db(self.embeddings)
