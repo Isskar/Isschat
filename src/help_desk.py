@@ -20,10 +20,16 @@ class HelpDesk:
         self.llm = self.get_llm()
         self.prompt = self.get_prompt()
 
-        if self.new_db:
+        # 🔍 GESTION INTELLIGENTE DE LA BASE DE DONNÉES
+        try:
+            if self.new_db:
+                self.db = load_db.DataLoader().set_db(self.embeddings)
+            else:
+                self.db = load_db.DataLoader().get_db(self.embeddings)
+        except FileNotFoundError as e:
+            print(f"⚠️  Base de données non trouvée: {str(e)}")
+            print("🔄 Création automatique de la base de données...")
             self.db = load_db.DataLoader().set_db(self.embeddings)
-        else:
-            self.db = load_db.DataLoader().get_db(self.embeddings)
 
         # Optimize the retriever for faster responses
         self.retriever = self.db.as_retriever(
@@ -66,9 +72,6 @@ class HelpDesk:
             model_kwargs={
                 "device": "cpu",
                 "trust_remote_code": False,
-                "use_auth_token": False,
-                "torch_dtype": "float32",
-                "low_cpu_mem_usage": False,
             },
             encode_kwargs={"normalize_embeddings": True, "batch_size": 16},
         )

@@ -56,6 +56,7 @@ def get_model(rebuild_db=False):
         # Check if the index.faiss file exists
         import sys  # noqa: E402
         from config import get_debug_info  # noqa: E402
+        from pathlib import Path  # noqa: E402
 
         # Get debug info
         config = get_config()
@@ -72,13 +73,15 @@ def get_model(rebuild_db=False):
                 - OpenRouter key: `{debug_info["openrouter_api_key"]}`
                 """)
 
-        # Check if directory exists
-        if not os.path.exists(config.persist_directory):
-            st.warning(f"Directory {config.persist_directory} does not exist. Attempting to create it...")
-            try:
-                os.makedirs(config.persist_directory, exist_ok=True)
-            except Exception as e:
-                st.error(f"Error creating directory: {str(e)}")
+        # 🔍 DÉTECTION AUTOMATIQUE INTELLIGENTE DE LA BASE DE DONNÉES
+        persist_path = Path(config.persist_directory)
+        index_file = persist_path / "index.faiss"
+
+        # Si rebuild_db n'est pas explicitement demandé, vérifier si la DB existe
+        if not rebuild_db:
+            if not persist_path.exists() or not index_file.exists():
+                st.info("🚀 Premier lancement détecté - Création de la base de données vectorielle...")
+                rebuild_db = True  # Force la création de la DB
 
         # Create the model
         try:
@@ -173,6 +176,7 @@ def main():
             if st.button("Rebuild from Confluence", type="primary"):
                 with st.spinner("Rebuilding database from Confluence..."):
                     # Delete existing files
+                    config = get_config()
 
                     try:
                         if os.path.exists(config.persist_directory):

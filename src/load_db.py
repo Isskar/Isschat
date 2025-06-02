@@ -267,6 +267,32 @@ class DataLoader:
 
     def load_from_db(self, embeddings: Embeddings) -> FAISS:
         """Loader chunks to Chroma DB"""
+        import logging
+        from pathlib import Path
+
+        # Log de diagnostic pour identifier le problème
+        logging.info(f"🔍 [DEBUG] Tentative de chargement de la DB depuis: {self.persist_directory}")
+
+        # Vérifier si le répertoire existe
+        persist_path = Path(self.persist_directory)
+        if not persist_path.exists():
+            logging.error(f"❌ [DEBUG] Le répertoire {self.persist_directory} n'existe pas")
+            raise FileNotFoundError(
+                f"Le répertoire de persistance {self.persist_directory} n'existe pas. "
+                f"Utilisez rebuild_db=True pour créer la base de données."
+            )
+
+        # Vérifier si le fichier index.faiss existe
+        index_file = persist_path / "index.faiss"
+        if not index_file.exists():
+            logging.error(f"❌ [DEBUG] Le fichier index.faiss n'existe pas dans {self.persist_directory}")
+            raise FileNotFoundError(
+                f"La base de données FAISS n'existe pas dans {self.persist_directory}. "
+                f"Utilisez rebuild_db=True pour créer la base de données."
+            )
+
+        logging.info("✅ [DEBUG] Fichiers DB trouvés, chargement en cours...")
+
         db: FAISS = FAISS.load_local(
             self.persist_directory,
             embeddings,
