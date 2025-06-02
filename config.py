@@ -171,7 +171,7 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
     def load_config(self) -> ConfigurationData:
         """Load configuration from Azure Key Vault"""
         # Get base directory for relative paths
-        base_dir = os.path.dirname(os.path.abspath(__file__ + "/../"))
+        base_dir = os.getcwd()
 
         # Key Vault secret mapping
         secret_mapping = {
