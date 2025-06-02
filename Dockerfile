@@ -5,6 +5,8 @@ ENV PATH="/root/.local/bin:$PATH"
 WORKDIR /app
 
 COPY pyproject.toml uv.lock README.md /app/
+RUN ["uv", "sync"]
+
 COPY src /app/src
 COPY .streamlit /app/.streamlit
 COPY config.py /app/config.py
