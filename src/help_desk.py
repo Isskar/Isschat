@@ -84,7 +84,7 @@ class HelpDesk:
 
         # Use ChatOpenAI with the custom client
         llm: ChatOpenAI = ChatOpenAI(
-            model_name="deepseek/deepseek-chat",
+            model_name="openai/gpt-4.1-mini",
             temperature=0.1,
             max_tokens=512,
             openai_api_key=api_key,

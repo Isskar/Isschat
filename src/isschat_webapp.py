@@ -1,11 +1,11 @@
-# Apply patches and configure environment before importing streamlit
+import streamlit as st
+import time
+import signal
 import os
 import sys
 import asyncio
-import time
 from pathlib import Path
 import shutil
-import streamlit as st  # noqa: E402
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -32,9 +32,8 @@ except Exception as e:
     pass  # Continue even if there's an issue with the event loop
 
 # Import custom modules
-from src.help_desk import HelpDesk  # noqa: E402
-from src.auth import (  # noqa: E402
-    logout,
+from src.help_desk import HelpDesk
+from src.auth import (
     get_all_users,
     add_user,
     delete_user,
@@ -199,10 +198,12 @@ def main():
 
                         st.code(traceback.format_exc(), language="python")
 
-        # Logout button (for all users)
+        # Close Button
         st.divider()
-        if st.button("Logout", key="nav_logout"):
-            logout()
+        if st.button("Close App", key="nav_close_app"):
+            st.warning("Shutting down the Streamlit app...")
+            time.sleep(1)
+            os.kill(os.getpid(), signal.SIGKILL)
 
     # Determine which page to display - user is already authenticated at the beginning of main()
     if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
