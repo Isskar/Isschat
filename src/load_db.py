@@ -1,6 +1,7 @@
 import sys
 import logging
 import shutil
+import os
 from pathlib import Path
 
 # Add the parent directory to the Python search path
@@ -261,6 +262,9 @@ class DataLoader:
 
     def save_to_db(self, splitted_docs: list, embeddings: Embeddings) -> FAISS:
         """Save chunks to Chroma DB"""
+        # Ensure the persist directory exists
+        os.makedirs(self.persist_directory, exist_ok=True)
+
         db = FAISS.from_documents(splitted_docs, embeddings)
         db.save_local(self.persist_directory)
         return db

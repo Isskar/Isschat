@@ -8,22 +8,39 @@ from langchain_core.utils.utils import convert_to_secret_str
 
 import load_db
 from config import get_config
+import logging # Add this import at the top of the file
 
 
 class HelpDesk:
     """Create the necessary objects to create a QARetrieval chain"""
 
-    def __init__(self, new_db: bool = True) -> None:
+    def __init__(self, new_db: bool = False) -> None: # Changed default of new_db to False
         self.new_db = new_db
         self.template = self.get_template()
         self.embeddings = self.get_embeddings()
         self.llm = self.get_llm()
         self.prompt = self.get_prompt()
 
+        data_loader = load_db.DataLoader()
+
         if self.new_db:
-            self.db = load_db.DataLoader().set_db(self.embeddings)
+            logging.info("Rebuilding database as requested (new_db=True).")
+            self.db = data_loader.set_db(self.embeddings)
         else:
-            self.db = load_db.DataLoader().get_db(self.embeddings)
+            try:
+                logging.info("Attempting to load existing database.")
+                self.db = data_loader.get_db(self.embeddings)
+                logging.info("Successfully loaded existing database.")
+            except RuntimeError as e:
+                logging.warning(f"Failed to load existing database: {e}")
+                # Check if the error is due to missing index file
+                if "index.faiss" in str(e) or "No such file or directory" in str(e):
+                    logging.info("FAISS index not found. Building a new database.")
+                    self.db = data_loader.set_db(self.embeddings)
+                    logging.info("Successfully built and loaded a new database.")
+                else:
+                    # If it's a different RuntimeError, re-raise it
+                    raise e
 
         # Optimize the retriever for faster responses
         self.retriever = self.db.as_retriever(
