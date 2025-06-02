@@ -3,7 +3,6 @@ from typing import *
 import torch
 import torch.distributed.rpc as rpc
 from torch import Tensor
-from torch._jit_internal import Future
 from torch.distributed.rpc import RRef
 from typing import Tuple  # pyre-ignore: unused import
 
@@ -40,10 +39,7 @@ _generated_methods = [
 ]
 
 
-
-
-def _remote_forward(
-    module_rref: RRef[module_interface_cls], device: str, is_device_map_set: bool, *args, **kwargs):
+def _remote_forward(module_rref: RRef[module_interface_cls], device: str, is_device_map_set: bool, *args, **kwargs):
     module = module_rref.local_value()
     device = torch.device(device)
 
