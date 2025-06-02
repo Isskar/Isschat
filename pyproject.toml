@@ -23,7 +23,7 @@ dependencies = [
     "atlassian-python-api>=3.41.0",
     "lxml>=5.1.0",
     "beautifulsoup4>=4.12.0",
-    "torch>=2.0.0",
+    "torch>=2.0.0,<=2.7.0",
     "transformers>=4.30.0",
     "tqdm>=4.65.0",
     "watchdog>=3.0.0",

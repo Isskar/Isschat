@@ -89,10 +89,26 @@ class LocalConfigProvider(ConfigProvider):
             logging.debug(f"LocalConfig - {field}: {value[:10] if value else 'EMPTY'}...")
 
         # Add path configurations
+        # Use /tmp for Azure environment to ensure write permissions
+        persist_dir = os.getenv("PERSIST_DIRECTORY")
+        if not persist_dir:
+            # Check if we're in Azure environment
+            azure_indicators = [
+                "WEBSITE_SITE_NAME",  # Azure App Service
+                "AZURE_CLIENT_ID",  # Managed Identity
+                "MSI_ENDPOINT",  # Managed Service Identity
+            ]
+            is_azure = any(os.getenv(indicator) for indicator in azure_indicators)
+
+            if is_azure:
+                persist_dir = "/tmp/db"
+            else:
+                persist_dir = os.path.join(base_dir, "db")
+
         config_dict.update(
             {
                 "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data/users.db")),
-                "persist_directory": os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "db")),
+                "persist_directory": persist_dir,
             }
         )
 
@@ -188,10 +204,16 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
             config_dict[field] = self._get_secret(secret_name)
 
         # Add path configurations
+        # Use /tmp for Azure environment to ensure write permissions
+        persist_dir = os.getenv("PERSIST_DIRECTORY")
+        if not persist_dir:
+            # We're already in Azure if using Key Vault
+            persist_dir = "/tmp/db"
+
         config_dict.update(
             {
                 "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data/users.db")),
-                "persist_directory": os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "db")),
+                "persist_directory": persist_dir,
             }
         )
 
