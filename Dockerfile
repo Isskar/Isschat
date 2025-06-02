@@ -6,6 +6,7 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock README.md /app/
 COPY src /app/src
+COPY .streamlit /app/.streamlit
 COPY config.py /app/config.py
 
 EXPOSE 8501
