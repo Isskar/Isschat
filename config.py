@@ -70,7 +70,7 @@ class LocalConfigProvider(ConfigProvider):
             logging.warning(f"No .env file found at {self.env_file_path}")
 
         # Get base directory for relative paths
-        base_dir = os.path.dirname(os.path.abspath(__file__ + "/../"))
+        base_dir = os.getcwd()
 
         # Environment variable mapping
         env_mapping = {
@@ -88,22 +88,7 @@ class LocalConfigProvider(ConfigProvider):
             config_dict[field] = value
             logging.debug(f"LocalConfig - {field}: {value[:10] if value else 'EMPTY'}...")
 
-        # Add path configurations
-        # Use /tmp for Azure environment to ensure write permissions
-        persist_dir = os.getenv("PERSIST_DIRECTORY")
-        if not persist_dir:
-            # Check if we're in Azure environment
-            azure_indicators = [
-                "WEBSITE_SITE_NAME",  # Azure App Service
-                "AZURE_CLIENT_ID",  # Managed Identity
-                "MSI_ENDPOINT",  # Managed Service Identity
-            ]
-            is_azure = any(os.getenv(indicator) for indicator in azure_indicators)
-
-            if is_azure:
-                persist_dir = "/tmp/db"
-            else:
-                persist_dir = os.path.join(base_dir, "db")
+        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "db"))
 
         config_dict.update(
             {
@@ -111,26 +96,6 @@ class LocalConfigProvider(ConfigProvider):
                 "persist_directory": persist_dir,
             }
         )
-
-        # Debug: Log config_dict structure before creating ConfigurationData
-        logging.debug(f"LocalConfig - config_dict keys: {list(config_dict.keys())}")
-        logging.debug(f"LocalConfig - config_dict types: {[(k, type(v).__name__) for k, v in config_dict.items()]}")
-
-        # Validate all required fields are present and are strings
-        required_fields = [
-            "confluence_private_api_key",
-            "confluence_space_key",
-            "confluence_space_name",
-            "confluence_email_address",
-            "openrouter_api_key",
-            "db_path",
-            "persist_directory",
-        ]
-        for field in required_fields:
-            if field not in config_dict:
-                logging.error(f"LocalConfig - Missing field: {field}")
-            elif not isinstance(config_dict[field], str):
-                logging.error(f"LocalConfig - Field {field} has wrong type: {type(config_dict[field])}")
 
         return ConfigurationData(**config_dict)  # ty : ignore
 
@@ -146,26 +111,28 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
         self._client = None
 
     def _get_client(self):
-        """Get Azure Key Vault client with managed identity"""
+        """Get Azure Key Vault client with managed identity or service principal"""
         if self._client is None:
             try:
                 from azure.keyvault.secrets import SecretClient
-                from azure.identity import DefaultAzureCredential
-                import json
+                from azure.identity import DefaultAzureCredential, ClientSecretCredential
 
-                # azure credentials from environment variable
-                if os.getenv("AZURE_CREDENTIALS"):
-                    # GitHub Actions with AZURE_CREDENTIALS JSON
-                    azure_creds = json.loads(os.getenv("AZURE_CREDENTIALS", "{}"))
-                    from azure.identity import ClientSecretCredential
+                # Check for Service Principal credentials (CI environment)
+                client_id = os.getenv("AZURE_CLIENT_ID")
+                client_secret = os.getenv("AZURE_CLIENT_SECRET")
+                tenant_id = os.getenv("AZURE_TENANT_ID")
 
+                if client_id and client_secret and tenant_id:
+                    # Service Principal authentication (CI)
+                    logging.info("Using Service Principal authentication for Key Vault")
                     credential = ClientSecretCredential(
-                        tenant_id=azure_creds["tenantId"],
-                        client_id=azure_creds["clientId"],
-                        client_secret=azure_creds["clientSecret"],
+                        tenant_id=tenant_id,
+                        client_id=client_id,
+                        client_secret=client_secret,
                     )
                 else:
-                    # DefaultAzureCredential (Managed Identity, Azure CLI, Env vars)
+                    # DefaultAzureCredential (Managed Identity, Azure CLI, etc.)
+                    logging.info("Using DefaultAzureCredential for Key Vault")
                     credential = DefaultAzureCredential()
 
                 self._client = SecretClient(vault_url=self.key_vault_url, credential=credential)
@@ -249,29 +216,36 @@ class ConfigurationManager:
 
     def auto_initialize(self) -> bool:
         """Auto-detect and initialize the appropriate configuration provider"""
-        # Check if we're running in Azure (presence of specific environment variables)
-        if self._is_azure_environment():
-            key_vault_url = os.getenv("KEY_VAULT_URL")
-            if key_vault_url:
-                logging.info("Azure environment detected, using Key Vault configuration")
-                provider = AzureKeyVaultConfigProvider(key_vault_url)
-                return self.initialize(provider)
-            else:
-                logging.warning("Azure environment detected but KEY_VAULT_URL not set, falling back to local config")
+        environment = os.getenv("ENVIRONMENT", "").lower()
 
-        # Default to local configuration
-        logging.info("Using local configuration")
+        if environment == "ci":
+            logging.info("CI environment detected, using Service Principal with Key Vault")
+            return self._initialize_ci_config()
+        elif environment in ["production", "prod", "azure"]:
+            logging.info("Production environment detected, using Managed Identity with Key Vault")
+            return self._initialize_production_config()
+        logging.info("Local environment detected, using .env configuration")
+        return self._initialize_local_config()
+
+    def _initialize_ci_config(self) -> bool:  # FIXME : Add secrets when CD deployed
+        """Initialize configuration for CI environment"""
         provider = LocalConfigProvider()
         return self.initialize(provider)
 
-    def _is_azure_environment(self) -> bool:
-        """Detect if we're running in Azure environment"""
-        azure_indicators = [
-            "WEBSITE_SITE_NAME",  # Azure App Service
-            "AZURE_CLIENT_ID",  # Managed Identity
-            "MSI_ENDPOINT",  # Managed Service Identity
-        ]
-        return any(os.getenv(indicator) for indicator in azure_indicators)
+    def _initialize_production_config(self) -> bool:
+        """Initialize configuration for production environment with Managed Identity"""
+        key_vault_url = os.getenv("KEY_VAULT_URL")
+        if key_vault_url:
+            provider = AzureKeyVaultConfigProvider(key_vault_url)
+            return self.initialize(provider)
+        else:
+            logging.warning("Azure environment detected but KEY_VAULT_URL not set, falling back to local config")
+            return self._initialize_local_config()
+
+    def _initialize_local_config(self) -> bool:
+        """Initialize configuration for local development"""
+        provider = LocalConfigProvider()
+        return self.initialize(provider)
 
     @property
     def config(self) -> ConfigurationData:
@@ -287,6 +261,26 @@ class ConfigurationManager:
             return "Not initialized"
         return self._provider.get_provider_name()
 
+    @property
+    def environment(self) -> str:
+        """Get the current environment"""
+        return os.getenv("ENVIRONMENT", "local").lower()
+
+    @property
+    def is_ci(self) -> bool:
+        """Check if running in CI environment"""
+        return self.environment == "ci"
+
+    @property
+    def is_production(self) -> bool:
+        """Check if running in production environment"""
+        return self.environment in ["production", "prod", "azure"]
+
+    @property
+    def is_local(self) -> bool:
+        """Check if running in local development environment"""
+        return not (self.is_ci or self.is_production)
+
     def get_debug_info(self) -> Dict[str, str]:
         """Get debug information about the configuration"""
         if self._config is None:
@@ -300,7 +294,11 @@ class ConfigurationManager:
         openrouter_display = f"*****{openrouter_key[-5:]}" if openrouter_key else "Not defined"
 
         return {
+            "environment": self.environment,
             "provider": self.provider_name,
+            "is_ci": str(self.is_ci),
+            "is_production": str(self.is_production),
+            "is_local": str(self.is_local),
             "confluence_url": self._config.confluence_space_name,
             "space_key": self._config.confluence_space_key,
             "user_email": self._config.confluence_email_address,
@@ -337,20 +335,6 @@ def get_config() -> ConfigurationData:
     """Get the global configuration instance"""
     manager = _ensure_config_initialized()
     return manager.config
-
-
-def initialize_config(provider: Optional[ConfigProvider] = None) -> bool:
-    """Initialize the global configuration"""
-    global _config_manager, _config_initialized
-
-    _config_manager = ConfigurationManager()
-    if provider:
-        success = _config_manager.initialize(provider)
-    else:
-        success = _config_manager.auto_initialize()
-
-    _config_initialized = success
-    return success
 
 
 def get_debug_info() -> Dict[str, str]:

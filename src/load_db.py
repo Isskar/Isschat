@@ -1,7 +1,5 @@
 import sys
 import logging
-import shutil
-import os
 from pathlib import Path
 
 # Add the parent directory to the Python search path
@@ -268,32 +266,6 @@ class DataLoader:
 
     def load_from_db(self, embeddings: Embeddings) -> FAISS:
         """Loader chunks to Chroma DB"""
-        import logging
-        from pathlib import Path
-
-        # Log de diagnostic pour identifier le problème
-        logging.info(f"🔍 [DEBUG] Tentative de chargement de la DB depuis: {self.persist_directory}")
-
-        # Vérifier si le répertoire existe
-        persist_path = Path(self.persist_directory)
-        if not persist_path.exists():
-            logging.error(f"❌ [DEBUG] Le répertoire {self.persist_directory} n'existe pas")
-            raise FileNotFoundError(
-                f"Le répertoire de persistance {self.persist_directory} n'existe pas. "
-                f"Utilisez rebuild_db=True pour créer la base de données."
-            )
-
-        # Vérifier si le fichier index.faiss existe
-        index_file = persist_path / "index.faiss"
-        if not index_file.exists():
-            logging.error(f"❌ [DEBUG] Le fichier index.faiss n'existe pas dans {self.persist_directory}")
-            raise FileNotFoundError(
-                f"La base de données FAISS n'existe pas dans {self.persist_directory}. "
-                f"Utilisez rebuild_db=True pour créer la base de données."
-            )
-
-        logging.info("✅ [DEBUG] Fichiers DB trouvés, chargement en cours...")
-
         db: FAISS = FAISS.load_local(
             self.persist_directory,
             embeddings,
@@ -329,32 +301,6 @@ class DataLoader:
 
     def set_db(self, embeddings: Embeddings) -> FAISS:
         """Create, save, and load db"""
-        # Ensure the persist directory exists and is writable
-        try:
-            # Remove existing directory if it exists
-            if os.path.exists(self.persist_directory):
-                shutil.rmtree(self.persist_directory)
-                logging.info(f"✅ Répertoire existant {self.persist_directory} supprimé")
-        except Exception as e:
-            logging.error(f"❌ ERREUR: Impossible de supprimer {self.persist_directory}: {e}")
-            raise RuntimeError(f"Impossible de supprimer le répertoire existant: {e}")
-
-        # Create the directory
-        try:
-            os.makedirs(self.persist_directory, exist_ok=True)
-            logging.info(f"✅ Répertoire {self.persist_directory} créé avec succès")
-
-            # Test write permissions
-            test_file = os.path.join(self.persist_directory, ".write_test")
-            with open(test_file, "w") as f:
-                f.write("test")
-            os.remove(test_file)
-            logging.info(f"✅ Permissions d'écriture confirmées sur {self.persist_directory}")
-
-        except Exception as e:
-            logging.error(f"❌ ERREUR: Impossible de créer ou d'écrire dans {self.persist_directory}: {e}")
-            raise RuntimeError(f"Impossible de créer le répertoire de persistance ou permissions insuffisantes: {e}")
-
         try:
             # Load docs from Confluence
             docs = self.load_from_confluence_loader()

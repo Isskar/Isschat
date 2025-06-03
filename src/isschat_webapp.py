@@ -72,15 +72,12 @@ def get_model(rebuild_db=False):
                 - OpenRouter key: `{debug_info["openrouter_api_key"]}`
                 """)
 
-        # 🔍 DÉTECTION AUTOMATIQUE INTELLIGENTE DE LA BASE DE DONNÉES
         persist_path = Path(config.persist_directory)
         index_file = persist_path / "index.faiss"
-
-        # Si rebuild_db n'est pas explicitement demandé, vérifier si la DB existe
         if not rebuild_db:
             if not persist_path.exists() or not index_file.exists():
-                st.info("🚀 Premier lancement détecté - Création de la base de données vectorielle...")
-                rebuild_db = True  # Force la création de la DB
+                st.info("🚀 First Launch Detected - Creating Vector DB...")
+                rebuild_db = True
 
         # Create the model
         try:
@@ -115,12 +112,9 @@ def main():
     # Even before rendering sidebar, force user auth
     if "user" not in st.session_state:
         # Create or retrieve admin user immediately
-        try:
-            config = get_config()
-            email = config.confluence_email_address or "admin@auto.login"
-        except RuntimeError as e:
-            st.error(f"Configuration error: {e}")
-            st.stop()
+        config = get_config()
+        email = config.confluence_email_address or "admin@auto.login"
+
         from src.auth import get_all_users, add_user
 
         # Check if user exists, create if needed

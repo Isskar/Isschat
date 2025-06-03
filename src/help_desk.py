@@ -20,15 +20,7 @@ class HelpDesk:
         self.llm = self.get_llm()
         self.prompt = self.get_prompt()
 
-        try:
-            if self.new_db:
-                self.db = load_db.DataLoader().set_db(self.embeddings)
-            else:
-                self.db = load_db.DataLoader().get_db(self.embeddings)
-        except FileNotFoundError as e:
-            print(f"⚠️  Base de données non trouvée: {str(e)}")
-            print("🔄 Création automatique de la base de données...")
-            self.db = load_db.DataLoader().set_db(self.embeddings)
+        self.db = self._create_db()
 
         # Optimize the retriever for faster responses
         self.retriever = self.db.as_retriever(
@@ -38,6 +30,14 @@ class HelpDesk:
             }
         )
         self.retrieval_qa_chain = self.get_retrieval_qa()
+
+    def _create_db(self):
+        """Create a new database or load an existing one."""
+        return (
+            load_db.DataLoader().set_db(self.embeddings)
+            if self.new_db
+            else load_db.DataLoader().get_db(self.embeddings)
+        )
 
     def get_template(self) -> str:
         template = """

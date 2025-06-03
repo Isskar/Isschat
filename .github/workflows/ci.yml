@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI Pipeline
 
 on:
   push:
@@ -6,11 +6,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [ main ]
-
-env:
-  REGISTRY_NAME: "isschat"
-  IMAGE_NAME: "isschat"
-  RESOURCE_GROUP: "chatbot-rg"
 
 jobs:
 
@@ -71,42 +66,3 @@ jobs:
       - name: Type check with ty
         run: |
           uv run ty check .
-
-  build-and-deploy:
-    needs: [lint-and-format, typecheck]
-    runs-on: ubuntu-latest
-   #nif: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    - name: Login to Azure Container Registry
-      uses: azure/docker-login@v1
-      with:
-        login-server: ${{ env.REGISTRY_NAME }}.azurecr.io
-        username: ${{ secrets.ACR_USERNAME }}
-        password: ${{ secrets.ACR_PASSWORD }}
-    
-    - name: Build and push Docker image
-      run: |
-        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} --platform linux/amd64 .
-        docker build -t ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest --platform linux/amd64 .
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
-    
-    - name: Deploy to Azure Container Instances with Key Vault
-      uses: azure/aci-deploy@v1
-      with:
-        resource-group: ${{ env.RESOURCE_GROUP }}
-        dns-name-label: isschat-${{ github.run_number }}
-        image: ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        name: isschat-container-${{ github.run_number }}
-        location: france-central
-        ports: 8501
-        cpu: 2
-        memory: 4

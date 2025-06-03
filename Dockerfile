@@ -1,7 +1,7 @@
 FROM ghcr.io/astral-sh/uv:0.7.8-python3.12-bookworm-slim@sha256:8973f2cef68d5d69799e37ad418c89b79c91511b7e4259697b98eba9cf714cbf
 
 ENV PATH="/root/.local/bin:$PATH"
-ENV PERSIST_DIRECTORY="/tmp/db"
+ENV ENVIRONMENT="production"
 
 WORKDIR /app
 
