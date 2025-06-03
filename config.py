@@ -172,10 +172,7 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
 
         # Add path configurations
         # Use /tmp for Azure environment to ensure write permissions
-        persist_dir = os.getenv("PERSIST_DIRECTORY")
-        if not persist_dir:
-            # We're already in Azure if using Key Vault
-            persist_dir = "/tmp/db"
+        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "db"))
 
         config_dict.update(
             {

@@ -1,5 +1,6 @@
 import sys
 import logging
+import time
 from pathlib import Path
 
 # Add the parent directory to the Python search path
@@ -80,51 +81,159 @@ class DataLoader:
                 username=self.username,
                 password=self.api_key,
                 cloud=True,  # Specify that it's a cloud instance
+                timeout=30,  # 30 seconds timeout per request
             )
+
+            # Connection test
+            try:
+                print("🔗 Testing connection to Confluence API...")
+                test_result = confluence.get_space(self.space_key)
+                print(f"✅ Connection successful - Space: {test_result.get('name', 'Unknown')}")
+            except Exception as e:
+                print(f"⚠️ Warning during connection test: {e}")
+                print("🔄 Attempting to continue despite warning...")
 
             # Retrieve all pages from the space with pagination
             print(f"Retrieving pages from space {self.space_key}...")
 
-            # Use pagination to retrieve all pages
-            # The get_all_pages_from_space method may have limitations
+            # Use pagination to retrieve all pages with safety mechanisms
             start = 0
             limit = 100  # Maximum number of pages to retrieve per request
             all_pages = []
 
+            # Safety mechanisms for Azure environment
+            MAX_PAGES = 1000  # Absolute safety limit
+            TIMEOUT_SECONDS = 300  # 5 minutes maximum
+            MAX_DUPLICATES = 3  # Maximum number of consecutive duplicate batches
+
+            start_time = time.time()
+            seen_page_ids = set()
+            consecutive_duplicates = 0
+            iteration_count = 0
+
+            print(f"🔧 Safety limits: {MAX_PAGES} pages max, {TIMEOUT_SECONDS}s timeout")
+
             while True:
+                iteration_count += 1
+
+                # Timeout check
+                elapsed_time = time.time() - start_time
+                if elapsed_time > TIMEOUT_SECONDS:
+                    print(f"🛑 TIMEOUT: Stopping after {elapsed_time:.1f}s ({iteration_count} iterations)")
+                    break
+
+                # Maximum pages check
+                if len(all_pages) >= MAX_PAGES:
+                    print(f"🛑 LIMIT: Stopping after {len(all_pages)} pages")
+                    break
+
+                print(f"📥 Batch {iteration_count}: start={start}, limit={limit}")
+                batch_start_time = time.time()
+
                 # Retrieve a batch of pages
-                batch = confluence.get_all_pages_from_space(self.space_key, start=start, limit=limit, expand="version")
+                try:
+                    batch_raw = confluence.get_all_pages_from_space(
+                        self.space_key, start=start, limit=limit, expand="version"
+                    )
+                    # Convert to list if it's a generator
+                    batch = list(batch_raw) if batch_raw else []
+                except Exception as e:
+                    print(f"❌ Error retrieving batch {iteration_count}: {e}")
+                    break
+
+                batch_duration = time.time() - batch_start_time
 
                 if not batch:
+                    print(f"✅ Normal end: no pages returned (batch {iteration_count})")
                     break  # No more pages to retrieve
 
-                all_pages.extend(batch)
-                print(f"  Retrieved {len(all_pages)} pages so far...")
+                # Check for duplicates
+                batch_ids = {page.get("id") for page in batch if page.get("id")}
+                new_ids = batch_ids - seen_page_ids
+
+                print(f"📊 Batch {iteration_count}: {len(batch)} pages received in {batch_duration:.2f}s")
+                print(f"🔍 New IDs: {len(new_ids)}/{len(batch_ids)} (duplicates: {len(batch_ids) - len(new_ids)})")
+
+                if len(new_ids) == 0:
+                    consecutive_duplicates += 1
+                    print(f"⚠️ Duplicate batch detected #{consecutive_duplicates}")
+                    if consecutive_duplicates >= MAX_DUPLICATES:
+                        print(f"🛑 STOP: {consecutive_duplicates} consecutive duplicate batches")
+                        break
+                else:
+                    consecutive_duplicates = 0
+                    seen_page_ids.update(new_ids)
+                    # Add only new pages
+                    new_pages = [p for p in batch if p.get("id") in new_ids]
+                    all_pages.extend(new_pages)
+                    print(f"✅ Added {len(new_pages)} new pages (total: {len(all_pages)})")
 
                 # Update the starting index for the next request
+                old_start = start
                 start += len(batch)
+
+                # Check that start progresses
+                if start == old_start:
+                    print(f"🛑 ERROR: Pagination stuck (start={start})")
+                    break
 
                 # If the number of pages retrieved is less than the limit, we've retrieved everything
                 if len(batch) < limit:
+                    print(f"✅ Normal end: incomplete batch ({len(batch)} < {limit})")
                     break
 
             pages = all_pages
-            print(f"Retrieval successful! {len(pages)} pages found in total.")
+
+            # Collection summary
+            total_time = time.time() - start_time
+            print("\n🎉 COLLECTION COMPLETED!")
+            print("📊 Summary:")
+            print(f"   • Pages retrieved: {len(pages)}")
+            print(f"   • Total time: {total_time:.1f}s")
+            print(f"   • Iterations: {iteration_count}")
+            print(f"   • Unique pages: {len(seen_page_ids)}")
+            if consecutive_duplicates > 0:
+                print(f"   • Duplicates detected: {consecutive_duplicates} batches")
 
             # Also retrieve child pages (sub-pages) if necessary
             if len(pages) > 0:
-                print("Searching for additional sub-pages...")
+                print("🔍 Searching for additional sub-pages...")
                 child_pages = []
+                processed_parent_ids = set()
 
-                for page in pages:
+                # Safety limit for sub-pages
+                MAX_CHILD_REQUESTS = 500
+                child_request_count = 0
+
+                for i, page in enumerate(pages):
                     page_id = page.get("id")
+                    page_title = page.get("title", "Untitled")
+
+                    # Avoid processing the same parent multiple times
+                    if page_id in processed_parent_ids:
+                        continue
+                    processed_parent_ids.add(page_id)
+
+                    # Safety limit
+                    child_request_count += 1
+                    if child_request_count > MAX_CHILD_REQUESTS:
+                        print(f"🛑 LIMIT: Stopping sub-page retrieval after {MAX_CHILD_REQUESTS} requests")
+                        break
+
+                    # Progress indicator
+                    if i % 50 == 0:
+                        print(f"📄 Checking sub-pages: {i + 1}/{len(pages)} pages processed")
+
                     # Retrieve the children of this page
                     try:
-                        children = confluence.get_page_child_by_type(page_id, type="page")
+                        children_raw = confluence.get_page_child_by_type(page_id, type="page")
+                        # Convert to list if it's a generator
+                        children = list(children_raw) if children_raw else []
                         if children and len(children) > 0:
+                            print(f"📁 {len(children)} sub-pages found for '{page_title}'")
                             child_pages.extend(children)
                     except Exception as e:
-                        print(f"Error retrieving sub-pages for {page.get('title', 'Untitled')}: {str(e)}")
+                        print(f"❌ Error retrieving sub-pages for '{page_title}': {str(e)}")
 
                 # Add sub-pages to our main list (avoiding duplicates)
                 existing_ids = {p.get("id") for p in pages}
@@ -132,7 +241,9 @@ class DataLoader:
 
                 if new_child_pages:
                     pages.extend(new_child_pages)
-                    print(f"Added {len(new_child_pages)} additional sub-pages. Total: {len(pages)} pages.")
+                    print(f"✅ Added {len(new_child_pages)} unique sub-pages. Total: {len(pages)} pages.")
+                else:
+                    print("ℹ️ No new sub-pages found.")
 
             # Convert pages to LangChain documents
             docs = []
@@ -232,9 +343,9 @@ class DataLoader:
     def split_docs(self, docs: list):
         # Markdown
         headers_to_split_on = [
-            ("#", "Titre 1"),
-            ("##", "Sous-titre 1"),
-            ("###", "Sous-titre 2"),
+            ("#", "Title 1"),
+            ("##", "Subtitle 1"),
+            ("###", "Subtitle 2"),
         ]
 
         markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)

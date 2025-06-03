@@ -5,6 +5,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
+from pathlib import Path
 
 import load_db
 from config import get_config
@@ -32,12 +33,14 @@ class HelpDesk:
         self.retrieval_qa_chain = self.get_retrieval_qa()
 
     def _create_db(self):
-        """Create a new database or load an existing one."""
-        return (
-            load_db.DataLoader().set_db(self.embeddings)
-            if self.new_db
-            else load_db.DataLoader().get_db(self.embeddings)
-        )
+        if self.new_db:
+            # Check if DB already exists before recreating it
+            persist_path = Path(get_config().persist_directory)
+            if persist_path.exists() and (persist_path / "index.faiss").exists():
+                print("⚠️ DB already exists, loading instead of rebuilding")
+                return load_db.DataLoader().get_db(self.embeddings)
+            return load_db.DataLoader().set_db(self.embeddings)
+        return load_db.DataLoader().get_db(self.embeddings)
 
     def get_template(self) -> str:
         template = """
