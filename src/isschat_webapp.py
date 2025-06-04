@@ -5,11 +5,12 @@ import os
 import sys
 import asyncio
 from pathlib import Path
+import shutil
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Now import streamlit after patches are applied
+from config import get_config
 
 # Set tokenizers parallelism to false to avoid deadlocks
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -42,7 +43,6 @@ from src.auth import (
 
 # Import new features
 from src.features_integration import FeaturesManager  # noqa: E402
-from src.conf_token_verification import validate_confluence_token  # noqa: E402
 
 # Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
@@ -54,28 +54,30 @@ def get_model(rebuild_db=False):
     with st.spinner("Loading RAG model..."):
         # Check if the index.faiss file exists
         import sys  # noqa: E402
-        from config import PERSIST_DIRECTORY  # noqa: E402
+        from config import get_debug_info  # noqa: E402
+        from pathlib import Path  # noqa: E402
 
-        # Display configuration information for debugging
-        api_key = os.getenv("CONFLUENCE_PRIVATE_API_KEY")
-        key_display = f"*****{api_key[-5:]}" if api_key else "Not defined"
+        # Get debug info
+        config = get_config()
+        debug_info = get_debug_info()
 
         st.sidebar.expander("Debug", expanded=False).write(f"""
                 **Configuration**:
-                - Vector store directory: `{PERSIST_DIRECTORY}`
-                - Confluence URL: `{os.getenv("CONFLUENCE_SPACE_NAME")}`
-                - Space key: `{os.getenv("CONFLUENCE_SPACE_KEY")}`
-                - User: `{os.getenv("CONFLUENCE_EMAIL_ADRESS")}`
-                - API key: `{key_display}`
+                - Provider: `{debug_info["provider"]}`
+                - Vector store directory: `{debug_info["persist_directory"]}`
+                - Confluence URL: `{debug_info["confluence_url"]}`
+                - Space key: `{debug_info["space_key"]}`
+                - User: `{debug_info["user_email"]}`
+                - API key: `{debug_info["confluence_api_key"]}`
+                - OpenRouter key: `{debug_info["openrouter_api_key"]}`
                 """)
 
-        # Check if directory exists
-        if not os.path.exists(PERSIST_DIRECTORY):
-            st.warning(f"Directory {PERSIST_DIRECTORY} does not exist. Attempting to create it...")
-            try:
-                os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
-            except Exception as e:
-                st.error(f"Error creating directory: {str(e)}")
+        persist_path = Path(config.persist_directory)
+        index_file = persist_path / "index.faiss"
+        if not rebuild_db:
+            if not persist_path.exists() or not index_file.exists():
+                st.info("🚀 First Launch Detected - Creating Vector DB...")
+                rebuild_db = True
 
         # Create the model
         try:
@@ -91,26 +93,11 @@ def get_model(rebuild_db=False):
 
 # User interface initialization
 def main():
-    # Validate Confluence API token before proceeding
-    is_valid, error_message = validate_confluence_token()
-    if not is_valid:
-        st.error("⚠️ Confluence API Token Error")
-        st.error(error_message)
-        st.markdown("""
-        ### Please generate a new Confluence API token
-        1. Go to [Atlassian Account Settings](https://id.atlassian.com/manage-profile/security/api-tokens)
-        2. Click on "Create API token"
-        3. Give it a name (e.g., "ISSCHAT Application")
-        4. Copy the generated token
-        5. Update your `.env` file with the new token value for `CONFLUENCE_PRIVATE_API_KEY`
-        Once updated, restart the application.
-        """)
-        st.stop()
-    # Ensure user is always authenticated
-    # Even before rendering sidebar, force user auth
     if "user" not in st.session_state:
         # Create or retrieve admin user immediately
-        email = os.getenv("CONFLUENCE_EMAIL_ADRESS") or "admin@auto.login"
+        config = get_config()
+        email = config.confluence_email_address or "admin@auto.login"
+
         from src.auth import get_all_users, add_user
 
         # Check if user exists, create if needed
@@ -165,14 +152,13 @@ def main():
             if st.button("Rebuild from Confluence", type="primary"):
                 with st.spinner("Rebuilding database from Confluence..."):
                     # Delete existing files
-                    import shutil
-                    from config import PERSIST_DIRECTORY
+                    config = get_config()
 
                     try:
-                        if os.path.exists(PERSIST_DIRECTORY):
-                            shutil.rmtree(PERSIST_DIRECTORY)
-                            st.info(f"Directory {PERSIST_DIRECTORY} successfully deleted.")
-                        os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
+                        if os.path.exists(config.persist_directory):
+                            shutil.rmtree(config.persist_directory)
+                            st.info(f"Directory {config.persist_directory} successfully deleted.")
+                        os.makedirs(config.persist_directory, exist_ok=True)
                     except Exception as e:
                         st.error(f"Error deleting directory: {str(e)}")
 

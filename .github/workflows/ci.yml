@@ -1,4 +1,4 @@
-name: CI
+name: CI Pipeline
 
 on:
   push:
@@ -24,13 +24,12 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          version: "0.7.6"
+          version: "0.7.8"
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
 
       - name: Lint with Ruff
         run: |
@@ -54,7 +53,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          version: "0.7.6"
+          version: "0.7.8"
       
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5

@@ -1,4 +1,3 @@
-import load_db
 import collections
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -6,7 +5,10 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
-import os
+from pathlib import Path
+
+import load_db
+from config import get_config
 
 
 class HelpDesk:
@@ -19,10 +21,7 @@ class HelpDesk:
         self.llm = self.get_llm()
         self.prompt = self.get_prompt()
 
-        if self.new_db:
-            self.db = load_db.DataLoader().set_db(self.embeddings)
-        else:
-            self.db = load_db.DataLoader().get_db(self.embeddings)
+        self.db = self._create_db()
 
         # Optimize the retriever for faster responses
         self.retriever = self.db.as_retriever(
@@ -32,6 +31,16 @@ class HelpDesk:
             }
         )
         self.retrieval_qa_chain = self.get_retrieval_qa()
+
+    def _create_db(self):
+        if self.new_db:
+            # Check if DB already exists before recreating it
+            persist_path = Path(get_config().persist_directory)
+            if persist_path.exists() and (persist_path / "index.faiss").exists():
+                print("⚠️ DB already exists, loading instead of rebuilding")
+                return load_db.DataLoader().get_db(self.embeddings)
+            return load_db.DataLoader().set_db(self.embeddings)
+        return load_db.DataLoader().get_db(self.embeddings)
 
     def get_template(self) -> str:
         template = """
@@ -60,13 +69,21 @@ class HelpDesk:
         return prompt
 
     def get_embeddings(self) -> HuggingFaceEmbeddings:
-        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        embeddings = HuggingFaceEmbeddings(
+            model_name="all-MiniLM-L6-v2",
+            model_kwargs={
+                "device": "cpu",
+                "trust_remote_code": False,
+            },
+            encode_kwargs={"normalize_embeddings": True, "batch_size": 16},
+        )
         return embeddings
 
     def get_llm(self):
-        api_key = convert_to_secret_str(os.getenv("OPENROUTER_API_KEY", ""))
+        config = get_config()
+        api_key = convert_to_secret_str(config.openrouter_api_key)
         if not api_key:
-            raise ValueError("OPENROUTER_API_KEY not found in environment variables")
+            raise ValueError("OPENROUTER_API_KEY not found in configuration")
 
         # Use ChatOpenAI with the custom client
         llm: ChatOpenAI = ChatOpenAI(
