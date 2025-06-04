@@ -1,9 +1,7 @@
 name: CD Pipeline
 
 on:
-  pull_request:
-    branches: [ main ]
-  workflow_run:
+   workflow_run:
     workflows: ["CI Pipeline"]
     types:
       - completed
@@ -19,6 +17,7 @@ jobs:
   build-and-deploy:
     name: Build and Deploy to Azure
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
 
     steps:
       - name: Checkout the repository
