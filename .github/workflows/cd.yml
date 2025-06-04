@@ -1,9 +1,8 @@
 name: CD Pipeline
 
 on:
-  push:
+  pull_request:
     branches: [ main ]
-  workflow_dispatch:
   workflow_run:
     workflows: ["CI Pipeline"]
     types:
