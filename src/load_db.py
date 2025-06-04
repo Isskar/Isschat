@@ -18,23 +18,16 @@ from langchain_core.embeddings import Embeddings
 class DataLoader:
     """Create, load, save the DB using the confluence Loader"""
 
-    def __init__(
-        self,
-        confluence_url=None,
-        username=None,
-        api_key=None,
-        space_key=None,
-        persist_directory=None,
-    ):
+    def __init__(self):
         # Get configuration
         config = get_config()
 
         # Use provided values or fall back to configuration
-        self.confluence_url: str = confluence_url or config.confluence_space_name
-        self.username: str = username or config.confluence_email_address
-        self.api_key: str = api_key or config.confluence_private_api_key
-        self.space_key: str = space_key or config.confluence_space_key
-        self.persist_directory: str = persist_directory or config.persist_directory
+        self.confluence_url: str = config.confluence_space_name
+        self.username: str = config.confluence_email_address
+        self.api_key: str = config.confluence_private_api_key
+        self.space_key: str = config.confluence_space_key
+        self.persist_directory: str = config.persist_directory
 
     def load_from_confluence_loader(self) -> list:
         """Load HTML files from Confluence using direct Atlassian API"""

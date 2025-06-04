@@ -93,23 +93,6 @@ def get_model(rebuild_db=False):
 
 # User interface initialization
 def main():
-    # Validate Confluence API token before proceeding
-    # is_valid, error_message = validate_confluence_token()
-    # if not is_valid:
-    #     st.error("⚠️ Confluence API Token Error")
-    #     st.error(error_message)
-    #     st.markdown("""
-    #     ### Please generate a new Confluence API token
-    #     1. Go to [Atlassian Account Settings](https://id.atlassian.com/manage-profile/security/api-tokens)
-    #     2. Click on "Create API token"
-    #     3. Give it a name (e.g., "ISSCHAT Application")
-    #     4. Copy the generated token
-    #     5. Update your `.env` file with the new token value for `CONFLUENCE_PRIVATE_API_KEY`
-    #     Once updated, restart the application.
-    #     """)
-    #     st.stop()
-    # Ensure user is always authenticated
-    # Even before rendering sidebar, force user auth
     if "user" not in st.session_state:
         # Create or retrieve admin user immediately
         config = get_config()
