@@ -213,7 +213,7 @@ def chat_page():
     # Sidebar for advanced options
     with st.sidebar:
         st.subheader("Advanced Options")
-        
+
         # Query history
         if st.button("Query History"):
             st.session_state["page"] = "history"
