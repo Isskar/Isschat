@@ -147,49 +147,19 @@ class FeedbackSystem:
             st_instance.write("✅ **Thank you for your feedback!**")
             return
 
-        # Use Streamlit's native feedback component
-        feedback = st_instance.feedback("thumbs", key=f"feedback_{qa_hash}")
+        # Use simple button approach that definitely works
+        st_instance.write("**Rate this response:**")
+        col1, col2 = st_instance.columns(2)
 
-        if feedback is not None:
-            print(f"DEBUG: Feedback received: {feedback}")
-            # Map Streamlit feedback to our format
-            feedback_type = "positive" if feedback == 1 else "negative"
-
-            # If negative feedback, ask for comment
-            comment = None
-            if feedback_type == "negative":
-                st_instance.write("**What could be improved?**")
-                comment = st_instance.text_input(
-                    "", key=f"comment_{qa_hash}", placeholder="Tell us how we can improve this response..."
-                )
-
-                if st_instance.button("Submit Feedback", key=f"submit_{qa_hash}", type="primary"):
-                    print(f"DEBUG: About to log negative feedback with comment: {comment}")
-                    success = self.log_feedback(
-                        user_id=user_id,
-                        question=question,
-                        answer=answer,
-                        sources=sources,
-                        feedback_type=feedback_type,
-                        comment=comment,
-                        session_id=session_id,
-                        version=version,
-                    )
-                    print(f"DEBUG: Negative feedback logging result: {success}")
-                    if success:
-                        st_instance.session_state[feedback_given_key] = True
-                        st_instance.rerun()
-                    else:
-                        st_instance.error("Failed to log feedback. Please try again.")
-            else:
-                # Positive feedback - log immediately
-                print("DEBUG: About to log positive feedback")
+        with col1:
+            if st_instance.button("👍 Good", key=f"positive_{qa_hash}", use_container_width=True):
+                print("DEBUG: Positive button clicked")
                 success = self.log_feedback(
                     user_id=user_id,
                     question=question,
                     answer=answer,
                     sources=sources,
-                    feedback_type=feedback_type,
+                    feedback_type="positive",
                     comment=None,
                     session_id=session_id,
                     version=version,
@@ -197,9 +167,72 @@ class FeedbackSystem:
                 print(f"DEBUG: Positive feedback logging result: {success}")
                 if success:
                     st_instance.session_state[feedback_given_key] = True
+                    st_instance.success("Thank you for your positive feedback!")
                     st_instance.rerun()
                 else:
                     st_instance.error("Failed to log feedback. Please try again.")
+
+        with col2:
+            if st_instance.button("👎 Needs Work", key=f"negative_{qa_hash}", use_container_width=True):
+                print("DEBUG: Negative button clicked")
+                st_instance.session_state[f"show_comment_{qa_hash}"] = True
+                st_instance.rerun()
+
+        # Show comment section if negative feedback was clicked
+        if st_instance.session_state.get(f"show_comment_{qa_hash}", False):
+            st_instance.write("**What could be improved?**")
+            comment = st_instance.text_input(
+                "", key=f"comment_{qa_hash}", placeholder="Tell us how we can improve this response..."
+            )
+
+            col1, col2 = st_instance.columns(2)
+            with col1:
+                if st_instance.button("Submit Feedback", key=f"submit_{qa_hash}", type="primary"):
+                    print(f"DEBUG: About to log negative feedback with comment: {comment}")
+                    success = self.log_feedback(
+                        user_id=user_id,
+                        question=question,
+                        answer=answer,
+                        sources=sources,
+                        feedback_type="negative",
+                        comment=comment,
+                        session_id=session_id,
+                        version=version,
+                    )
+                    print(f"DEBUG: Negative feedback logging result: {success}")
+                    if success:
+                        st_instance.session_state[feedback_given_key] = True
+                        # Clear comment state
+                        if f"show_comment_{qa_hash}" in st_instance.session_state:
+                            del st_instance.session_state[f"show_comment_{qa_hash}"]
+                        st_instance.success("Thank you for your feedback!")
+                        st_instance.rerun()
+                    else:
+                        st_instance.error("Failed to log feedback. Please try again.")
+
+            with col2:
+                if st_instance.button("Skip Comment", key=f"skip_{qa_hash}"):
+                    print("DEBUG: Skip comment clicked, logging negative without comment")
+                    success = self.log_feedback(
+                        user_id=user_id,
+                        question=question,
+                        answer=answer,
+                        sources=sources,
+                        feedback_type="negative",
+                        comment=None,
+                        session_id=session_id,
+                        version=version,
+                    )
+                    print(f"DEBUG: Negative feedback (no comment) logging result: {success}")
+                    if success:
+                        st_instance.session_state[feedback_given_key] = True
+                        # Clear comment state
+                        if f"show_comment_{qa_hash}" in st_instance.session_state:
+                            del st_instance.session_state[f"show_comment_{qa_hash}"]
+                        st_instance.success("Thank you for your feedback!")
+                        st_instance.rerun()
+                    else:
+                        st_instance.error("Failed to log feedback. Please try again.")
 
     def render_feedback_dashboard(self, st_instance) -> None:
         """Render feedback analytics dashboard"""
