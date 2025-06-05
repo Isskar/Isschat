@@ -9,6 +9,7 @@ from src.conversation_analysis import ConversationAnalyzer
 from src.response_tracking import ResponseTracker
 from src.performance_tracking import PerformanceTracker
 from src.query_history import QueryHistory
+from src.feedback_system import FeedbackSystem
 
 
 class FeaturesManager:
@@ -42,6 +43,7 @@ class FeaturesManager:
         self.response_tracker = ResponseTracker()
         self.performance_tracker = PerformanceTracker()
         self.query_history = QueryHistory()
+        self.feedback_system = FeedbackSystem()
 
         # Integrate necessary features
         self._integrate_selected_features()
@@ -128,6 +130,7 @@ class FeaturesManager:
                 "Conversation Analysis",
                 "Response Tracking",
                 "Performance",
+                "Feedback Analytics",
                 "General Statistics",
             ]
         )
@@ -153,8 +156,15 @@ class FeaturesManager:
             except Exception as e:
                 st.error(f"Error displaying performance metrics: {str(e)}")
 
-        # Tab 4: General Statistics
+        # Tab 4: Feedback Analytics
         with tabs[3]:
+            try:
+                self.feedback_system.render_feedback_dashboard(st)
+            except Exception as e:
+                st.error(f"Error displaying feedback analytics: {str(e)}")
+
+        # Tab 5: General Statistics
+        with tabs[4]:
             self._render_general_statistics(st)
 
     def _render_general_statistics(self, st) -> None:
@@ -177,9 +187,10 @@ class FeaturesManager:
             else:
                 stats["avg_response_time"] = 0
 
-            # Feedback statistics
-            unsat_responses = self.response_tracker.get_unsatisfactory_responses(days=30)
-            stats["unsatisfactory_responses"] = len(unsat_responses)
+            # Feedback statistics from new system
+            feedback_data = self.feedback_system.get_satisfaction_rate(days=30)
+            stats["satisfaction_rate"] = feedback_data["satisfaction_rate"]
+            stats["total_feedback"] = feedback_data["total"]
 
             # Display statistics
             col1, col2, col3 = st.columns(3)
@@ -191,7 +202,7 @@ class FeaturesManager:
                 st.metric("Average response time", stats["avg_response_time"])
 
             with col3:
-                st.metric("Unsatisfactory responses", stats["unsatisfactory_responses"])
+                st.metric("Satisfaction Rate", f"{stats['satisfaction_rate']:.1f}%")
 
         except Exception as e:
             st.error(f"Error collecting statistics: {str(e)}")
@@ -221,33 +232,15 @@ class FeaturesManager:
             return "Sorry, an error occurred while processing your question.", []
 
     def _add_feedback_widget(self, st, question: str, answer: str, sources: list) -> None:
-        """Add a feedback widget to evaluate the quality of the response"""
-        st.write("---")
-        st.write("### Rate this response")
+        """Add a simple, reliable feedback widget"""
+        print(f"🔥 FEEDBACK WIDGET CALLED! user_id: {self.user_id}")
+        print(f"🔥 Question: {question[:50]}...")
+        print(f"🔥 Answer length: {len(answer)}")
 
-        col1, col2 = st.columns([3, 1])
+        # Import and use the simple feedback system
+        from src.simple_feedback import render_simple_feedback_buttons
 
-        with col1:
-            feedback_score = st.slider("Response quality", 1, 5, 3, key="feedback_score")
-            feedback_text = st.text_area(
-                "Comment (optional)",
-                key="feedback_text",
-                placeholder="Tell us what you think about this response",
-            )
-
-        with col2:
-            if st.button("Send feedback", key="send_feedback"):
-                # Record the feedback
-                self.response_tracker.log_response_quality(
-                    user_id=self.user_id,
-                    question=question,
-                    answer=answer,
-                    sources=sources if isinstance(sources, list) else [sources],
-                    feedback_score=feedback_score,
-                    feedback_text=feedback_text,
-                )
-                # st.success("Thank you for your feedback!")
-                pass
+        render_simple_feedback_buttons(st, question, answer, self.user_id)
 
 
 # Function to integrate the feature manager into the main application
