@@ -29,7 +29,7 @@ class FeedbackSystem:
         comment: Optional[str] = None,
         session_id: Optional[str] = None,
         version: Optional[str] = None
-    ) -> None:
+    ) -> bool:
         """Log user feedback with structured format"""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -45,11 +45,20 @@ class FeedbackSystem:
         }
 
         try:
+            # Ensure the directory exists
+            os.makedirs(self.log_path, exist_ok=True)
+            
             with open(self.current_log_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
-            self.logger.info(f"Feedback logged: {feedback_type} for user {user_id}")
+                f.flush()  # Force write to disk
+            
+            self.logger.info(f"Feedback logged: {feedback_type} for user {user_id} to {self.current_log_file}")
+            return True
         except Exception as e:
             self.logger.error(f"Error logging feedback: {str(e)}")
+            # Also print to console for debugging
+            print(f"FEEDBACK ERROR: Failed to log feedback: {str(e)}")
+            return False
 
     def get_feedback_logs(self, days: int = 30) -> List[Dict[str, Any]]:
         """Retrieve feedback logs from the last n days"""
@@ -109,53 +118,68 @@ class FeedbackSystem:
         session_id: Optional[str] = None,
         version: Optional[str] = None
     ) -> None:
-        """Render thumbs up/down feedback widget in Streamlit"""
+        """Render thumbs up/down feedback widget using Streamlit's native feedback component"""
+        # Create unique identifier for this Q&A pair
+        qa_hash = str(hash(question + answer))
+        feedback_given_key = f"feedback_given_{qa_hash}"
+        
         st_instance.write("---")
-        st_instance.write("### How was this response?")
-
-        col1, col2, col3 = st_instance.columns([1, 1, 3])
-
-        with col1:
-            if st_instance.button("👍", key=f"positive_{hash(question + answer)}", help="Good response"):
-                self.log_feedback(
-                    user_id=user_id,
-                    question=question,
-                    answer=answer,
-                    sources=sources,
-                    feedback_type="positive",
-                    session_id=session_id,
-                    version=version
-                )
-                st_instance.success("Thank you for your feedback!")
-
-        with col2:
-            if st_instance.button("👎", key=f"negative_{hash(question + answer)}", help="Poor response"):
-                # Show comment box for negative feedback
-                st_instance.session_state[f"show_comment_{hash(question + answer)}"] = True
-
-        # Show comment box if negative feedback was clicked
-        if st_instance.session_state.get(f"show_comment_{hash(question + answer)}", False):
-            with col3:
+        
+        # Check if feedback has already been given for this Q&A
+        if st_instance.session_state.get(feedback_given_key, False):
+            st_instance.write("✅ **Thank you for your feedback!**")
+            return
+        
+        # Use Streamlit's native feedback component
+        feedback = st_instance.feedback("thumbs", key=f"feedback_{qa_hash}")
+        
+        if feedback is not None:
+            # Map Streamlit feedback to our format
+            feedback_type = "positive" if feedback == 1 else "negative"
+            
+            # If negative feedback, ask for comment
+            comment = None
+            if feedback_type == "negative":
+                st_instance.write("**What could be improved?**")
                 comment = st_instance.text_input(
-                    "What could be improved?",
-                    key=f"comment_{hash(question + answer)}",
-                    placeholder="Tell us how we can improve..."
+                    "",
+                    key=f"comment_{qa_hash}",
+                    placeholder="Tell us how we can improve this response..."
                 )
-
-                if st_instance.button("Submit", key=f"submit_{hash(question + answer)}"):
-                    self.log_feedback(
+                
+                if st_instance.button("Submit Feedback", key=f"submit_{qa_hash}", type="primary"):
+                    success = self.log_feedback(
                         user_id=user_id,
                         question=question,
                         answer=answer,
                         sources=sources,
-                        feedback_type="negative",
+                        feedback_type=feedback_type,
                         comment=comment,
                         session_id=session_id,
                         version=version
                     )
-                    st_instance.success("Thank you for your feedback!")
-                    # Clear the comment box state
-                    del st_instance.session_state[f"show_comment_{hash(question + answer)}"]
+                    if success:
+                        st_instance.session_state[feedback_given_key] = True
+                        st_instance.rerun()
+                    else:
+                        st_instance.error("Failed to log feedback. Please try again.")
+            else:
+                # Positive feedback - log immediately
+                success = self.log_feedback(
+                    user_id=user_id,
+                    question=question,
+                    answer=answer,
+                    sources=sources,
+                    feedback_type=feedback_type,
+                    comment=None,
+                    session_id=session_id,
+                    version=version
+                )
+                if success:
+                    st_instance.session_state[feedback_given_key] = True
+                    st_instance.rerun()
+                else:
+                    st_instance.error("Failed to log feedback. Please try again.")
 
     def render_feedback_dashboard(self, st_instance) -> None:
         """Render feedback analytics dashboard"""
