@@ -1,5 +1,3 @@
-import pandas as pd
-import streamlit as st
 import json
 import os
 from datetime import datetime
@@ -119,101 +117,8 @@ class ResponseTracker:
         except Exception as e:
             return {"error": str(e), "message": "Error during pattern analysis"}  # Translated from French
 
-    def render_tracking_dashboard(self):
-        """Display the response tracking dashboard in Streamlit"""
-        st.title("Response Tracking")
-
-        # Period selection
-        days = st.slider("Analysis period (days)", 1, 90, 30, key="nonresponse_days")
-        unsatisfactory = self.get_unsatisfactory_responses(days)
-
-        if not unsatisfactory:
-            st.warning("No unsatisfactory responses found for the selected period")
-            return
-
-        # Basic metrics
-        st.metric("Number of unsatisfactory responses", len(unsatisfactory))
-
-        # Pattern analysis
-        patterns = self.identify_patterns(unsatisfactory)
-
-        if "error" in patterns:
-            st.error(f"Analysis error: {patterns['error']}")
-            return
-
-        # Display clusters of similar questions
-        if "clusters" in patterns and patterns["clusters"]:
-            st.subheader("Groups of similar questions without satisfactory responses")
-
-            for i, cluster in enumerate(patterns["clusters"]):
-                with st.expander(f"Group {i + 1}: {cluster['main_question']} ({cluster['count']} questions)"):
-                    for q in cluster["similar_questions"]:
-                        st.write(f"- {q}")
-
-        # Display common terms
-        if "common_terms" in patterns and patterns["common_terms"]:
-            st.subheader("Frequent terms in questions without satisfactory responses")
-            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Term", "Frequency"])
-            st.dataframe(terms_df)
-
-        # Table of questions without satisfactory responses
-        st.subheader("Details of questions without satisfactory responses")
-
-        # Convert to DataFrame for cleaner display
-        df = pd.DataFrame(
-            [
-                {
-                    "Date": datetime.fromisoformat(item["timestamp"]).strftime("%Y-%m-%d %H:%M"),
-                    "Question": item["question"],
-                    "Score": item["feedback_score"],
-                    "Comment": item.get("feedback_text", ""),
-                }
-                for item in unsatisfactory
-            ]
-        )
-
-        st.dataframe(df)
+    # Dashboard rendering method moved to src/dashboard.py for centralization
 
 
-# Function to integrate the tracker in the main application
-def integrate_response_tracker(help_desk, user_id):
-    """Integrates the response tracker into the help_desk"""
-    tracker = ResponseTracker()
-
-    # Add the tracker as an attribute
-    help_desk.response_tracker = tracker
-
-    return help_desk
-
-
-# Function to add a feedback widget in Streamlit
-def add_feedback_widget(st, help_desk, user_id, question, answer, sources):
-    """Adds a feedback widget for the response"""
-    st.write("---")
-    st.write("### Rate this response")
-
-    col1, col2, col3 = st.columns([3, 1, 1])
-
-    with col1:
-        feedback_score = st.slider("Response quality", 1, 5, 3)
-
-    with col2:
-        if st.button("Send feedback"):
-            feedback_text = st.session_state.get("feedback_text", "")
-            help_desk.response_tracker.log_response_quality(
-                user_id=user_id,
-                question=question,
-                answer=answer,
-                sources=sources,
-                feedback_score=feedback_score,
-                feedback_text=feedback_text,
-            )
-            st.success("Thank you for your feedback!")
-
-    with col3:
-        if feedback_score <= 3:
-            feedback_text = st.text_area(
-                "Comment (optional)",
-                key="feedback_text",
-                placeholder="Tell us why this response was not satisfactory",
-            )
+# Functions removed - response tracking is now integrated through FeaturesManager
+# to avoid duplication and maintain consistency

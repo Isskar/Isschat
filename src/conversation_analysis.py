@@ -1,9 +1,7 @@
-import pandas as pd
 import json
 import os
 from datetime import datetime
 from collections import Counter
-import streamlit as st
 
 
 class ConversationAnalyzer:
@@ -90,76 +88,8 @@ class ConversationAnalyzer:
             "avg_response_time_ms": avg_response_time,
         }
 
-    def render_analysis_dashboard(self) -> None:
-        """Display the analysis dashboard in Streamlit"""
-        st.title("Conversation Analysis")
-
-        # Period selection
-        days = st.slider("Analysis period (days)", 1, 30, 7)
-        logs = self.get_recent_logs(days)
-
-        if not logs:
-            st.warning("No data available for the selected period")
-            return
-
-        # Analysis
-        analysis = self.analyze_questions(logs)
-
-        # Display metrics
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Total questions", analysis["total_questions"])
-        with col2:
-            st.metric("Average response time", f"{analysis['avg_response_time_ms']:.0f} ms")
-
-        # Hourly distribution chart
-        st.subheader("Question distribution by hour")
-        hours = list(range(24))
-        counts = [analysis["hour_distribution"].get(hour, 0) for hour in hours]
-
-        hour_df = pd.DataFrame({"Hour": hours, "Number of questions": counts})
-        st.bar_chart(hour_df.set_index("Hour"))
-
-        # Most frequent words
-        st.subheader("Most frequent keywords")
-        if analysis["common_words"]:
-            keywords_df = pd.DataFrame(analysis["common_words"], columns=["Word", "Frequency"])
-            st.dataframe(keywords_df)
-        else:
-            st.info("Not enough data for keyword analysis")
+    # Dashboard rendering method moved to src/dashboard.py for centralization
 
 
-# Function to integrate the analyzer in the main application
-def integrate_conversation_analyzer(help_desk, user_id: str):
-    """Integrates the conversation analyzer into the help_desk"""
-    analyzer = ConversationAnalyzer()
-
-    # Wrapper function for ask_question that logs interactions
-    original_ask = help_desk.ask_question if hasattr(help_desk, "ask_question") else None
-
-    def ask_with_logging(question, verbose=False):
-        start_time = datetime.now()
-        answer, sources = original_ask(question, verbose) if original_ask else ("No answer", [])
-        end_time = datetime.now()
-        response_time = (end_time - start_time).total_seconds() * 1000  # in milliseconds
-
-        # Log the interaction
-        analyzer.log_interaction(
-            user_id=user_id,
-            question=question,
-            answer=answer,
-            sources=sources,
-            response_time=response_time,
-        )
-
-        return answer, sources
-
-    # Replace the original method
-    if hasattr(help_desk, "ask_question"):
-        help_desk.ask_question = ask_with_logging
-
-    # Add the analyzer as an attribute
-    if not hasattr(help_desk, "analyzer"):
-        help_desk.analyzer = analyzer
-
-    return help_desk
+# Function removed - conversation analysis is now integrated through FeaturesManager
+# to avoid multiple wrapping of the ask_question method

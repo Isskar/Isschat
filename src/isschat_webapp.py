@@ -34,9 +34,6 @@ except Exception as e:
 # Import custom modules
 from src.help_desk import HelpDesk
 from src.auth import (
-    get_all_users,
-    add_user,
-    delete_user,
     login_required,
     admin_required,
 )
@@ -325,63 +322,12 @@ def admin_page():
     """Display the administration page"""
     st.title("Administration Dashboard")
 
-    # Create tabs to separate different features
-    tab1, tab2 = st.tabs(["User Management", "Analytics and Performance"])
-
-    with tab1:
-        st.header("User Management")
-
-        # Form to add a user
-        with st.expander("Add User", expanded=True):
-            with st.form("add_user_form"):
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
-                is_admin = st.checkbox("Administrator")
-                submit = st.form_submit_button("Add")
-
-                if submit and email and password:
-                    success = add_user(email, password, is_admin)
-                    if success:
-                        st.success(f"User {email} added successfully.")
-                    else:
-                        st.error(f"Email {email} already exists.")
-
-        # User list
-        st.subheader("User List")
-        users = get_all_users()
-
-        if users:
-            # Create a table to display users
-            cols = st.columns([3, 2, 1, 1])
-            cols[0].write("**Email**")
-            cols[1].write("**Creation Date**")
-            cols[2].write("**Admin**")
-            cols[3].write("**Actions**")
-
-            for user in users:
-                cols = st.columns([3, 2, 1, 1])
-                cols[0].write(user["email"])
-                cols[1].write(user["created_at"])
-                cols[2].write("Yes" if user["is_admin"] else "No")
-
-                # Don't allow deleting the currently logged in user
-                if user["id"] != st.session_state["user"]["id"]:
-                    if cols[3].button("Delete", key=f"delete_{user['id']}"):
-                        delete_user(user["id"])
-                        st.success(f"User {user['email']} deleted.")
-                        st.rerun()
-                else:
-                    cols[3].write("(You)")
-        else:
-            st.info("No users found.")
-
-    with tab2:
-        # Check if the features manager is initialized
-        if "features_manager" in st.session_state:
-            features = st.session_state["features_manager"]
-            features.render_admin_dashboard(st)
-        else:
-            st.warning("Please interact with the chatbot first to initialize the analytics features.")
+    # Check if the features manager is initialized
+    if "features_manager" in st.session_state:
+        features = st.session_state["features_manager"]
+        features.render_admin_dashboard(st)
+    else:
+        st.warning("Please interact with the chatbot first to initialize the analytics features.")
 
     # Return button
     if st.button("Return to chat"):
