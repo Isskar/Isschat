@@ -168,7 +168,7 @@ class FeedbackSystem:
                 if success:
                     st_instance.session_state[feedback_given_key] = True
                     st_instance.success("Thank you for your positive feedback!")
-                    st_instance.rerun()
+                    # Don't rerun immediately - let the logging complete
                 else:
                     st_instance.error("Failed to log feedback. Please try again.")
 
@@ -176,7 +176,7 @@ class FeedbackSystem:
             if st_instance.button("👎 Needs Work", key=f"negative_{qa_hash}", use_container_width=True):
                 print("DEBUG: Negative button clicked")
                 st_instance.session_state[f"show_comment_{qa_hash}"] = True
-                st_instance.rerun()
+                # Don't rerun immediately - just set the state
 
         # Show comment section if negative feedback was clicked
         if st_instance.session_state.get(f"show_comment_{qa_hash}", False):
@@ -206,7 +206,7 @@ class FeedbackSystem:
                         if f"show_comment_{qa_hash}" in st_instance.session_state:
                             del st_instance.session_state[f"show_comment_{qa_hash}"]
                         st_instance.success("Thank you for your feedback!")
-                        st_instance.rerun()
+                        # Let the page rerun naturally on next interaction
                     else:
                         st_instance.error("Failed to log feedback. Please try again.")
 
@@ -230,7 +230,7 @@ class FeedbackSystem:
                         if f"show_comment_{qa_hash}" in st_instance.session_state:
                             del st_instance.session_state[f"show_comment_{qa_hash}"]
                         st_instance.success("Thank you for your feedback!")
-                        st_instance.rerun()
+                        # Let the page rerun naturally on next interaction
                     else:
                         st_instance.error("Failed to log feedback. Please try again.")
 
