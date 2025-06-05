@@ -128,67 +128,87 @@ class FeedbackSystem:
         session_id: Optional[str] = None,
         version: Optional[str] = None,
     ) -> None:
-        """Render thumbs up/down feedback widget using Streamlit's native feedback component"""
+        """Render simple and reliable feedback widget"""
         # Debug logging
-        print(f"DEBUG: render_feedback_widget called for user {user_id}")
-        print(f"DEBUG: Question: {question[:50]}...")
-        print(f"DEBUG: Log path: {self.log_path}")
-        print(f"DEBUG: Current log file: {self.current_log_file}")
+        print(f"🔍 FEEDBACK WIDGET: Starting for user {user_id}")
+        print(f"🔍 FEEDBACK WIDGET: Question length: {len(question)}")
+        print(f"🔍 FEEDBACK WIDGET: Log file: {self.current_log_file}")
 
         # Create unique identifier for this Q&A pair
         qa_hash = str(hash(question + answer))
         feedback_given_key = f"feedback_given_{qa_hash}"
 
-        st_instance.write("---")
-        st_instance.write("🔍 **DEBUG**: Feedback widget loaded")  # Visual debug
+        # Always show feedback section header
+        st_instance.markdown("---")
+        st_instance.markdown("### 📝 How was this response?")
 
-        # Check if feedback has already been given for this Q&A
+        # Check if feedback already given
         if st_instance.session_state.get(feedback_given_key, False):
-            st_instance.write("✅ **Thank you for your feedback!**")
+            st_instance.success("✅ Thank you! Your feedback has been recorded.")
             return
 
-        # Use simple button approach that definitely works
-        st_instance.write("**Rate this response:**")
-        col1, col2 = st_instance.columns(2)
+        # Simple expander approach to avoid button disappearing issues
+        with st_instance.expander("👍👎 Rate this response", expanded=True):
+            st_instance.write("Please rate the quality of this response:")
 
-        with col1:
-            if st_instance.button("👍 Good", key=f"positive_{qa_hash}", use_container_width=True):
-                print("DEBUG: Positive button clicked")
-                success = self.log_feedback(
-                    user_id=user_id,
-                    question=question,
-                    answer=answer,
-                    sources=sources,
-                    feedback_type="positive",
-                    comment=None,
-                    session_id=session_id,
-                    version=version,
-                )
-                print(f"DEBUG: Positive feedback logging result: {success}")
-                if success:
-                    st_instance.session_state[feedback_given_key] = True
-                    st_instance.success("Thank you for your positive feedback!")
-                    # Don't rerun immediately - let the logging complete
-                else:
-                    st_instance.error("Failed to log feedback. Please try again.")
+            # Use columns for side-by-side buttons
+            col1, col2 = st_instance.columns(2)
 
-        with col2:
-            if st_instance.button("👎 Needs Work", key=f"negative_{qa_hash}", use_container_width=True):
-                print("DEBUG: Negative button clicked")
-                st_instance.session_state[f"show_comment_{qa_hash}"] = True
-                # Don't rerun immediately - just set the state
+            # Positive feedback button
+            with col1:
+                if st_instance.button("👍 GOOD RESPONSE", key=f"pos_{qa_hash}", type="primary"):
+                    print("🔍 POSITIVE BUTTON CLICKED!")
 
-        # Show comment section if negative feedback was clicked
-        if st_instance.session_state.get(f"show_comment_{qa_hash}", False):
-            st_instance.write("**What could be improved?**")
-            comment = st_instance.text_input(
-                "", key=f"comment_{qa_hash}", placeholder="Tell us how we can improve this response..."
+                    # Log immediately with verbose output
+                    print(f"🔍 Logging positive feedback for user: {user_id}")
+                    success = self.log_feedback(
+                        user_id=user_id,
+                        question=question,
+                        answer=answer,
+                        sources=sources,
+                        feedback_type="positive",
+                        comment=None,
+                        session_id=session_id,
+                        version=version,
+                    )
+
+                    if success:
+                        print("🔍 SUCCESS: Positive feedback logged!")
+                        st_instance.session_state[feedback_given_key] = True
+                        st_instance.balloons()  # Fun visual feedback
+                        st_instance.success("✅ Thank you for the positive feedback!")
+                    else:
+                        print("❌ FAILED: Could not log positive feedback")
+                        st_instance.error("❌ Failed to save feedback. Please try again.")
+
+            # Negative feedback button
+            with col2:
+                if st_instance.button("👎 NEEDS IMPROVEMENT", key=f"neg_{qa_hash}"):
+                    print("🔍 NEGATIVE BUTTON CLICKED!")
+
+                    # Show comment input immediately
+                    st_instance.session_state[f"show_neg_comment_{qa_hash}"] = True
+
+        # Handle negative feedback with comment
+        if st_instance.session_state.get(f"show_neg_comment_{qa_hash}", False):
+            st_instance.markdown("### 💬 Help us improve")
+            st_instance.write("What could be improved? (optional)")
+
+            # Comment input
+            comment = st_instance.text_area(
+                "Your feedback:",
+                key=f"neg_comment_{qa_hash}",
+                placeholder="Tell us specifically what could be better...",
+                height=100,
             )
 
+            # Submit buttons
             col1, col2 = st_instance.columns(2)
             with col1:
-                if st_instance.button("Submit Feedback", key=f"submit_{qa_hash}", type="primary"):
-                    print(f"DEBUG: About to log negative feedback with comment: {comment}")
+                if st_instance.button("📝 Submit with Comment", key=f"submit_comment_{qa_hash}", type="primary"):
+                    print("🔍 SUBMIT WITH COMMENT CLICKED!")
+                    print(f"🔍 Comment: '{comment}'")
+
                     success = self.log_feedback(
                         user_id=user_id,
                         question=question,
@@ -199,20 +219,21 @@ class FeedbackSystem:
                         session_id=session_id,
                         version=version,
                     )
-                    print(f"DEBUG: Negative feedback logging result: {success}")
+
                     if success:
+                        print("🔍 SUCCESS: Negative feedback with comment logged!")
                         st_instance.session_state[feedback_given_key] = True
-                        # Clear comment state
-                        if f"show_comment_{qa_hash}" in st_instance.session_state:
-                            del st_instance.session_state[f"show_comment_{qa_hash}"]
-                        st_instance.success("Thank you for your feedback!")
-                        # Let the page rerun naturally on next interaction
+                        if f"show_neg_comment_{qa_hash}" in st_instance.session_state:
+                            del st_instance.session_state[f"show_neg_comment_{qa_hash}"]
+                        st_instance.success("✅ Thank you for the detailed feedback!")
                     else:
-                        st_instance.error("Failed to log feedback. Please try again.")
+                        print("❌ FAILED: Could not log negative feedback with comment")
+                        st_instance.error("❌ Failed to save feedback. Please try again.")
 
             with col2:
-                if st_instance.button("Skip Comment", key=f"skip_{qa_hash}"):
-                    print("DEBUG: Skip comment clicked, logging negative without comment")
+                if st_instance.button("⏭️ Submit without Comment", key=f"submit_no_comment_{qa_hash}"):
+                    print("🔍 SUBMIT WITHOUT COMMENT CLICKED!")
+
                     success = self.log_feedback(
                         user_id=user_id,
                         question=question,
@@ -223,16 +244,16 @@ class FeedbackSystem:
                         session_id=session_id,
                         version=version,
                     )
-                    print(f"DEBUG: Negative feedback (no comment) logging result: {success}")
+
                     if success:
+                        print("🔍 SUCCESS: Negative feedback without comment logged!")
                         st_instance.session_state[feedback_given_key] = True
-                        # Clear comment state
-                        if f"show_comment_{qa_hash}" in st_instance.session_state:
-                            del st_instance.session_state[f"show_comment_{qa_hash}"]
-                        st_instance.success("Thank you for your feedback!")
-                        # Let the page rerun naturally on next interaction
+                        if f"show_neg_comment_{qa_hash}" in st_instance.session_state:
+                            del st_instance.session_state[f"show_neg_comment_{qa_hash}"]
+                        st_instance.success("✅ Thank you for the feedback!")
                     else:
-                        st_instance.error("Failed to log feedback. Please try again.")
+                        print("❌ FAILED: Could not log negative feedback without comment")
+                        st_instance.error("❌ Failed to save feedback. Please try again.")
 
     def render_feedback_dashboard(self, st_instance) -> None:
         """Render feedback analytics dashboard"""
