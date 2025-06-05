@@ -213,8 +213,7 @@ def chat_page():
     # Sidebar for advanced options
     with st.sidebar:
         st.subheader("Advanced Options")
-        show_feedback = st.toggle("Response feedback", value=True)
-
+        
         # Query history
         if st.button("Query History"):
             st.session_state["page"] = "history"
@@ -261,9 +260,8 @@ def chat_page():
             if sources:
                 st.chat_message("assistant").write(sources)
 
-            # Add feedback widget if enabled
-            if show_feedback:
-                features._add_feedback_widget(st, prompt, result, sources)
+            # Add feedback widget (always enabled now)
+            features._add_feedback_widget(st, prompt, result, sources)
 
             # Add to message history
             st.session_state.messages.append({"role": "assistant", "content": response_content})
@@ -288,9 +286,8 @@ def chat_page():
             if sources:
                 st.chat_message("assistant").write(sources)
 
-            # Add feedback widget if enabled
-            if show_feedback:
-                features._add_feedback_widget(st, prompt, result, sources)
+            # Add feedback widget (always enabled now)
+            features._add_feedback_widget(st, prompt, result, sources)
 
             # Add to message history
             st.session_state.messages.append({"role": "assistant", "content": response_content})
