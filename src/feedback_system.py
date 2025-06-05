@@ -12,9 +12,7 @@ class FeedbackSystem:
         """Initialize the feedback system with unified storage"""
         self.log_path = log_path
         os.makedirs(log_path, exist_ok=True)
-        self.current_log_file = os.path.join(
-            log_path, f"feedback_log_{datetime.now().strftime('%Y%m%d')}.jsonl"
-        )
+        self.current_log_file = os.path.join(log_path, f"feedback_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
 
         # Setup logging
         self.logger = logging.getLogger("feedback_system")
@@ -28,9 +26,19 @@ class FeedbackSystem:
         feedback_type: str,  # "positive" or "negative"
         comment: Optional[str] = None,
         session_id: Optional[str] = None,
-        version: Optional[str] = None
+        version: Optional[str] = None,
     ) -> bool:
         """Log user feedback with structured format"""
+        # Ensure sources is a list
+        if isinstance(sources, str):
+            sources = [sources]
+        elif sources is None:
+            sources = []
+
+        print(f"DEBUG: log_feedback called with feedback_type: {feedback_type}")
+        print(f"DEBUG: user_id: {user_id}, comment: {comment}")
+        print(f"DEBUG: sources type: {type(sources)}, value: {sources}")
+
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "user_id": user_id,
@@ -41,17 +49,19 @@ class FeedbackSystem:
             "comment": comment,
             "session_id": session_id,
             "version": version,
-            "sources": sources[:3] if sources else []  # Store first 3 sources for reference
+            "sources": sources[:3] if sources else [],  # Store first 3 sources for reference
         }
+
+        print(f"DEBUG: log_entry created: {log_entry}")
 
         try:
             # Ensure the directory exists
             os.makedirs(self.log_path, exist_ok=True)
-            
+
             with open(self.current_log_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
                 f.flush()  # Force write to disk
-            
+
             self.logger.info(f"Feedback logged: {feedback_type} for user {user_id} to {self.current_log_file}")
             return True
         except Exception as e:
@@ -100,7 +110,7 @@ class FeedbackSystem:
             "positive": positive_count,
             "negative": negative_count,
             "total": total_count,
-            "satisfaction_rate": satisfaction_rate
+            "satisfaction_rate": satisfaction_rate,
         }
 
     def get_negative_feedback(self, days: int = 30) -> List[Dict[str, Any]]:
@@ -116,38 +126,45 @@ class FeedbackSystem:
         sources: List[str],
         user_id: str,
         session_id: Optional[str] = None,
-        version: Optional[str] = None
+        version: Optional[str] = None,
     ) -> None:
         """Render thumbs up/down feedback widget using Streamlit's native feedback component"""
+        # Debug logging
+        print(f"DEBUG: render_feedback_widget called for user {user_id}")
+        print(f"DEBUG: Question: {question[:50]}...")
+        print(f"DEBUG: Log path: {self.log_path}")
+        print(f"DEBUG: Current log file: {self.current_log_file}")
+
         # Create unique identifier for this Q&A pair
         qa_hash = str(hash(question + answer))
         feedback_given_key = f"feedback_given_{qa_hash}"
-        
+
         st_instance.write("---")
-        
+        st_instance.write("🔍 **DEBUG**: Feedback widget loaded")  # Visual debug
+
         # Check if feedback has already been given for this Q&A
         if st_instance.session_state.get(feedback_given_key, False):
             st_instance.write("✅ **Thank you for your feedback!**")
             return
-        
+
         # Use Streamlit's native feedback component
         feedback = st_instance.feedback("thumbs", key=f"feedback_{qa_hash}")
-        
+
         if feedback is not None:
+            print(f"DEBUG: Feedback received: {feedback}")
             # Map Streamlit feedback to our format
             feedback_type = "positive" if feedback == 1 else "negative"
-            
+
             # If negative feedback, ask for comment
             comment = None
             if feedback_type == "negative":
                 st_instance.write("**What could be improved?**")
                 comment = st_instance.text_input(
-                    "",
-                    key=f"comment_{qa_hash}",
-                    placeholder="Tell us how we can improve this response..."
+                    "", key=f"comment_{qa_hash}", placeholder="Tell us how we can improve this response..."
                 )
-                
+
                 if st_instance.button("Submit Feedback", key=f"submit_{qa_hash}", type="primary"):
+                    print(f"DEBUG: About to log negative feedback with comment: {comment}")
                     success = self.log_feedback(
                         user_id=user_id,
                         question=question,
@@ -156,8 +173,9 @@ class FeedbackSystem:
                         feedback_type=feedback_type,
                         comment=comment,
                         session_id=session_id,
-                        version=version
+                        version=version,
                     )
+                    print(f"DEBUG: Negative feedback logging result: {success}")
                     if success:
                         st_instance.session_state[feedback_given_key] = True
                         st_instance.rerun()
@@ -165,6 +183,7 @@ class FeedbackSystem:
                         st_instance.error("Failed to log feedback. Please try again.")
             else:
                 # Positive feedback - log immediately
+                print("DEBUG: About to log positive feedback")
                 success = self.log_feedback(
                     user_id=user_id,
                     question=question,
@@ -173,8 +192,9 @@ class FeedbackSystem:
                     feedback_type=feedback_type,
                     comment=None,
                     session_id=session_id,
-                    version=version
+                    version=version,
                 )
+                print(f"DEBUG: Positive feedback logging result: {success}")
                 if success:
                     st_instance.session_state[feedback_given_key] = True
                     st_instance.rerun()
@@ -210,12 +230,10 @@ class FeedbackSystem:
             st_instance.subheader("Recent Negative Feedback")
 
             for feedback in negative_feedback[-10:]:  # Show last 10
-                with st_instance.expander(
-                    f"🕒 {feedback['timestamp'][:16]} - {feedback['question'][:50]}..."
-                ):
+                with st_instance.expander(f"🕒 {feedback['timestamp'][:16]} - {feedback['question'][:50]}..."):
                     st_instance.write(f"**Question:** {feedback['question']}")
                     st_instance.write(f"**Answer snippet:** {feedback['answer_snippet']}")
-                    if feedback.get('comment'):
+                    if feedback.get("comment"):
                         st_instance.write(f"**User comment:** {feedback['comment']}")
                     st_instance.write(f"**Sources:** {feedback['sources_count']}")
         else:

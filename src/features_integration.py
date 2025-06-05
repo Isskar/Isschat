@@ -128,7 +128,7 @@ class FeaturesManager:
         tabs = st.tabs(
             [
                 "Conversation Analysis",
-                "Response Tracking", 
+                "Response Tracking",
                 "Performance",
                 "Feedback Analytics",
                 "General Statistics",
@@ -233,6 +233,11 @@ class FeaturesManager:
 
     def _add_feedback_widget(self, st, question: str, answer: str, sources: list) -> None:
         """Add a feedback widget to evaluate the quality of the response"""
+        print(f"DEBUG: _add_feedback_widget called with user_id: {self.user_id}")
+        print(f"DEBUG: Question length: {len(question)}")
+        print(f"DEBUG: Answer length: {len(answer)}")
+        print(f"DEBUG: Sources: {sources}")
+
         # Use the new unified feedback system with thumbs up/down
         self.feedback_system.render_feedback_widget(
             st_instance=st,
@@ -240,8 +245,8 @@ class FeaturesManager:
             answer=answer,
             sources=sources if isinstance(sources, list) else [sources],
             user_id=self.user_id,
-            session_id=getattr(st.session_state, 'session_id', None),
-            version=None  # Can be added later for version tracking
+            session_id=getattr(st.session_state, "session_id", None),
+            version=None,  # Can be added later for version tracking
         )
 
 
