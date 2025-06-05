@@ -87,9 +87,3 @@ class ConversationAnalyzer:
             "hour_distribution": dict(hour_counts),
             "avg_response_time_ms": avg_response_time,
         }
-
-    # Dashboard rendering method moved to src/dashboard.py for centralization
-
-
-# Function removed - conversation analysis is now integrated through FeaturesManager
-# to avoid multiple wrapping of the ask_question method

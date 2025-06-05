@@ -2,26 +2,24 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
-from datetime import datetime
 
 
 class AdminDashboard:
     """Centralized dashboard for all admin analytics and monitoring"""
 
-    def __init__(self, conversation_analyzer, response_tracker, performance_tracker):
+    def __init__(self, conversation_analyzer, feedback_system, performance_tracker):
         self.conversation_analyzer = conversation_analyzer
-        self.response_tracker = response_tracker
+        self.feedback_system = feedback_system  # New feedback system
         self.performance_tracker = performance_tracker
 
     def render_admin_dashboard(self, st) -> None:
         """Display the complete administration dashboard with all features"""
 
-        # Create tabs for each feature
+        # Create tabs for each feature (Response Tracking removed)
         tabs = st.tabs(
             [
-                "Conversation Analysis",
-                "Response Tracking",
                 "Performance",
+                "Conversation Analysis",
                 "General Statistics",
             ]
         )
@@ -29,26 +27,19 @@ class AdminDashboard:
         # Tab 1: Conversation Analysis
         with tabs[0]:
             try:
-                self.render_conversation_analysis_dashboard()
-            except Exception as e:
-                st.error(f"Error displaying conversation analysis: {str(e)}")
-
-        # Tab 2: Response Tracking
-        with tabs[1]:
-            try:
-                self.render_response_tracking_dashboard()
-            except Exception as e:
-                st.error(f"Error displaying response tracking: {str(e)}")
-
-        # Tab 3: Performance
-        with tabs[2]:
-            try:
                 self.render_performance_dashboard()
             except Exception as e:
                 st.error(f"Error displaying performance metrics: {str(e)}")
 
-        # Tab 4: General Statistics
-        with tabs[3]:
+        # Tab 2: Performance
+        with tabs[1]:
+            try:
+                self.render_conversation_analysis_dashboard()
+            except Exception as e:
+                st.error(f"Error displaying conversation analysis: {str(e)}")
+
+        # Tab 3: General Statistics
+        with tabs[2]:
             self.render_general_statistics()
 
     def render_conversation_analysis_dashboard(self) -> None:
@@ -89,60 +80,7 @@ class AdminDashboard:
         else:
             st.info("Not enough data for keyword analysis")
 
-    def render_response_tracking_dashboard(self):
-        """Display the response tracking dashboard in Streamlit"""
-        st.title("Response Tracking")
-
-        # Period selection
-        days = st.slider("Analysis period (days)", 1, 90, 30, key="response_tracking_days")
-        unsatisfactory = self.response_tracker.get_unsatisfactory_responses(days)
-
-        if not unsatisfactory:
-            st.warning("No unsatisfactory responses found for the selected period")
-            return
-
-        # Basic metrics
-        st.metric("Number of unsatisfactory responses", len(unsatisfactory))
-
-        # Pattern analysis
-        patterns = self.response_tracker.identify_patterns(unsatisfactory)
-
-        if "error" in patterns:
-            st.error(f"Analysis error: {patterns['error']}")
-            return
-
-        # Display clusters of similar questions
-        if "clusters" in patterns and patterns["clusters"]:
-            st.subheader("Groups of similar questions without satisfactory responses")
-
-            for i, cluster in enumerate(patterns["clusters"]):
-                with st.expander(f"Group {i + 1}: {cluster['main_question']} ({cluster['count']} questions)"):
-                    for q in cluster["similar_questions"]:
-                        st.write(f"- {q}")
-
-        # Display common terms
-        if "common_terms" in patterns and patterns["common_terms"]:
-            st.subheader("Frequent terms in questions without satisfactory responses")
-            terms_df = pd.DataFrame(patterns["common_terms"], columns=["Term", "Frequency"])
-            st.dataframe(terms_df)
-
-        # Table of questions without satisfactory responses
-        st.subheader("Details of questions without satisfactory responses")
-
-        # Convert to DataFrame for cleaner display
-        df = pd.DataFrame(
-            [
-                {
-                    "Date": datetime.fromisoformat(item["timestamp"]).strftime("%Y-%m-%d %H:%M"),
-                    "Question": item["question"],
-                    "Score": item["feedback_score"],
-                    "Comment": item.get("feedback_text", ""),
-                }
-                for item in unsatisfactory
-            ]
-        )
-
-        st.dataframe(df)
+    # Response tracking dashboard removed as requested
 
     def render_performance_dashboard(self):
         """Display the performance dashboard in Streamlit"""
@@ -159,16 +97,9 @@ class AdminDashboard:
         # Analysis
         analysis = self.performance_tracker.analyze_performance(logs)
 
-        # Display main metrics
+        # Display main metrics (only total response time)
         metrics = analysis["metrics"]
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric("Average response time", f"{metrics['avg_total_time_ms']:.0f} ms")
-        with col2:
-            st.metric("Average retrieval time", f"{metrics['avg_retrieval_time_ms']:.0f} ms")
-        with col3:
-            st.metric("Average generation time", f"{metrics['avg_generation_time_ms']:.0f} ms")
+        st.metric("Average response time", f"{metrics['avg_total_time_ms']:.0f} ms")
 
         # Time evolution chart
         st.subheader("Response Time Evolution")
@@ -182,27 +113,10 @@ class AdminDashboard:
             # Create chart
             fig, ax1 = plt.subplots(figsize=(10, 6))
 
-            # Response times
+            # Response times (only total time)
             ax1.set_xlabel("Date")
             ax1.set_ylabel("Time (ms)", color="tab:blue")
-            ax1.plot(
-                daily_data["date"],
-                daily_data["total_time_ms"],
-                "b-",
-                label="Total time",
-            )
-            ax1.plot(
-                daily_data["date"],
-                daily_data["retrieval_time_ms"],
-                "g--",
-                label="Retrieval time",
-            )
-            ax1.plot(
-                daily_data["date"],
-                daily_data["generation_time_ms"],
-                "r--",
-                label="Generation time",
-            )
+            ax1.plot(daily_data["date"], daily_data["total_time_ms"], "b-", label="Response time", linewidth=2)
             ax1.tick_params(axis="y", labelcolor="tab:blue")
             ax1.legend(loc="upper left")
 
@@ -253,20 +167,21 @@ class AdminDashboard:
                 stats["avg_response_time"] = 0
 
             # Feedback statistics
-            unsat_responses = self.response_tracker.get_unsatisfactory_responses(days=30)
-            stats["unsatisfactory_responses"] = len(unsat_responses)
+            feedback_stats = self.feedback_system.get_feedback_statistics(days=30)
+            stats["satisfaction_rate"] = feedback_stats["satisfaction_rate"]
 
-            # Display statistics
+            # Display statistics (with new feedback statistics)
             col1, col2, col3 = st.columns(3)
 
             with col1:
                 st.metric("Total conversations", stats["total_conversations"])
 
             with col2:
-                st.metric("Average response time", stats["avg_response_time"])
+                st.metric("Average response time", f"{stats['avg_response_time']} ms")
 
             with col3:
-                st.metric("Unsatisfactory responses", stats["unsatisfactory_responses"])
+                st.metric("Satisfaction rate", f"{stats['satisfaction_rate']:.1f}%")
+                st.metric("Satisfaction rate", f"{stats['satisfaction_rate']:.1f}%")
 
         except Exception as e:
             st.error(f"Error collecting statistics: {str(e)}")

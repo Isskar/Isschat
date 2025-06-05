@@ -92,8 +92,6 @@ class PerformanceTracker:
         metrics = {
             "total_queries": len(df),
             "avg_total_time_ms": df["total_time_ms"].mean(),
-            "avg_retrieval_time_ms": df["retrieval_time_ms"].mean(),
-            "avg_generation_time_ms": df["generation_time_ms"].mean(),
             "avg_docs_retrieved": df["num_docs_retrieved"].mean(),
             "p95_total_time_ms": df["total_time_ms"].quantile(0.95),
             "max_total_time_ms": df["total_time_ms"].max(),
