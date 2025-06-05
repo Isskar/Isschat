@@ -232,22 +232,15 @@ class FeaturesManager:
             return "Sorry, an error occurred while processing your question.", []
 
     def _add_feedback_widget(self, st, question: str, answer: str, sources: list) -> None:
-        """Add a feedback widget to evaluate the quality of the response"""
-        print(f"DEBUG: _add_feedback_widget called with user_id: {self.user_id}")
-        print(f"DEBUG: Question length: {len(question)}")
-        print(f"DEBUG: Answer length: {len(answer)}")
-        print(f"DEBUG: Sources: {sources}")
+        """Add a simple, reliable feedback widget"""
+        print(f"🔥 FEEDBACK WIDGET CALLED! user_id: {self.user_id}")
+        print(f"🔥 Question: {question[:50]}...")
+        print(f"🔥 Answer length: {len(answer)}")
 
-        # Use the new unified feedback system with thumbs up/down
-        self.feedback_system.render_feedback_widget(
-            st_instance=st,
-            question=question,
-            answer=answer,
-            sources=sources if isinstance(sources, list) else [sources],
-            user_id=self.user_id,
-            session_id=getattr(st.session_state, "session_id", None),
-            version=None,  # Can be added later for version tracking
-        )
+        # Import and use the simple feedback system
+        from src.simple_feedback import render_simple_feedback_buttons
+
+        render_simple_feedback_buttons(st, question, answer, self.user_id)
 
 
 # Function to integrate the feature manager into the main application
