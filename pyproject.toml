@@ -41,6 +41,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "azure-keyvault-secrets>=4.9.0",
     "azure-identity>=1.23.0",
+    "pytest>=8.4.0",
 ]
 
 [tool.ruff]
