@@ -180,8 +180,7 @@ class AdminDashboard:
                 st.metric("Average response time", f"{stats['avg_response_time']} ms")
 
             with col3:
-                st.metric("Satisfaction rate", f"{stats['satisfaction_rate']:.1f}%")
-                st.metric("Satisfaction rate", f"{stats['satisfaction_rate']:.1f}%")
+                st.metric("Satisfaction rate (feedback)", f"{stats['satisfaction_rate']:.1f}%")
 
         except Exception as e:
             st.error(f"Error collecting statistics: {str(e)}")

@@ -14,50 +14,101 @@ class FeedbackSystem:
 
     def log_feedback(self, user_id: str, question: str, answer: str, documents: list, feedback_state: str):
         """Records user feedback in the log file"""
-        log_entry = {
-            "timestamp": datetime.now().isoformat(),
-            "user_id": user_id,
-            "question": question,
-            "answer": answer,
-            "documents_retrieved": documents if isinstance(documents, list) else [documents],
-            "feedback_state": feedback_state,  # "satisfactory" or "unsatisfactory"
-        }
+        print(f"DEBUG: log_feedback called with user_id={user_id}, feedback_state={feedback_state}")
+        print(f"DEBUG: log_path={self.log_path}")
+        print(f"DEBUG: current_log_file={self.current_log_file}")
 
-        with open(self.current_log_file, "a") as f:
-            f.write(json.dumps(log_entry) + "\n")
+        try:
+            # Ensure directory exists
+            os.makedirs(self.log_path, exist_ok=True)
+            print(f"DEBUG: Directory created/verified: {self.log_path}")
+
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "user_id": user_id,
+                "question": question,
+                "answer": answer,
+                "documents_retrieved": documents if isinstance(documents, list) else [documents],
+                "feedback_state": feedback_state,  # "satisfactory" or "unsatisfactory"
+            }
+            print(f"DEBUG: Log entry created: {log_entry}")
+
+            with open(self.current_log_file, "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
+                f.flush()  # Force write to disk
+
+            print(f"DEBUG: Feedback written to file: {self.current_log_file}")
+
+            # Verify file exists and has content
+            if os.path.exists(self.current_log_file):
+                file_size = os.path.getsize(self.current_log_file)
+                print(f"DEBUG: File exists, size: {file_size} bytes")
+            else:
+                print("DEBUG: ERROR - File does not exist after write!")
+
+        except Exception as e:
+            print(f"DEBUG: Exception in log_feedback: {e}")
+            import traceback
+
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            raise
 
     def render_feedback_widget(self, user_id: str, question: str, answer: str, sources: list, key_suffix: str = ""):
         """Render the thumbs up/down feedback widget using st.feedback"""
 
         # Create a unique key for this feedback widget
         feedback_key = f"feedback_{key_suffix}_{hash(question + answer)}"
+        session_key = f"feedback_logged_{feedback_key}"
 
         st.write("---")
         st.write("#### Rate this response")
 
+        # Show status if already logged
+        if st.session_state.get(session_key, False):
+            st.info("✅ Feedback already recorded for this response")
+            return None
+
         # Use st.feedback for thumbs up/down
         feedback = st.feedback("thumbs", key=feedback_key)
 
+        # Debug logging
+        print(f"DEBUG: Widget key: {feedback_key}")
+        print(f"DEBUG: Feedback value: {feedback}")
+        print(f"DEBUG: Session state logged: {st.session_state.get(session_key, False)}")
+
+        # Process feedback immediately when provided
         if feedback is not None:
-            # Convert feedback to our format
             feedback_state = "satisfactory" if feedback == 1 else "unsatisfactory"
 
-            # Log the feedback
-            self.log_feedback(
-                user_id=user_id,
-                question=question,
-                answer=answer,
-                documents=sources if isinstance(sources, list) else [sources],
-                feedback_state=feedback_state,
-            )
+            print(f"DEBUG: Processing feedback immediately: {feedback_state}")
 
-            # Show confirmation message
-            if feedback == 1:
-                st.success("👍 Thank you for your positive feedback!")
-            else:
-                st.info("👎 Thank you for your feedback. We'll work to improve!")
+            # Log the feedback immediately
+            try:
+                self.log_feedback(
+                    user_id=user_id,
+                    question=question,
+                    answer=answer,
+                    documents=sources if isinstance(sources, list) else [sources],
+                    feedback_state=feedback_state,
+                )
 
-            return feedback_state
+                # Mark as logged in session state
+                st.session_state[session_key] = True
+                print("DEBUG: Feedback logged successfully")
+
+                # Show confirmation message
+                if feedback == 1:
+                    st.success("👍 Thank you for your positive feedback!")
+                else:
+                    st.info("👎 Thank you for your feedback. We'll work to improve!")
+
+                return feedback_state
+
+            except Exception as e:
+                print(f"DEBUG: Error logging feedback: {e}")
+                import traceback
+
+                print(f"DEBUG: Traceback: {traceback.format_exc()}")
 
         return None
 
