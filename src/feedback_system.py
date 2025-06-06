@@ -1,191 +1,187 @@
+import streamlit as st
+from streamlit_feedback import streamlit_feedback
+import uuid
 import json
 import os
 from datetime import datetime
-import streamlit as st
+from typing import Dict, List, Optional
 
 
 class FeedbackSystem:
-    """New feedback system using thumbs up/down with st.feedback"""
+    """Système de feedback corrigé pour éviter les problèmes de rerun Streamlit"""
 
-    def __init__(self, log_path="./logs/feedback"):
-        self.log_path = log_path
-        os.makedirs(log_path, exist_ok=True)
-        self.current_log_file = os.path.join(log_path, f"feedback_log_{datetime.now().strftime('%Y%m%d')}.jsonl")
+    def __init__(self, feedback_file: Optional[str] = None):
+        if feedback_file is None:
+            # Créer un nom de fichier avec la date actuelle
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            feedback_file = f"./logs/feedback/feedback_{date_str}.json"
+        self.feedback_file = feedback_file
+        self._ensure_feedback_file_exists()
 
-    def log_feedback(self, user_id: str, question: str, answer: str, documents: list, feedback_state: str):
-        """Records user feedback in the log file"""
-        print(f"DEBUG: log_feedback called with user_id={user_id}, feedback_state={feedback_state}")
-        print(f"DEBUG: log_path={self.log_path}")
-        print(f"DEBUG: current_log_file={self.current_log_file}")
+    def _ensure_feedback_file_exists(self):
+        """S'assurer que le fichier de feedback existe"""
+        os.makedirs(os.path.dirname(self.feedback_file), exist_ok=True)
+        if not os.path.exists(self.feedback_file):
+            with open(self.feedback_file, "w") as f:
+                json.dump([], f)
 
+    def _load_feedback_data(self) -> List[Dict]:
+        """Charger les données de feedback depuis le fichier"""
         try:
-            # Ensure directory exists
-            os.makedirs(self.log_path, exist_ok=True)
-            print(f"DEBUG: Directory created/verified: {self.log_path}")
+            with open(self.feedback_file, "r") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
 
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
+    def _save_feedback_data(self, data: List[Dict]):
+        """Sauvegarder les données de feedback dans le fichier"""
+        with open(self.feedback_file, "w") as f:
+            json.dump(data, f, indent=2, default=str)
+
+    def render_feedback_widget(
+        self, user_id: str, question: str, answer: str, sources: List[str], key_suffix: str = ""
+    ) -> Optional[Dict]:
+        """
+        Afficher le widget de feedback corrigé pour éviter les problèmes de rerun
+
+        Args:
+            user_id: ID de l'utilisateur
+            question: Question posée
+            answer: Réponse donnée
+            sources: Sources utilisées
+            key_suffix: Suffixe pour la clé unique du widget
+
+        Returns:
+            Dictionnaire avec les données de feedback si soumis
+        """
+
+        # Créer une clé unique basée sur le contenu (plus stable)
+        content_hash = hash(f"{question}_{answer}_{key_suffix}")
+        feedback_key = f"feedback_{content_hash}"
+
+        # États persistants pour ce feedback spécifique
+        feedback_data_key = f"feedback_data_{feedback_key}"
+        feedback_submitted_key = f"feedback_submitted_{feedback_key}"
+        fbk_widget_key = f"fbk_widget_{feedback_key}"
+
+        # Initialiser les données de feedback si pas encore fait
+        if feedback_data_key not in st.session_state:
+            st.session_state[feedback_data_key] = {
                 "user_id": user_id,
                 "question": question,
                 "answer": answer,
-                "documents_retrieved": documents if isinstance(documents, list) else [documents],
-                "feedback_state": feedback_state,  # "satisfactory" or "unsatisfactory"
+                "sources": sources,
+                "timestamp": datetime.now().isoformat(),
+                "feedback_submitted": False,
             }
-            print(f"DEBUG: Log entry created: {log_entry}")
 
-            with open(self.current_log_file, "a") as f:
-                f.write(json.dumps(log_entry) + "\n")
-                f.flush()  # Force write to disk
+        # Initialiser l'état de soumission
+        if feedback_submitted_key not in st.session_state:
+            st.session_state[feedback_submitted_key] = False
 
-            print(f"DEBUG: Feedback written to file: {self.current_log_file}")
+        # Clé unique pour le widget
+        if fbk_widget_key not in st.session_state:
+            st.session_state[fbk_widget_key] = str(uuid.uuid4())
 
-            # Verify file exists and has content
-            if os.path.exists(self.current_log_file):
-                file_size = os.path.getsize(self.current_log_file)
-                print(f"DEBUG: File exists, size: {file_size} bytes")
-            else:
-                print("DEBUG: ERROR - File does not exist after write!")
+        def feedback_callback(response):
+            """
+            Callback pour traiter le feedback soumis
 
-        except Exception as e:
-            print(f"DEBUG: Exception in log_feedback: {e}")
-            import traceback
+            Args:
+                response: Réponse du widget de feedback
+            """
+            # Marquer le feedback comme soumis
+            st.session_state[feedback_submitted_key] = True
 
-            print(f"DEBUG: Traceback: {traceback.format_exc()}")
-            raise
+            # Mettre à jour les données de feedback
+            st.session_state[feedback_data_key]["feedback"] = response
+            st.session_state[feedback_data_key]["feedback_submitted"] = True
 
-    def render_feedback_widget(self, user_id: str, question: str, answer: str, sources: list, key_suffix: str = ""):
-        """Render the thumbs up/down feedback widget using st.feedback"""
+            # Sauvegarder dans le fichier de données
+            feedback_data = self._load_feedback_data()
+            feedback_entry = {
+                "user_id": user_id,
+                "question": question,
+                "answer": answer,
+                "sources": sources,
+                "feedback": response,
+                "timestamp": datetime.now().isoformat(),
+            }
+            feedback_data.append(feedback_entry)
+            self._save_feedback_data(feedback_data)
 
-        # Create a unique key for this feedback widget
-        feedback_key = f"feedback_{key_suffix}_{hash(question + answer)}"
-        session_key = f"feedback_logged_{feedback_key}"
+            # Générer une nouvelle clé pour éviter les conflits
+            st.session_state[fbk_widget_key] = str(uuid.uuid4())
 
-        st.write("---")
-        st.write("#### Rate this response")
-
-        # Show status if already logged
-        if st.session_state.get(session_key, False):
-            st.info("✅ Feedback already recorded for this response")
+        # Afficher le feedback déjà soumis si disponible
+        if st.session_state[feedback_submitted_key]:
+            feedback_data = st.session_state[feedback_data_key]
+            if "feedback" in feedback_data:
+                feedback_type = "👍" if feedback_data["feedback"]["score"] == 1 else "👎"
+                st.write(f"Votre feedback: {feedback_type}")
+                if feedback_data["feedback"].get("text"):
+                    st.write(f"Commentaire: {feedback_data['feedback']['text']}")
             return None
 
-        # Use st.feedback for thumbs up/down
-        feedback = st.feedback("thumbs", key=feedback_key)
+        # Afficher le widget de feedback si pas encore soumis
+        feedback_response = streamlit_feedback(
+            feedback_type="thumbs",
+            optional_text_label="[Optionnel] Commentaire:",
+            align="flex-start",
+            key=st.session_state[fbk_widget_key],
+            on_submit=feedback_callback,
+        )
 
-        # Debug logging
-        print(f"DEBUG: Widget key: {feedback_key}")
-        print(f"DEBUG: Feedback value: {feedback}")
-        print(f"DEBUG: Session state logged: {st.session_state.get(session_key, False)}")
+        return feedback_response
 
-        # Process feedback immediately when provided
-        if feedback is not None:
-            feedback_state = "satisfactory" if feedback == 1 else "unsatisfactory"
+    def get_feedback_statistics(self, days: int = 30) -> Dict:
+        """
+        Obtenir les statistiques de feedback pour les N derniers jours
 
-            print(f"DEBUG: Processing feedback immediately: {feedback_state}")
+        Args:
+            days: Nombre de jours à analyser
 
-            # Log the feedback immediately
+        Returns:
+            Dictionnaire avec les statistiques
+        """
+        feedback_data = self._load_feedback_data()
+
+        if not feedback_data:
+            return {"total_feedback": 0, "positive_feedback": 0, "negative_feedback": 0, "satisfaction_rate": 0.0}
+
+        # Filtrer par date si nécessaire
+        from datetime import datetime, timedelta
+
+        cutoff_date = datetime.now() - timedelta(days=days)
+
+        recent_feedback = []
+        for entry in feedback_data:
             try:
-                self.log_feedback(
-                    user_id=user_id,
-                    question=question,
-                    answer=answer,
-                    documents=sources if isinstance(sources, list) else [sources],
-                    feedback_state=feedback_state,
-                )
+                entry_date = datetime.fromisoformat(entry["timestamp"])
+                if entry_date >= cutoff_date:
+                    recent_feedback.append(entry)
+            except (KeyError, ValueError):
+                # Inclure les entrées sans timestamp valide
+                recent_feedback.append(entry)
 
-                # Mark as logged in session state
-                st.session_state[session_key] = True
-                print("DEBUG: Feedback logged successfully")
+        total = len(recent_feedback)
+        positive = sum(1 for entry in recent_feedback if entry.get("feedback", {}).get("score") == 1)
+        negative = sum(1 for entry in recent_feedback if entry.get("feedback", {}).get("score") == 0)
 
-                # Show confirmation message
-                if feedback == 1:
-                    st.success("👍 Thank you for your positive feedback!")
-                else:
-                    st.info("👎 Thank you for your feedback. We'll work to improve!")
-
-                return feedback_state
-
-            except Exception as e:
-                print(f"DEBUG: Error logging feedback: {e}")
-                import traceback
-
-                print(f"DEBUG: Traceback: {traceback.format_exc()}")
-
-        return None
-
-    def get_feedback_logs(self, days=30):
-        """Retrieves feedback logs from the last n days"""
-        logs = []
-
-        # Find all log files in the specified period
-        for filename in os.listdir(self.log_path):
-            if filename.startswith("feedback_log_") and filename.endswith(".jsonl"):
-                file_path = os.path.join(self.log_path, filename)
-                with open(file_path, "r") as f:
-                    for line in f:
-                        try:
-                            log_entry = json.loads(line.strip())
-                            log_date = datetime.fromisoformat(log_entry["timestamp"])
-                            days_ago = (datetime.now() - log_date).days
-                            if days_ago <= days:
-                                logs.append(log_entry)
-                        except json.JSONDecodeError:
-                            continue
-
-        return logs
-
-    def get_feedback_statistics(self, days=30):
-        """Get feedback statistics for the dashboard"""
-        logs = self.get_feedback_logs(days)
-
-        if not logs:
-            return {"total_feedback": 0, "satisfactory": 0, "unsatisfactory": 0, "satisfaction_rate": 0}
-
-        satisfactory_count = len([log for log in logs if log["feedback_state"] == "satisfactory"])
-        unsatisfactory_count = len([log for log in logs if log["feedback_state"] == "unsatisfactory"])
+        satisfaction_rate = (positive / total * 100) if total > 0 else 0.0
 
         return {
-            "total_feedback": len(logs),
-            "satisfactory": satisfactory_count,
-            "unsatisfactory": unsatisfactory_count,
-            "satisfaction_rate": (satisfactory_count / len(logs)) * 100 if logs else 0,
+            "total_feedback": total,
+            "positive_feedback": positive,
+            "negative_feedback": negative,
+            "satisfaction_rate": satisfaction_rate,
         }
 
-    def render_feedback_dashboard(self):
-        """Display the feedback dashboard in Streamlit"""
-        st.title("Feedback Analysis")
+    def get_all_feedback(self) -> List[Dict]:
+        """Obtenir tous les feedbacks enregistrés"""
+        return self._load_feedback_data()
 
-        # Period selection
-        days = st.slider("Analysis period (days)", 1, 90, 30, key="feedback_days")
-        logs = self.get_feedback_logs(days)
-
-        if not logs:
-            st.warning("No feedback data available for the selected period")
-            return
-
-        # Get statistics
-        stats = self.get_feedback_statistics(days)
-
-        # Display metrics
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            st.metric("Total Feedback", stats["total_feedback"])
-        with col2:
-            st.metric("👍 Satisfactory", stats["satisfactory"])
-        with col3:
-            st.metric("👎 Unsatisfactory", stats["unsatisfactory"])
-        with col4:
-            st.metric("Satisfaction Rate", f"{stats['satisfaction_rate']:.1f}%")
-
-        # Show unsatisfactory feedback details
-        if stats["unsatisfactory"] > 0:
-            st.subheader("Unsatisfactory Responses")
-
-            unsatisfactory_logs = [log for log in logs if log["feedback_state"] == "unsatisfactory"]
-
-            for i, log in enumerate(unsatisfactory_logs):
-                with st.expander(f"Feedback {i + 1}: {log['question'][:50]}..."):
-                    st.write(f"**Question:** {log['question']}")
-                    st.write(f"**Answer:** {log['answer'][:200]}...")
-                    st.write(f"**Documents:** {', '.join(log['documents_retrieved'])}")
-                    st.write(f"**Date:** {datetime.fromisoformat(log['timestamp']).strftime('%Y-%m-%d %H:%M')}")
+    def get_feedback_by_user(self, user_id: str) -> List[Dict]:
+        """Obtenir les feedbacks d'un utilisateur spécifique"""
+        all_feedback = self._load_feedback_data()
+        return [entry for entry in all_feedback if entry.get("user_id") == user_id]

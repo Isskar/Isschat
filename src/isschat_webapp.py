@@ -234,9 +234,23 @@ def chat_page():
             }
         ]  # ;)
 
-    # Display message history
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+    # Display message history with feedback widgets
+    for i, msg in enumerate(st.session_state.messages):
+        if msg["role"] == "user":
+            st.chat_message("user").write(msg["content"])
+        else:
+            with st.chat_message("assistant"):
+                st.write(msg["content"])
+
+                # Add feedback widget for assistant messages (except welcome)
+                if i > 0 and show_feedback and "question_data" in msg:
+                    features.add_feedback_widget(
+                        st,
+                        msg["question_data"]["question"],
+                        msg["question_data"]["answer"],
+                        msg["question_data"]["sources"],
+                        key_suffix=f"history_{i}",
+                    )
 
     # Check if there's a question to reuse from history
     if "reuse_question" in st.session_state:
@@ -258,12 +272,17 @@ def chat_page():
             if sources:
                 st.chat_message("assistant").write(sources)
 
-            # Add new thumbs up/down feedback widget if enabled
-            if show_feedback:
-                features.add_feedback_widget(st, prompt, result, sources, key_suffix="reuse")
+            # Add to message history with question data for feedback
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_content,
+                    "question_data": {"question": prompt, "answer": result, "sources": sources},
+                }
+            )
 
-            # Add to message history
-            st.session_state.messages.append({"role": "assistant", "content": response_content})
+            # Force rerun to display feedback widget in history
+            st.rerun()
 
     # Chat interface
     if prompt := st.chat_input("Ask your question here..."):
@@ -285,12 +304,17 @@ def chat_page():
             if sources:
                 st.chat_message("assistant").write(sources)
 
-            # Add new thumbs up/down feedback widget if enabled
-            if show_feedback:
-                features.add_feedback_widget(st, prompt, result, sources, key_suffix="chat")
+            # Add to message history with question data for feedback
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_content,
+                    "question_data": {"question": prompt, "answer": result, "sources": sources},
+                }
+            )
 
-            # Add to message history
-            st.session_state.messages.append({"role": "assistant", "content": response_content})
+            # Force rerun to display feedback widget in history
+            st.rerun()
 
 
 @login_required
