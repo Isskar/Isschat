@@ -25,6 +25,14 @@ class ConfigurationData:
 
     def validate(self) -> bool:
         """Validate that all required fields are present"""
+        # In CI environment, only openrouter_api_key is required
+        if os.getenv("ENVIRONMENT", "").lower() == "ci":
+            if not self.openrouter_api_key:
+                logging.error("Missing required configuration: openrouter_api_key")
+                return False
+            return True
+
+        # Normal validation for non-CI environments
         required_fields = [
             "confluence_private_api_key",
             "confluence_space_key",
@@ -101,6 +109,26 @@ class LocalConfigProvider(ConfigProvider):
 
     def get_provider_name(self) -> str:
         return "Local (.env)"
+
+
+class CiProvider(ConfigProvider):
+    """Configuration provider for CI environment that only requires openrouter_api_key"""
+
+    def load_config(self) -> ConfigurationData:
+        """Load configuration for CI environment"""
+        config_dict = {
+            "confluence_private_api_key": "dummy_api_key",
+            "confluence_space_key": "TEST",
+            "confluence_space_name": "Test Space",
+            "confluence_email_address": "test@example.com",
+            "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", "dummy_openrouter_key"),
+            "db_path": "test_db.db",
+            "persist_directory": "test_db",
+        }
+        return ConfigurationData(**config_dict)
+
+    def get_provider_name(self) -> str:
+        return "CI Provider"
 
 
 class AzureKeyVaultConfigProvider(ConfigProvider):
@@ -224,9 +252,9 @@ class ConfigurationManager:
         logging.info("Local environment detected, using .env configuration")
         return self._initialize_local_config()
 
-    def _initialize_ci_config(self) -> bool:  # FIXME : Add secrets when CD deployed
+    def _initialize_ci_config(self) -> bool:
         """Initialize configuration for CI environment"""
-        provider = LocalConfigProvider()
+        provider = CiProvider()
         return self.initialize(provider)
 
     def _initialize_production_config(self) -> bool:

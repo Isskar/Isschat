@@ -4,66 +4,65 @@ Configuration pytest simplifiée pour les tests d'ISSCHAT
 
 import pytest
 import os
-from unittest.mock import Mock, patch
 
-from tests.test_data import TEST_CONFIG
 import config
 
 
+@pytest.fixture(scope="session")
+def test_db(tmp_path_factory):
+    """Create a test FAISS database with sample documents"""
+    from src.load_db import DataLoader
+    from src.help_desk import HelpDesk
+    from tests.test_data import MOCK_DOCUMENTS
+
+    db_path = tmp_path_factory.mktemp("db") / "test_index"
+    loader = DataLoader()
+
+    # Override persist directory for tests
+    loader.persist_directory = str(db_path)
+
+    # Process documents through the full pipeline
+    splitted_docs = loader.split_docs(MOCK_DOCUMENTS[:2])  # Use first 2 test documents
+    db = loader.save_to_db(splitted_docs, embeddings=HelpDesk().embeddings)  # noqa
+
+    return str(db_path)
+
+
 @pytest.fixture
-def simple_mock_config():
-    """Mock simple de la configuration pour les tests"""
-    config_data = config.ConfigurationData(
-        confluence_private_api_key=TEST_CONFIG["confluence_private_api_key"],
-        confluence_space_key=TEST_CONFIG["confluence_space_key"],
-        confluence_space_name=TEST_CONFIG["confluence_space_name"],
-        confluence_email_address=TEST_CONFIG["confluence_email_address"],
-        openrouter_api_key=TEST_CONFIG["openrouter_api_key"],
-        db_path=TEST_CONFIG["db_path"],
-        persist_directory=TEST_CONFIG["persist_directory"],
+def ci_config(test_db):
+    """Fixture for CI environment configuration"""
+    original_env = os.getenv("ENVIRONMENT")
+
+    # Set required environment variables
+    os.environ.update(
+        {
+            "ENVIRONMENT": "ci",
+            "OPENROUTER_API_KEY": "fake_test_key",
+            "PERSIST_DIRECTORY": test_db,
+            # Minimal Confluence config to avoid errors
+            "CONFLUENCE_SPACE_NAME": "test_space",
+            "CONFLUENCE_SPACE_KEY": "TEST",
+            "CONFLUENCE_EMAIL_ADDRESS": "test@example.com",
+            "CONFLUENCE_PRIVATE_API_KEY": "fake_api_key",
+        }
     )
 
-    with patch("config.get_config") as mock_get_config:
-        mock_get_config.return_value = config_data
-        yield config_data
-
-
-@pytest.fixture
-def simple_mock_dependencies(simple_mock_config):
-    """Mock simple de toutes les dépendances de HelpDesk"""
-    with (
-        patch("src.help_desk.HuggingFaceEmbeddings") as mock_hf_embeddings,
-        patch("src.help_desk.ChatOpenAI") as mock_chat_openai,
-        patch("src.load_db.DataLoader") as mock_data_loader,
-    ):
-        # Configuration des mocks simples
-        mock_embeddings = Mock()
-        mock_embeddings.embed_query.return_value = [0.1] * 384
-        mock_hf_embeddings.return_value = mock_embeddings
-
-        mock_llm = Mock()
-        mock_chat_openai.return_value = mock_llm
-
-        mock_db = Mock()
-        mock_retriever = Mock()
-        mock_db.as_retriever.return_value = mock_retriever
-
-        mock_loader_instance = Mock()
-        mock_loader_instance.get_db.return_value = mock_db
-        mock_loader_instance.set_db.return_value = mock_db
-        mock_data_loader.return_value = mock_loader_instance
-
-        yield {"embeddings": mock_embeddings, "llm": mock_llm, "db": mock_db, "config": simple_mock_config}
-
-
-@pytest.fixture(autouse=True)
-def setup_simple_test_environment():
-    """Configure l'environnement de test simple"""
-    os.environ["ENVIRONMENT"] = "test"
-    os.environ["OPENROUTER_API_KEY"] = "fake_test_key"
+    # Reset config before test
+    config.reset_config()
 
     yield
 
-    # Nettoyage après les tests
-    if "ENVIRONMENT" in os.environ:
-        del os.environ["ENVIRONMENT"]
+    # Cleanup - remove all test environment variables
+    for var in [
+        "ENVIRONMENT",
+        "OPENROUTER_API_KEY",
+        "PERSIST_DIRECTORY",
+        "CONFLUENCE_SPACE_NAME",
+        "CONFLUENCE_SPACE_KEY",
+        "CONFLUENCE_EMAIL_ADDRESS",
+        "CONFLUENCE_PRIVATE_API_KEY",
+    ]:
+        if var in os.environ:
+            del os.environ[var]
+    if original_env:
+        os.environ["ENVIRONMENT"] = original_env

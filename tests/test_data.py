@@ -83,15 +83,15 @@ MOCK_DOCUMENTS = [
     ),
 ]
 
-# Configuration de test
+# Configuration de test - matches CiProvider format with only openrouter_api_key required
 TEST_CONFIG = {
-    "confluence_private_api_key": "fake_api_key_for_tests",
-    "confluence_space_key": "TEST",
-    "confluence_space_name": "Test Space",
-    "confluence_email_address": "test@example.com",
+    "confluence_private_api_key": "",
+    "confluence_space_key": "",
+    "confluence_space_name": "",
+    "confluence_email_address": "",
     "openrouter_api_key": "fake_openrouter_key",
-    "db_path": "test_db.db",
-    "persist_directory": "test_db",
+    "db_path": "",
+    "persist_directory": "",
 }
 
 # Réponses attendues pour les tests

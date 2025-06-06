@@ -94,7 +94,7 @@ jobs:
 
       - name: Run tests with pytest
         env:
-          ENVIRONMENT: test
-          OPENROUTER_API_KEY: fake_test_key
+          ENVIRONMENT: ci
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           uv run pytest tests/ -v --tb=short
