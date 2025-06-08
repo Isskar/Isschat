@@ -4,8 +4,8 @@ Main RAG pipeline orchestrating retrieval and generation.
 
 from typing import Dict, Any, Tuple
 
-from retrieval.base_retriever import BaseRetriever
-from generation.base_generator import BaseGenerator
+from src.retrieval.base_retriever import BaseRetriever
+from src.generation.base_generator import BaseGenerator
 
 
 class RAGPipeline:

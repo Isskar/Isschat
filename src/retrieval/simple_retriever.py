@@ -8,9 +8,9 @@ import time
 
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from core.interfaces import RetrievalResult, Document
-from core.exceptions import RetrievalError, ConfigurationError
-from retrieval.base_retriever import BaseRetriever
+from src.core.interfaces import RetrievalResult, Document
+from src.core.exceptions import RetrievalError, ConfigurationError
+from src.retrieval.base_retriever import BaseRetriever
 
 
 class SimpleRetriever(BaseRetriever):

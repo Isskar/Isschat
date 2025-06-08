@@ -11,10 +11,10 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.utils.utils import convert_to_secret_str
 
-from core.interfaces import GenerationResult, RetrievalResult
-from core.exceptions import GenerationError, ConfigurationError
-from generation.base_generator import BaseGenerator
-from core.config import get_config
+from src.core.interfaces import GenerationResult, RetrievalResult
+from src.core.exceptions import GenerationError, ConfigurationError
+from src.generation.base_generator import BaseGenerator
+from src.core.config import get_config
 
 
 class OpenRouterGenerator(BaseGenerator):

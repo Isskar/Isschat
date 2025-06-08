@@ -5,7 +5,7 @@ Base retriever interface.
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 
-from core.interfaces import RetrievalResult
+from src.core.interfaces import RetrievalResult
 
 
 class BaseRetriever(ABC):

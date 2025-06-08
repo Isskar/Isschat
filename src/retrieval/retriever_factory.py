@@ -3,17 +3,10 @@ Factory for creating different types of retrievers.
 """
 
 from typing import Dict, Any
-from .base_retriever import BaseRetriever
-from .simple_retriever import SimpleRetriever
+from base_retriever import BaseRetriever
+from simple_retriever import SimpleRetriever
 
-# Use absolute imports with fallbacks
-try:
-    from core.exceptions import ConfigurationError
-except ImportError:
-    try:
-        from src.core.exceptions import ConfigurationError
-    except ImportError:
-        from ..core.exceptions import ConfigurationError
+from src.core.exceptions import ConfigurationError
 
 
 class RetrieverFactory:

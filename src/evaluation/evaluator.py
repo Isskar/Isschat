@@ -4,14 +4,7 @@ Main evaluator for the RAG system.
 
 from typing import List, Dict, Any, Optional
 
-# Use absolute imports with fallbacks
-try:
-    from rag_system.rag_pipeline import RAGPipeline
-except ImportError:
-    try:
-        from src.rag_system.rag_pipeline import RAGPipeline
-    except ImportError:
-        from ..rag_system.rag_pipeline import RAGPipeline
+from src.rag_system.rag_pipeline import RAGPipeline
 
 
 class RAGEvaluator:
