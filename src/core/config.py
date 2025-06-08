@@ -88,11 +88,11 @@ class LocalConfigProvider(ConfigProvider):
             config_dict[field] = value
             logging.debug(f"LocalConfig - {field}: {value[:10] if value else 'EMPTY'}...")
 
-        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "db"))
+        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
 
         config_dict.update(
             {
-                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data/users.db")),
+                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db")),
                 "persist_directory": persist_dir,
             }
         )
@@ -172,11 +172,11 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
 
         # Add path configurations
         # Use /tmp for Azure environment to ensure write permissions
-        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "db"))
+        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
 
         config_dict.update(
             {
-                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data/users.db")),
+                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db")),
                 "persist_directory": persist_dir,
             }
         )
