@@ -5,7 +5,6 @@ Refactored version with integrated performance dashboard
 
 import streamlit as st
 import time
-import signal
 import os
 import sys
 import asyncio
@@ -17,37 +16,192 @@ from typing import Optional, Tuple, Any
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Streamlit configuration - modern interface
+# Streamlit configuration - modern dark interface
 st.set_page_config(
-    page_title="Isschat - AI Assistant",
-    page_icon="💬",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="Isschat - AI Chatbot Assistant", page_icon="🤖", layout="wide", initial_sidebar_state="expanded"
 )
 
-# Custom CSS for modern interface
-st.markdown("""
+# Custom CSS for modern dark interface
+st.markdown(
+    """
 <style>
+    /* Global dark theme */
+    .main > div {
+        background-color: #1E1E1E;
+        color: #FFFFFF;
+    }
+    
     .main-header {
         font-size: 2.5rem;
         font-weight: 600;
-        color: #1f77b4;
+        color: #2E86AB;
         margin-bottom: 1rem;
+        text-align: center;
     }
+    
     .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #2E86AB 0%, #A23B72 100%);
+        padding: 1.5rem;
+        border-radius: 15px;
         color: white;
         margin: 0.5rem 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 1px solid #404040;
     }
+    
+    .chat-container {
+        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid #404040;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    
     .status-healthy {
-        color: #28a745;
+        color: #6A994E;
         font-weight: 600;
     }
-    .status-warning {
-        color: #ffc107;
+    .status-critical {
+        color: #C73E1D;
         font-weight: 600;
+    }
+    
+    /* Sidebar styling */
+    .css-1d391kg {
+        background-color: #2D2D2D;
+    }
+    
+    /* Button styling - Modern and elegant design */
+    .stButton > button {
+        background: #2E86AB;
+        color: white;
+        border: 1px solid #2E86AB;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        box-shadow: none;
+    }
+    
+    .stButton > button:hover {
+        background: #1e5f7a;
+        border-color: #1e5f7a;
+        transform: none;
+        box-shadow: 0 2px 4px rgba(46, 134, 171, 0.2);
+    }
+    
+    .stButton > button:active {
+        background: #164a5c;
+        transform: translateY(1px);
+    }
+    
+    /* Button variants for different contexts */
+    .stButton.secondary > button {
+        background: transparent;
+        color: #2E86AB;
+        border: 1px solid #2E86AB;
+    }
+    
+    .stButton.secondary > button:hover {
+        background: #2E86AB;
+        color: white;
+    }
+    
+    .stButton.danger > button {
+        background: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .stButton.danger > button:hover {
+        background: #c82333;
+        border-color: #c82333;
+    }
+    
+    /* Input styling */
+    .stTextInput > div > div > input {
+        background-color: #2D2D2D;
+        color: #FFFFFF;
+        border: 1px solid #404040;
+        border-radius: 10px;
+    }
+    
+    .stTextArea > div > div > textarea {
+        background-color: #2D2D2D;
+        color: #FFFFFF;
+        border: 1px solid #404040;
+        border-radius: 10px;
+    }
+    
+    /* Selectbox styling */
+    .stSelectbox > div > div > select {
+        background-color: #2D2D2D;
+        color: #FFFFFF;
+        border: 1px solid #404040;
+        border-radius: 10px;
+    }
+    
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #2D2D2D;
+        border-radius: 10px;
+        gap: 8px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent;
+        color: #FFFFFF;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #2E86AB;
+        color: white;
+    }
+    
+    /* Metric styling */
+    .stMetric {
+        background-color: #2D2D2D;
+        border: 1px solid #404040;
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        background-color: #2D2D2D;
+        border: 1px solid #404040;
+        border-radius: 10px;
+        color: #FFFFFF;
+    }
+    
+    /* Success/Info/Warning/Error message styling */
+    .stSuccess {
+        background-color: rgba(106, 153, 78, 0.1);
+        border: 1px solid #6A994E;
+        color: #6A994E;
+    }
+    
+    .stInfo {
+        background-color: rgba(46, 134, 171, 0.1);
+        border: 1px solid #2E86AB;
+        color: #2E86AB;
+    }
+    
+    .stWarning {
+        background-color: rgba(241, 143, 1, 0.1);
+        border: 1px solid #F18F01;
+        color: #F18F01;
+    }
+    
+    .stError {
+        background-color: rgba(199, 62, 29, 0.1);
+        border: 1px solid #C73E1D;
+        color: #C73E1D;
     }
     .status-error {
         color: #dc3545;
@@ -66,7 +220,9 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # === PROJECT CONFIGURATION ===
@@ -97,6 +253,7 @@ def import_core_config():
     """Import core configuration"""
     try:
         from src.core.config import get_config, get_debug_info
+
         logger.info("Core configuration imported")
         return get_config, get_debug_info
     except ImportError as e:
@@ -109,6 +266,7 @@ def import_auth_system():
     """Import authentication system"""
     try:
         from src.webapp.components.auth_manager import AuthManager
+
         logger.info("Auth system imported")
         return AuthManager()
     except ImportError as e:
@@ -120,6 +278,7 @@ def import_features_manager():
     """Import features manager"""
     try:
         from src.webapp.components.features_manager import FeaturesManager
+
         logger.info("FeaturesManager imported")
         return FeaturesManager
     except ImportError as e:
@@ -131,6 +290,7 @@ def import_rag_pipeline():
     """Import RAG pipeline"""
     try:
         from src.rag_system.rag_pipeline import RAGPipelineFactory
+
         logger.info("RAG Pipeline imported")
         return RAGPipelineFactory, True
     except ImportError as e:
@@ -143,6 +303,7 @@ def import_history_components():
     try:
         from src.webapp.components.history_manager import get_history_manager
         from src.core.data_manager import get_data_manager
+
         logger.info("History components imported")
         return get_history_manager, get_data_manager
     except ImportError as e:
@@ -154,6 +315,7 @@ def import_performance_dashboard():
     """Import performance dashboard"""
     try:
         from src.webapp.components.performance_dashboard import render_performance_dashboard
+
         logger.info("Performance dashboard imported")
         return render_performance_dashboard
     except ImportError as e:
@@ -182,20 +344,24 @@ def create_auth_decorators():
 
     def login_required(func):
         """Decorator for pages requiring authentication"""
+
         def wrapper(*args, **kwargs):
             if auth_manager and not auth_manager.is_authenticated():
                 if not auth_manager.render_login_form():
                     return
             return func(*args, **kwargs)
+
         return wrapper
 
     def admin_required(func):
         """Decorator for admin pages"""
+
         def wrapper(*args, **kwargs):
             if auth_manager and not auth_manager.is_admin():
                 st.error("Administrator access required")
                 return
             return func(*args, **kwargs)
+
         return wrapper
 
     return login_required, admin_required
@@ -243,6 +409,7 @@ Configuration:
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")
             import traceback
+
             with st.expander("Error details"):
                 st.code(traceback.format_exc(), language="python")
             return None
@@ -297,7 +464,7 @@ def process_question(model, features_manager: Optional[Any], prompt: str) -> Tup
         else:
             result = "Model unavailable"
             sources = ""
-        
+
         if features_manager and result != "Model unavailable":
             response_time_ms = (time.time() - start_time) * 1000
             features_manager.process_query_response(prompt, result, response_time_ms)
@@ -379,7 +546,7 @@ def chat_page():
     st.session_state["page"] = "chat"
 
     # Modern header
-    st.markdown('<h1 class="main-header">Isschat AI Assistant</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">Bienvenue sur ISSCHAT</h1>', unsafe_allow_html=True)
 
     # Load model
     model = get_model()
@@ -403,14 +570,14 @@ def chat_page():
         st.subheader("Options")
         show_feedback = st.toggle("Response feedback", value=True)
         show_sources = st.toggle("Show sources", value=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
         # System status
         st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
         st.subheader("System Status")
         if NEW_RAG_AVAILABLE:
             st.markdown('<span class="status-healthy">System operational</span>', unsafe_allow_html=True)
-            
+
             if hasattr(model, "health_check"):
                 try:
                     health = model.health_check()
@@ -425,11 +592,11 @@ def chat_page():
                     st.caption("Health check unavailable")
         else:
             st.markdown('<span class="status-error">Legacy architecture</span>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # Chat interface in modern container
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-    
+
     # Welcome message
     user_email = st.session_state.get("user", {}).get("email", "")
     first_name = user_email.split("@")[0].split(".")[0].capitalize()
@@ -501,7 +668,7 @@ def chat_page():
                 response_content += "\n\n" + sources
             st.session_state.messages.append({"role": "assistant", "content": response_content})
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 @login_required
@@ -549,24 +716,24 @@ def render_sidebar():
     """Render modern sidebar"""
     with st.sidebar:
         # Logo and title
-        st.markdown("### Isschat")
-        st.markdown("*Professional AI Assistant*")
+        st.markdown("### ISSCHAT")
+        st.markdown("*Intelligent Conversation Assistant*")
 
         # User information
         if "user" in st.session_state:
-            user_email = st.session_state['user']['email']
+            user_email = st.session_state["user"]["email"]
             st.success(f"Connected: {user_email}")
 
         # Main navigation
         st.markdown("---")
         st.subheader("Navigation")
-        
+
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Chat", use_container_width=True):
                 st.session_state["page"] = "chat"
                 st.rerun()
-        
+
         with col2:
             if st.button("History", use_container_width=True):
                 st.session_state["page"] = "history"
