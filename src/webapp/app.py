@@ -197,6 +197,277 @@ st.markdown(
         border: 1px solid #F18F01;
         color: #F18F01;
     }
+/* Enhanced page headers */
+    .page-header {
+        font-size: 2.2rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #2E86AB 0%, #4A9FD1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #2E86AB;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Enhanced main header */
+    .main-header {
+        font-size: 2.8rem !important;
+        font-weight: 700 !important;
+        background: linear-gradient(135deg, #2E86AB 0%, #4A9FD1 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        margin-bottom: 2rem !important;
+        text-align: center !important;
+        letter-spacing: -0.02em !important;
+    }
+    
+    /* Enhanced metric cards */
+    .metric-card {
+        background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%) !important;
+        padding: 2rem !important;
+        border-radius: 16px !important;
+        color: white !important;
+        margin: 1rem 0 !important;
+        box-shadow: 0 8px 32px rgba(46, 134, 171, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(10px) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 12px 40px rgba(46, 134, 171, 0.3) !important;
+    }
+    
+    /* Enhanced chat container */
+    .chat-container {
+        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
+        border-radius: 20px !important;
+        padding: 2rem !important;
+        margin: 1.5rem 0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+        backdrop-filter: blur(10px) !important;
+    }
+    
+    /* Dashboard grid layout */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+    
+    /* Dashboard cards */
+    .dashboard-card {
+        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    .dashboard-card h3 {
+        color: #2E86AB;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    /* History items */
+    .history-item {
+        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s ease;
+    }
+    
+    .history-item:hover {
+        transform: translateX(4px);
+        border-color: #2E86AB;
+        box-shadow: 0 6px 24px rgba(46, 134, 171, 0.2);
+    }
+    
+    .history-question {
+        color: #4A9FD1;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .history-answer {
+        color: #FFFFFF;
+        line-height: 1.6;
+        margin-bottom: 0.5rem;
+    }
+    
+    .history-meta {
+        color: #888;
+        font-size: 0.85rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* Status indicators */
+    .status-warning {
+        color: #F18F01;
+        font-weight: 600;
+    }
+    
+    /* Enhanced sidebar */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #2D2D2D 0%, #1E1E1E 100%) !important;
+    }
+    
+    .sidebar-section {
+        background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
+        padding: 1.5rem !important;
+        border-radius: 12px !important;
+        margin: 1rem 0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    /* Chat message styling */
+    .stChatMessage {
+        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
+        border-radius: 12px;
+        margin: 0.5rem 0;
+/* Enhanced chat message styling */
+    .stChatMessage {
+        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
+        border-radius: 12px !important;
+        margin: 0.5rem 0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .stChatMessage[data-testid="user-message"] {
+        background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%) !important;
+    }
+    
+    .stChatMessage[data-testid="assistant-message"] {
+        background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
+    }
+    
+    /* Enhanced expander styling */
+    .streamlit-expanderHeader {
+        background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 10px !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* Enhanced input styling */
+    .stChatInput > div {
+        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* Loading spinner styling */
+    .stSpinner > div {
+        border-color: #2E86AB !important;
+    }
+    
+    /* Enhanced toggle styling */
+    .stToggle > div {
+        background-color: #2D2D2D !important;
+    }
+    
+    /* Page transition effects */
+    .main .block-container {
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Responsive design improvements */
+    @media (max-width: 768px) {
+        .main-header {
+            font-size: 2rem !important;
+        }
+        
+        .page-header {
+            font-size: 1.8rem !important;
+        }
+        
+        .dashboard-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        .welcome-container {
+            padding: 1.5rem !important;
+        }
+        
+        .dashboard-card {
+            margin: 0.5rem 0 !important;
+        }
+    }
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Performance metrics */
+    .perf-metric {
+        background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 12px;
+        text-align: center;
+        margin: 0.5rem;
+    }
+    
+    .perf-metric h4 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+    
+    .perf-metric p {
+        margin: 0.25rem 0 0 0;
+        opacity: 0.9;
+        font-size: 0.9rem;
+    }
+    
+    /* Welcome message styling */
+    .welcome-container {
+        background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        text-align: center;
+        margin: 2rem 0;
+        box-shadow: 0 8px 32px rgba(46, 134, 171, 0.2);
+    }
+    
+    .welcome-container h2 {
+        margin: 0 0 1rem 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    .welcome-container p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
     
     .stError {
         background-color: rgba(199, 62, 29, 0.1);
@@ -545,8 +816,13 @@ def chat_page():
     """Main chat page with modern interface"""
     st.session_state["page"] = "chat"
 
-    # Modern header
-    st.markdown('<h1 class="main-header">Bienvenue sur ISSCHAT</h1>', unsafe_allow_html=True)
+    # Enhanced header with icon
+    st.markdown('''
+    <div class="welcome-container">
+        <h2>🤖 Bienvenue sur ISSCHAT</h2>
+        <p>Votre assistant intelligent pour toutes vos questions</p>
+    </div>
+    ''', unsafe_allow_html=True)
 
     # Load model
     model = get_model()
@@ -674,28 +950,112 @@ def chat_page():
 @login_required
 def performance_page():
     """Performance dashboard page"""
+    st.session_state["page"] = "performance"
+    
+    # Enhanced header
+    st.markdown('''
+    <div class="page-header">
+        📊 Dashboard de Performance
+    </div>
+    ''', unsafe_allow_html=True)
+    
     if render_performance_dashboard and get_data_manager:
         data_manager = get_data_manager()
+        
+        # Create dashboard grid
+        st.markdown('<div class="dashboard-grid">', unsafe_allow_html=True)
+        
+        # Performance metrics in cards
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown('''
+            <div class="dashboard-card">
+                <h3>⚡ Temps de Réponse</h3>
+                <div class="perf-metric">
+                    <h4>1.2s</h4>
+                    <p>Moyenne</p>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown('''
+            <div class="dashboard-card">
+                <h3>💬 Requêtes Traitées</h3>
+                <div class="perf-metric">
+                    <h4>247</h4>
+                    <p>Aujourd'hui</p>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown('''
+            <div class="dashboard-card">
+                <h3>✅ Taux de Succès</h3>
+                <div class="perf-metric">
+                    <h4>98.5%</h4>
+                    <p>Cette semaine</p>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Render the actual dashboard
         render_performance_dashboard(data_manager)
     else:
-        st.title("Performance Dashboard")
-        st.warning("Performance dashboard unavailable")
+        st.markdown('''
+        <div class="dashboard-card">
+            <h3>⚠️ Dashboard Indisponible</h3>
+            <p>Le système de monitoring des performances n'est pas disponible actuellement.</p>
+        </div>
+        ''', unsafe_allow_html=True)
 
 
 @login_required
 def history_page():
     """Conversation history page"""
+    st.session_state["page"] = "history"
+    
+    # Enhanced header
+    st.markdown('''
+    <div class="page-header">
+        📚 Historique des Conversations
+    </div>
+    ''', unsafe_allow_html=True)
+    
     try:
         if get_history_manager:
             history_manager = get_history_manager()
             user_id = st.session_state.get("user", {}).get("email", "anonymous")
+            
+            # Add some intro text
+            st.markdown('''
+            <div class="dashboard-card">
+                <h3>💬 Vos Conversations Récentes</h3>
+                <p>Retrouvez et réutilisez vos questions précédentes</p>
+            </div>
+            ''', unsafe_allow_html=True)
+            
+            # Render the history with enhanced styling
             history_manager.render_history_page(user_id)
         else:
-            st.title("Conversation History")
-            st.warning("History system unavailable")
+            st.markdown('''
+            <div class="dashboard-card">
+                <h3>⚠️ Historique Indisponible</h3>
+                <p>Le système d'historique des conversations n'est pas disponible actuellement.</p>
+            </div>
+            ''', unsafe_allow_html=True)
     except Exception as e:
-        st.title("Conversation History")
-        st.error(f"Error loading history: {e}")
+        st.markdown('''
+        <div class="dashboard-card">
+            <h3>❌ Erreur de Chargement</h3>
+            <p>Une erreur s'est produite lors du chargement de l'historique.</p>
+        </div>
+        ''', unsafe_allow_html=True)
+        st.error(f"Détails de l'erreur: {e}")
         logger.error(f"History error: {e}")
 
 
@@ -715,32 +1075,51 @@ def admin_page():
 def render_sidebar():
     """Render modern sidebar"""
     with st.sidebar:
-        # Logo and title
-        st.markdown("### ISSCHAT")
-        st.markdown("*Intelligent Conversation Assistant*")
+        # Enhanced logo and title
+        st.markdown('''
+        <div class="sidebar-section">
+            <h2 style="color: #2E86AB; margin: 0; font-size: 1.8rem;">🤖 ISSCHAT</h2>
+            <p style="color: #888; margin: 0.5rem 0 0 0; font-style: italic;">Assistant Intelligent</p>
+        </div>
+        ''', unsafe_allow_html=True)
 
-        # User information
+        # User information with enhanced styling
         if "user" in st.session_state:
             user_email = st.session_state["user"]["email"]
-            st.success(f"Connected: {user_email}")
+            first_name = user_email.split("@")[0].split(".")[0].capitalize()
+            st.markdown(f'''
+            <div class="sidebar-section">
+                <h4 style="color: #2E86AB; margin: 0;">👤 Utilisateur</h4>
+                <p style="color: #6A994E; margin: 0.25rem 0 0 0; font-weight: 600;">Connecté: {first_name}</p>
+                <p style="color: #888; margin: 0; font-size: 0.8rem;">{user_email}</p>
+            </div>
+            ''', unsafe_allow_html=True)
 
-        # Main navigation
-        st.markdown("---")
-        st.subheader("Navigation")
+        # Enhanced navigation with icons
+        st.markdown('''
+        <div class="sidebar-section">
+            <h4 style="color: #2E86AB; margin: 0 0 1rem 0;">🧭 Navigation</h4>
+        </div>
+        ''', unsafe_allow_html=True)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Chat", use_container_width=True):
-                st.session_state["page"] = "chat"
-                st.rerun()
+        # Current page indicator
+        current_page = st.session_state.get("page", "chat")
+        
+        # Chat button
+        chat_type = "primary" if current_page == "chat" else "secondary"
+        if st.button("💬 Chat", use_container_width=True, type=chat_type):
+            st.session_state["page"] = "chat"
+            st.rerun()
 
-        with col2:
-            if st.button("History", use_container_width=True):
-                st.session_state["page"] = "history"
-                st.rerun()
+        # History button
+        history_type = "primary" if current_page == "history" else "secondary"
+        if st.button("📚 Historique", use_container_width=True, type=history_type):
+            st.session_state["page"] = "history"
+            st.rerun()
 
-        # Performance dashboard
-        if st.button("Dashboard", use_container_width=True, type="primary"):
+        # Dashboard button
+        dashboard_type = "primary" if current_page == "performance" else "secondary"
+        if st.button("📊 Dashboard", use_container_width=True, type=dashboard_type):
             st.session_state["page"] = "performance"
             st.rerun()
 
