@@ -17,7 +17,7 @@ from .evaluation_config import (
 
 __all__ = [
     "EvaluationConfig",
-    "LLMConfig", 
+    "LLMConfig",
     "DatabaseConfig",
     "PromptConfig",
     "ReportingConfig",
