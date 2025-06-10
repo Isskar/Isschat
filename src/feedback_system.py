@@ -8,33 +8,57 @@ from typing import Dict, List, Optional
 
 
 class FeedbackSystem:
-    """Système de feedback corrigé pour éviter les problèmes de rerun Streamlit"""
+    """Fixed feedback system to avoid Streamlit rerun issues"""
 
     def __init__(self, feedback_file: Optional[str] = None):
         if feedback_file is None:
-            # Créer un nom de fichier avec la date actuelle
+            # Create a filename with the current date
             date_str = datetime.now().strftime("%Y-%m-%d")
             feedback_file = f"./logs/feedback/feedback_{date_str}.json"
         self.feedback_file = feedback_file
         self._ensure_feedback_file_exists()
 
     def _ensure_feedback_file_exists(self):
-        """S'assurer que le fichier de feedback existe"""
+        """Ensure the feedback file exists"""
         os.makedirs(os.path.dirname(self.feedback_file), exist_ok=True)
         if not os.path.exists(self.feedback_file):
             with open(self.feedback_file, "w") as f:
                 json.dump([], f)
 
     def _load_feedback_data(self) -> List[Dict]:
-        """Charger les données de feedback depuis le fichier"""
-        try:
-            with open(self.feedback_file, "r") as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return []
+        """Load feedback data from all files of the last 30 days"""
+        from datetime import datetime, timedelta
+
+        all_feedback = []
+
+        # Calculate the last 30 days
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+
+        # Generate filenames for each day
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y-%m-%d")
+            feedback_file_path = f"./logs/feedback/feedback_{date_str}.json"
+
+            # Load the file if it exists
+            try:
+                if os.path.exists(feedback_file_path):
+                    with open(feedback_file_path, "r") as f:
+                        daily_feedback = json.load(f)
+                        if isinstance(daily_feedback, list):
+                            all_feedback.extend(daily_feedback)
+            except (json.JSONDecodeError, IOError) as e:
+                # Ignore corrupted or inaccessible files
+                print(f"Error loading {feedback_file_path}: {e}")
+                continue
+
+            current_date += timedelta(days=1)
+
+        return all_feedback
 
     def _save_feedback_data(self, data: List[Dict]):
-        """Sauvegarder les données de feedback dans le fichier"""
+        """Save feedback data to file"""
         with open(self.feedback_file, "w") as f:
             json.dump(data, f, indent=2, default=str)
 
@@ -42,29 +66,29 @@ class FeedbackSystem:
         self, user_id: str, question: str, answer: str, sources: List[str], key_suffix: str = ""
     ) -> Optional[Dict]:
         """
-        Afficher le widget de feedback corrigé pour éviter les problèmes de rerun
+        Display the fixed feedback widget to avoid rerun issues
 
         Args:
-            user_id: ID de l'utilisateur
-            question: Question posée
-            answer: Réponse donnée
-            sources: Sources utilisées
-            key_suffix: Suffixe pour la clé unique du widget
+            user_id: User ID
+            question: Question asked
+            answer: Answer given
+            sources: Sources used
+            key_suffix: Suffix for the unique widget key
 
         Returns:
-            Dictionnaire avec les données de feedback si soumis
+            Dictionary with feedback data if submitted
         """
 
-        # Créer une clé unique basée sur le contenu (plus stable)
+        # Create a unique key based on content (more stable)
         content_hash = hash(f"{question}_{answer}_{key_suffix}")
         feedback_key = f"feedback_{content_hash}"
 
-        # États persistants pour ce feedback spécifique
+        # Persistent states for this specific feedback
         feedback_data_key = f"feedback_data_{feedback_key}"
         feedback_submitted_key = f"feedback_submitted_{feedback_key}"
         fbk_widget_key = f"fbk_widget_{feedback_key}"
 
-        # Initialiser les données de feedback si pas encore fait
+        # Initialize feedback data if not done yet
         if feedback_data_key not in st.session_state:
             st.session_state[feedback_data_key] = {
                 "user_id": user_id,
@@ -75,29 +99,29 @@ class FeedbackSystem:
                 "feedback_submitted": False,
             }
 
-        # Initialiser l'état de soumission
+        # Initialize submission state
         if feedback_submitted_key not in st.session_state:
             st.session_state[feedback_submitted_key] = False
 
-        # Clé unique pour le widget
+        # Unique key for the widget
         if fbk_widget_key not in st.session_state:
             st.session_state[fbk_widget_key] = str(uuid.uuid4())
 
         def feedback_callback(response):
             """
-            Callback pour traiter le feedback soumis
+            Callback to process submitted feedback
 
             Args:
-                response: Réponse du widget de feedback
+                response: Response from the feedback widget
             """
-            # Marquer le feedback comme soumis
+            # Mark feedback as submitted
             st.session_state[feedback_submitted_key] = True
 
-            # Mettre à jour les données de feedback
+            # Update feedback data
             st.session_state[feedback_data_key]["feedback"] = response
             st.session_state[feedback_data_key]["feedback_submitted"] = True
 
-            # Sauvegarder dans le fichier de données
+            # Save to data file
             feedback_data = self._load_feedback_data()
             feedback_entry = {
                 "user_id": user_id,
@@ -110,23 +134,17 @@ class FeedbackSystem:
             feedback_data.append(feedback_entry)
             self._save_feedback_data(feedback_data)
 
-            # Générer une nouvelle clé pour éviter les conflits
+            # Generate a new key to avoid conflicts
             st.session_state[fbk_widget_key] = str(uuid.uuid4())
 
-        # Afficher le feedback déjà soumis si disponible
+        # Display already submitted feedback if available
         if st.session_state[feedback_submitted_key]:
-            feedback_data = st.session_state[feedback_data_key]
-            if "feedback" in feedback_data:
-                feedback_type = "👍" if feedback_data["feedback"]["score"] == 1 else "👎"
-                st.write(f"Votre feedback: {feedback_type}")
-                if feedback_data["feedback"].get("text"):
-                    st.write(f"Commentaire: {feedback_data['feedback']['text']}")
             return None
 
-        # Afficher le widget de feedback si pas encore soumis
+        # Display feedback widget if not yet submitted
         feedback_response = streamlit_feedback(
             feedback_type="thumbs",
-            optional_text_label="[Optionnel] Commentaire:",
+            optional_text_label="[Optional] Comment:",
             align="flex-start",
             key=st.session_state[fbk_widget_key],
             on_submit=feedback_callback,
@@ -136,37 +154,51 @@ class FeedbackSystem:
 
     def get_feedback_statistics(self, days: int = 30) -> Dict:
         """
-        Obtenir les statistiques de feedback pour les N derniers jours
+        Get feedback statistics for the last N days
 
         Args:
-            days: Nombre de jours à analyser
+            days: Number of days to analyze (default 30, but _load_feedback_data already loads the last 30 days)
 
         Returns:
-            Dictionnaire avec les statistiques
+            Dictionary with statistics
         """
         feedback_data = self._load_feedback_data()
 
         if not feedback_data:
             return {"total_feedback": 0, "positive_feedback": 0, "negative_feedback": 0, "satisfaction_rate": 0.0}
 
-        # Filtrer par date si nécessaire
-        from datetime import datetime, timedelta
+        # If we want less than 30 days, filter by date
+        if days < 30:
+            from datetime import datetime, timedelta
 
-        cutoff_date = datetime.now() - timedelta(days=days)
+            cutoff_date = datetime.now() - timedelta(days=days)
 
-        recent_feedback = []
-        for entry in feedback_data:
-            try:
-                entry_date = datetime.fromisoformat(entry["timestamp"])
-                if entry_date >= cutoff_date:
+            recent_feedback = []
+            for entry in feedback_data:
+                try:
+                    entry_date = datetime.fromisoformat(entry["timestamp"])
+                    if entry_date >= cutoff_date:
+                        recent_feedback.append(entry)
+                except (KeyError, ValueError):
+                    # Include entries without valid timestamp
                     recent_feedback.append(entry)
-            except (KeyError, ValueError):
-                # Inclure les entrées sans timestamp valide
-                recent_feedback.append(entry)
+        else:
+            # Use all data already filtered by _load_feedback_data
+            recent_feedback = feedback_data
 
         total = len(recent_feedback)
-        positive = sum(1 for entry in recent_feedback if entry.get("feedback", {}).get("score") == 1)
-        negative = sum(1 for entry in recent_feedback if entry.get("feedback", {}).get("score") == 0)
+        positive = 0
+        negative = 0
+
+        for entry in recent_feedback:
+            feedback_obj = entry.get("feedback", {})
+            score = feedback_obj.get("score")
+
+            # Handle both emoji format ('👍'/'👎') and numeric format (1/0)
+            if score == 1 or score == "👍":
+                positive += 1
+            elif score == 0 or score == "👎":
+                negative += 1
 
         satisfaction_rate = (positive / total * 100) if total > 0 else 0.0
 
@@ -178,10 +210,10 @@ class FeedbackSystem:
         }
 
     def get_all_feedback(self) -> List[Dict]:
-        """Obtenir tous les feedbacks enregistrés"""
+        """Get all recorded feedback"""
         return self._load_feedback_data()
 
     def get_feedback_by_user(self, user_id: str) -> List[Dict]:
-        """Obtenir les feedbacks d'un utilisateur spécifique"""
+        """Get feedback from a specific user"""
         all_feedback = self._load_feedback_data()
         return [entry for entry in all_feedback if entry.get("user_id") == user_id]
