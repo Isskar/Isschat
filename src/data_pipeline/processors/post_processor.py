@@ -28,6 +28,7 @@ class PostProcessor:
         self.clean_whitespace = self.config.get("clean_whitespace", True)
         self.normalize_text = self.config.get("normalize_text", True)
         self.add_metadata = self.config.get("add_metadata", True)
+        self.enrich_content = self.config.get("enrich_content", True)
 
     def process_documents(self, documents: List[Document]) -> List[Document]:
         """
@@ -68,9 +69,16 @@ class PostProcessor:
         if self.normalize_text:
             content = self._normalize_text(content)
 
+        # Enrich content with metadata for better search
+        if self.enrich_content:
+            content = self._enrich_content_with_metadata(content, metadata)
+
         # Add processing metadata
         if self.add_metadata:
-            metadata.update({"processed": True, "processing_steps": ["whitespace_cleaning", "text_normalization"]})
+            processing_steps = ["whitespace_cleaning", "text_normalization"]
+            if self.enrich_content:
+                processing_steps.append("content_enrichment")
+            metadata.update({"processed": True, "processing_steps": processing_steps})
 
         return Document(content=content, metadata=metadata)
 
@@ -111,6 +119,41 @@ class PostProcessor:
         text = re.sub(r"\n{3,}", "\n\n", text)
 
         return text
+
+    def _enrich_content_with_metadata(self, content: str, metadata: Dict[str, Any]) -> str:
+        """
+        Enrich chunk content with important metadata for better search.
+        
+        Args:
+            content: Original chunk content
+            metadata: Document metadata
+            
+        Returns:
+            str: Enriched content
+        """
+        enrichment_parts = []
+        
+        # Add title if available
+        title = metadata.get('title', '').strip()
+        if title:
+            enrichment_parts.append(f"Title: {title}")
+        
+        # Add filename/page name if available
+        filename = metadata.get('filename', metadata.get('page_name', metadata.get('source', ''))).strip()
+        if filename and filename != title:
+            enrichment_parts.append(f"Document: {filename}")
+            
+        # Add URL if available (for Confluence)
+        url = metadata.get('url', '').strip()
+        if url:
+            enrichment_parts.append(f"URL: {url}")
+        
+        # Build enriched content
+        if enrichment_parts:
+            enrichment_header = " | ".join(enrichment_parts)
+            return f"[{enrichment_header}]\n\n{content}"
+        
+        return content
 
     def get_processing_stats(self, original_docs: List[Document], processed_docs: List[Document]) -> Dict[str, Any]:
         """

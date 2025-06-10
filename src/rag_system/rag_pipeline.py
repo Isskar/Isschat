@@ -76,18 +76,6 @@ class RAGPipeline:
                 "Aucune source disponible",
             )
 
-    def retrieval_qa_inference(self, question: str, verbose: bool = True) -> Tuple[str, str]:
-        """
-        Legacy-compatible method name for HelpDesk replacement.
-
-        Args:
-            question: User question
-            verbose: Whether to print verbose output
-
-        Returns:
-            Tuple of (answer, sources)
-        """
-        return self.process_query(question, verbose=verbose)
 
     def get_pipeline_stats(self) -> Dict[str, Any]:
         """Get comprehensive pipeline statistics."""
@@ -140,16 +128,8 @@ class RAGPipelineFactory:
             Configured RAGPipeline
         """
         # Use absolute imports with fallbacks
-        try:
-            from retrieval.simple_retriever import SimpleRetriever
-            from generation.openrouter_generator import OpenRouterGenerator
-        except ImportError:
-            try:
-                from src.retrieval.simple_retriever import SimpleRetriever
-                from src.generation.openrouter_generator import OpenRouterGenerator
-            except ImportError:
-                from ..retrieval.simple_retriever import SimpleRetriever
-                from ..generation.openrouter_generator import OpenRouterGenerator
+        from src.retrieval.simple_retriever import SimpleRetriever
+        from src.generation.openrouter_generator import OpenRouterGenerator
 
         retriever = SimpleRetriever()
         generator = OpenRouterGenerator()
@@ -170,16 +150,8 @@ class RAGPipelineFactory:
             Configured RAGPipeline
         """
         # Import here to avoid circular imports
-        try:
-            from retrieval.retriever_factory import RetrieverFactory
-            from generation.openrouter_generator import OpenRouterGenerator
-        except ImportError:
-            try:
-                from src.retrieval.retriever_factory import RetrieverFactory
-                from src.generation.openrouter_generator import OpenRouterGenerator
-            except ImportError:
-                from ..retrieval.retriever_factory import RetrieverFactory
-                from ..generation.openrouter_generator import OpenRouterGenerator
+        from src.retrieval.retriever_factory import RetrieverFactory
+        from src.generation.openrouter_generator import OpenRouterGenerator
 
         # Create retriever
         retriever = RetrieverFactory.create_retriever(retriever_type, **kwargs.get("retriever_config", {}))

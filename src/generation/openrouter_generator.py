@@ -14,6 +14,7 @@ from langchain_core.utils.utils import convert_to_secret_str
 from src.core.interfaces import GenerationResult, RetrievalResult
 from src.core.exceptions import GenerationError, ConfigurationError
 from src.generation.base_generator import BaseGenerator
+from src.generation.prompt_templates import PromptTemplates
 from src.core.config import get_config
 
 
@@ -35,29 +36,6 @@ class OpenRouterGenerator(BaseGenerator):
         self._prompt = None
         self._chain = None
 
-    def _get_template(self) -> str:
-        """Get the prompt template for generation."""
-        template = """
-        You are a professional and friendly virtual assistant named "ISSCHAT".
-        Your mission is to help users find information in the Confluence documentation.
-
-        Based on these text excerpts:
-        -----
-        {context}
-        -----
-
-        Answer the following question IN FRENCH in a conversational and professional manner.
-        Use a friendly but professional tone, as if you were a helpful colleague.
-        Be concise but complete. Use French phrases like "je vous suggère de..."
-        (I suggest that you...), "vous pourriez..." (you could...), etc.
-        If you don't have the information, clearly state so and suggest alternatives.
-        IMPORTANT: Always respond in French regardless of the language of the question.
-
-        Question: {question}
-        Answer:
-        """
-        return template
-
     def _initialize_llm(self):
         """Initialize the language model."""
         if ChatOpenAI is None or get_config is None:
@@ -78,7 +56,8 @@ class OpenRouterGenerator(BaseGenerator):
             )
 
             # Create prompt template
-            self._prompt = PromptTemplate(template=self._get_template(), input_variables=["context", "question"])
+            prompt = PromptTemplates.get_default_template()
+            self._prompt = PromptTemplate(template=prompt, input_variables=["context", "question"])
 
             # Create the chain
             self._chain = (

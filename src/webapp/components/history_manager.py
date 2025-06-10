@@ -20,11 +20,11 @@ class ConversationHistoryManager:
 
     def render_history_page(self, user_id: Optional[str] = None):
         """Rend la page d'historique des conversations."""
-        st.title("📚 Historique des Conversations")
+        st.title("Conversation History")
 
         # Sidebar pour les filtres
         with st.sidebar:
-            st.subheader("🔍 Filtres")
+            st.subheader("Filters")
 
             # Filtre par période
             period_options = {
@@ -59,7 +59,7 @@ class ConversationHistoryManager:
 
         # Onglets pour différentes vues
         tab1, tab2, tab3, tab4 = st.tabs(
-            ["📋 Liste des Conversations", "📊 Statistiques", "🔍 Recherche", "📈 Analyse"]
+            ["Conversation List", "Statistics", "Search", "Analysis"]
         )
 
         with tab1:
@@ -88,18 +88,18 @@ class ConversationHistoryManager:
 
     def _render_conversations_list(self, conversations: List[Dict]):
         """Rend la liste des conversations."""
-        st.subheader("💬 Conversations Récentes")
+        st.subheader("Recent Conversations")
 
         if not conversations:
-            st.info("Aucune conversation à afficher.")
+            st.info("No conversations to display.")
             return
 
         # Options d'affichage
         col1, col2 = st.columns([3, 1])
         with col1:
-            show_details = st.checkbox("Afficher les détails complets", value=False)
+            show_details = st.checkbox("Show full details", value=False)
         with col2:
-            export_btn = st.button("📥 Exporter CSV")
+            export_btn = st.button("Export CSV")
 
         if export_btn:
             self._export_conversations_csv(conversations)

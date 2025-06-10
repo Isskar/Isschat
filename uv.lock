@@ -793,6 +793,7 @@ dependencies = [
     { name = "pandas-stubs" },
     { name = "plotly" },
     { name = "pre-commit" },
+    { name = "psutils" },
     { name = "python-dotenv" },
     { name = "ruff" },
     { name = "scikit-learn" },
@@ -830,6 +831,7 @@ requires-dist = [
     { name = "pandas-stubs", specifier = ">=2.2.3.250308" },
     { name = "plotly", specifier = ">=6.1.2" },
     { name = "pre-commit", specifier = ">=4.2.0" },
+    { name = "psutils", specifier = ">=3.3.10" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "ruff", specifier = ">=0.11.9" },
     { name = "scikit-learn", specifier = ">=1.2.0" },
@@ -1831,6 +1833,28 @@ wheels = [
 ]
 
 [[package]]
+name = "psutils"
+version = "3.3.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "puremagic" },
+    { name = "pypdf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/00/718c0fba71ed7d035013bab4083195c43ec0dfcd894492a8cfb1efd693a7/psutils-3.3.10.tar.gz", hash = "sha256:698a18f291183d48d63cd43b6a2e43d133e89ab438d5aef5baa24374660729f7", size = 1245517, upload-time = "2025-05-13T00:31:25.705Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4b/92/5c412acdfa124c06c5574a3e7599bc9158ccbf5ea44bfe5bac45ab19229e/psutils-3.3.10-py3-none-any.whl", hash = "sha256:cc05f25294a8c03f326e5c7713b04cdb3d78872bce55bf705696b788bc5fadc5", size = 57033, upload-time = "2025-05-13T00:30:44.155Z" },
+]
+
+[[package]]
+name = "puremagic"
+version = "1.29"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/de/c9dbb741a2e0e657147c6125699e4a2a3b9003840fed62528e17c87c0989/puremagic-1.29.tar.gz", hash = "sha256:67c115db3f63d43b13433860917b11e2b767e5eaec696a491be2fb544f224f7a", size = 314734, upload-time = "2025-05-02T03:16:17.891Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/e3/6d0ad0dc83cf0871198a68d527c61e443c10509a93db1e1666be9d1bf9c6/puremagic-1.29-py3-none-any.whl", hash = "sha256:2c3cfcde77f0b1560f1898f627bd388421d2bd64ec94d8d25f400f7742a4f109", size = 43279, upload-time = "2025-05-02T03:16:16.407Z" },
+]
+
+[[package]]
 name = "pyarrow"
 version = "20.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1979,6 +2003,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bb/22/f1129e69d94ffff626bdb5c835506b3a5b4f3d070f17ea295e12c2c6f60f/pyparsing-3.2.3.tar.gz", hash = "sha256:b9c13f1ab8b3b542f72e28f634bad4de758ab3ce4546e4301970ad6fa77c38be", size = 1088608, upload-time = "2025-03-25T05:01:28.114Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/e7/df2285f3d08fee213f2d041540fa4fc9ca6c2d44cf36d3a035bf2a8d2bcc/pyparsing-3.2.3-py3-none-any.whl", hash = "sha256:a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf", size = 111120, upload-time = "2025-03-25T05:01:24.908Z" },
+]
+
+[[package]]
+name = "pypdf"
+version = "5.6.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/40/46/67de1d7a65412aa1c896e6b280829b70b57d203fadae6859b690006b8e0a/pypdf-5.6.0.tar.gz", hash = "sha256:a4b6538b77fc796622000db7127e4e58039ec5e6afd292f8e9bf42e2e985a749", size = 5023749, upload-time = "2025-06-01T12:19:40.101Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/71/8b/dc3a72d98c22be7a4cbd664ad14c5a3e6295c2dbdf572865ed61e24b5e38/pypdf-5.6.0-py3-none-any.whl", hash = "sha256:ca6bf446bfb0a2d8d71d6d6bb860798d864c36a29b3d9ae8d7fc7958c59f88e7", size = 304208, upload-time = "2025-06-01T12:19:38.003Z" },
 ]
 
 [[package]]

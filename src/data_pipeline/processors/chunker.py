@@ -5,13 +5,7 @@ Document chunking for processing pipeline.
 from typing import List, Dict, Any, Optional
 
 # Use absolute imports with fallbacks
-try:
-    from data_pipeline.extractors.base_extractor import Document
-except ImportError:
-    try:
-        from src.data_pipeline.extractors.base_extractor import Document
-    except ImportError:
-        from ..extractors.base_extractor import Document
+from src.data_pipeline.extractors.base_extractor import Document
 
 
 class DocumentChunker:

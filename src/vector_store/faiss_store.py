@@ -8,9 +8,9 @@ from pathlib import Path
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from vector_store.base_store import BaseVectorStore
-from core.interfaces import Document
-from core.exceptions import VectorStoreError
+from src.vector_store.base_store import BaseVectorStore
+from src.core.interfaces import Document
+from src.core.exceptions import VectorStoreError
 
 
 class FAISSVectorStore(BaseVectorStore):
