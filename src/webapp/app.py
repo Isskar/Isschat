@@ -647,25 +647,26 @@ def show_database_status():
     # Initialize session state for database status
     if "db_status" not in st.session_state:
         st.session_state.db_status = "checking"
-    
+
     config = get_config()
     persist_path = Path(config.persist_directory)
     index_file = persist_path / "index.faiss"
-    
+
     # Check if database exists
     db_exists = persist_path.exists() and index_file.exists()
-    
+
     if not db_exists and st.session_state.db_status == "checking":
         st.session_state.db_status = "creating"
     elif db_exists and st.session_state.db_status == "creating":
         st.session_state.db_status = "completed"
         # Force a rerun to clear the message
         st.rerun()
-    
+
     # Show message only during creation
     if st.session_state.db_status == "creating":
         st.info("🚀 Première exécution - Création de la base de données vectorielle en cours...")
         st.write("Cette opération peut prendre plusieurs minutes. Veuillez patienter...")
+
 
 @st.cache_resource
 def get_model():
@@ -696,6 +697,7 @@ Configuration:
         except Exception as e:
             st.error(f"Erreur lors du chargement du modèle: {str(e)}")
             import traceback
+
             with st.expander("Détails de l'erreur"):
                 st.code(traceback.format_exc(), language="python")
             return None
