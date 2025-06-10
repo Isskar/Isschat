@@ -642,46 +642,61 @@ login_required, admin_required = create_auth_decorators()
 
 
 # === RAG MODEL MANAGEMENT ===
+def show_database_status():
+    """Show database creation status if needed"""
+    # Initialize session state for database status
+    if "db_status" not in st.session_state:
+        st.session_state.db_status = "checking"
+    
+    config = get_config()
+    persist_path = Path(config.persist_directory)
+    index_file = persist_path / "index.faiss"
+    
+    # Check if database exists
+    db_exists = persist_path.exists() and index_file.exists()
+    
+    if not db_exists and st.session_state.db_status == "checking":
+        st.session_state.db_status = "creating"
+    elif db_exists and st.session_state.db_status == "creating":
+        st.session_state.db_status = "completed"
+        # Force a rerun to clear the message
+        st.rerun()
+    
+    # Show message only during creation
+    if st.session_state.db_status == "creating":
+        st.info("🚀 Première exécution - Création de la base de données vectorielle en cours...")
+        st.write("Cette opération peut prendre plusieurs minutes. Veuillez patienter...")
+
 @st.cache_resource
 def get_model():
     """Load RAG model with clean error handling"""
-    with st.spinner("Loading RAG model..."):
-        config = get_config()
-        debug_info = get_debug_info()
+    config = get_config()
+    debug_info = get_debug_info()
 
-        # Display debug information in discrete expander
-        with st.sidebar.expander("System Information", expanded=False):
-            st.code(f"""
+    # Display debug information in discrete expander
+    with st.sidebar.expander("System Information", expanded=False):
+        st.code(f"""
 Configuration:
 - Provider: {debug_info["provider"]}
 - Vector store: {debug_info["persist_directory"]}
 - Confluence URL: {debug_info["confluence_url"]}
 - Space key: {debug_info["space_key"]}
 - User: {debug_info["user_email"]}
-            """)
+        """)
 
-        persist_path = Path(config.persist_directory)
-        index_file = persist_path / "index.faiss"
-
-        # Check database existence
-        if not persist_path.exists() or not index_file.exists():
-            st.info("First launch - Creating vector database...")
-
-        # Model creation
+    with st.spinner("Chargement du système..."):
         try:
             if not NEW_RAG_AVAILABLE:
                 st.error("RAG architecture unavailable!")
                 return None
 
             pipeline = RAGPipelineFactory.create_default_pipeline()
-            st.success("Vector database ready")
             return pipeline
 
         except Exception as e:
-            st.error(f"Error loading model: {str(e)}")
+            st.error(f"Erreur lors du chargement du modèle: {str(e)}")
             import traceback
-
-            with st.expander("Error details"):
+            with st.expander("Détails de l'erreur"):
                 st.code(traceback.format_exc(), language="python")
             return None
 
@@ -827,6 +842,9 @@ def chat_page():
         unsafe_allow_html=True,
     )
 
+    # Show database status if needed (will disappear once creation is complete)
+    show_database_status()
+
     # Load model
     model = get_model()
     if not model:
@@ -879,7 +897,7 @@ def chat_page():
     # Welcome message
     user_email = st.session_state.get("user", {}).get("email", "")
     first_name = user_email.split("@")[0].split(".")[0].capitalize()
-    welcome_message = f"Hello {first_name}, how can I help you today?"
+    welcome_message = f"Bonjour {first_name}, je suis votre assistant, comment puis-je vous aider ?"
 
     # Initialize message history
     if "messages" not in st.session_state:
