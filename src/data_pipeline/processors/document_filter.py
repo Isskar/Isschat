@@ -1,28 +1,20 @@
 """
-Filtrage de qualité des documents.
+Document quality filtering.
 """
 
 from typing import List, Dict, Any, Optional
-
-# Use absolute imports with fallbacks
-try:
-    from data_pipeline.extractors.base_extractor import Document
-except ImportError:
-    try:
-        from src.data_pipeline.extractors.base_extractor import Document
-    except ImportError:
-        from ..extractors.base_extractor import Document
+from src.core.interfaces import Document
 
 
 class DocumentFilter:
-    """Filtre les documents selon des critères de qualité."""
+    """Filter documents based on quality criteria."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
-        Initialise le filtre de documents.
+        Initialize the document filter.
 
         Args:
-            config: Configuration du filtrage
+            config: Filtering configuration
         """
         self.config = config or {}
         self.min_length = self.config.get("min_length", 50)
@@ -31,13 +23,13 @@ class DocumentFilter:
 
     def filter_documents(self, documents: List[Document]) -> List[Document]:
         """
-        Filtre les documents selon les critères de qualité.
+        Filter documents based on quality criteria.
 
         Args:
-            documents: Liste des documents à filtrer
+            documents: List of documents to filter
 
         Returns:
-            List[Document]: Documents filtrés
+            List[Document]: Filtered documents
         """
         filtered_docs = []
 
@@ -49,26 +41,26 @@ class DocumentFilter:
 
     def _is_valid_document(self, document: Document) -> bool:
         """
-        Vérifie si un document respecte les critères de qualité.
+        Check if a document meets quality criteria.
 
         Args:
-            document: Document à vérifier
+            document: Document to verify
 
         Returns:
-            bool: True si le document est valide
+            bool: True if document is valid
         """
-        content = document.content.strip()
+        content = document.page_content.strip()
 
-        # Vérifier la longueur
+        # Check length
         if len(content) < self.min_length or len(content) > self.max_length:
             return False
 
-        # Vérifier les patterns exclus
+        # Check excluded patterns
         for pattern in self.excluded_patterns:
             if pattern.lower() in content.lower():
                 return False
 
-        # Vérifier que le contenu n'est pas vide ou uniquement des espaces
+        # Check that content is not empty or only whitespace
         if not content or content.isspace():
             return False
 
@@ -76,14 +68,14 @@ class DocumentFilter:
 
     def get_filter_stats(self, original_docs: List[Document], filtered_docs: List[Document]) -> Dict[str, Any]:
         """
-        Retourne les statistiques de filtrage.
+        Return filtering statistics.
 
         Args:
-            original_docs: Documents originaux
-            filtered_docs: Documents filtrés
+            original_docs: Original documents
+            filtered_docs: Filtered documents
 
         Returns:
-            Dict: Statistiques de filtrage
+            Dict: Filtering statistics
         """
         return {
             "original_count": len(original_docs),

@@ -6,14 +6,7 @@ from typing import Dict, Any
 from .base_store import BaseVectorStore
 from .faiss_store import FAISSVectorStore
 
-# Use absolute imports with fallbacks
-try:
-    from core.exceptions import ConfigurationError
-except ImportError:
-    try:
-        from src.core.exceptions import ConfigurationError
-    except ImportError:
-        from ..core.exceptions import ConfigurationError
+from src.core.exceptions import ConfigurationError
 
 
 class VectorStoreFactory:

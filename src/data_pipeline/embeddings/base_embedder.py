@@ -5,14 +5,7 @@ Abstract base class for embedding generation.
 from abc import ABC, abstractmethod
 from typing import List
 
-# Use absolute imports with fallbacks
-try:
-    from data_pipeline.extractors.base_extractor import Document
-except ImportError:
-    try:
-        from src.data_pipeline.extractors.base_extractor import Document
-    except ImportError:
-        from ..extractors.base_extractor import Document
+from src.core.interfaces import Document
 
 
 class BaseEmbedder(ABC):

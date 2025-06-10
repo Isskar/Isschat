@@ -5,14 +5,7 @@ HuggingFace embedding implementation.
 from typing import List, Dict, Any
 from .base_embedder import BaseEmbedder
 
-# Use absolute imports with fallbacks
-try:
-    from data_pipeline.extractors.base_extractor import Document
-except ImportError:
-    try:
-        from src.data_pipeline.extractors.base_extractor import Document
-    except ImportError:
-        from ..extractors.base_extractor import Document
+from src.core.interfaces import Document
 
 
 class HuggingFaceEmbedder(BaseEmbedder):

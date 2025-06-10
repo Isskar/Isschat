@@ -1,6 +1,6 @@
 """
-Gestionnaire de données centralisé pour la nouvelle structure de répertoires.
-Gère l'historique des conversations, les logs et la migration des données.
+Centralized data manager for the new directory structure.
+Manages conversation history, logs and data migration.
 """
 
 import json
@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 
 @dataclass
 class ConversationEntry:
-    """Structure d'une entrée de conversation."""
+    """Structure of a conversation entry."""
 
     timestamp: str
     user_id: str
@@ -30,7 +30,7 @@ class ConversationEntry:
 
 @dataclass
 class PerformanceEntry:
-    """Structure d'une entrée de performance."""
+    """Structure of a performance entry."""
 
     timestamp: str
     operation: str
@@ -41,7 +41,7 @@ class PerformanceEntry:
 
 @dataclass
 class FeedbackEntry:
-    """Structure d'une entrée de feedback."""
+    """Structure of a feedback entry."""
 
     timestamp: str
     user_id: str
@@ -52,26 +52,26 @@ class FeedbackEntry:
 
 
 class BaseDataStore(ABC):
-    """Interface abstraite pour les stores de données."""
+    """Abstract interface for data stores."""
 
     @abstractmethod
     def save_entry(self, entry: Any) -> bool:
-        """Sauvegarde une entrée."""
+        """Save an entry."""
         pass
 
     @abstractmethod
     def load_entries(self, limit: Optional[int] = None) -> List[Any]:
-        """Charge les entrées."""
+        """Load entries."""
         pass
 
     @abstractmethod
     def get_entries_by_user(self, user_id: str, limit: Optional[int] = None) -> List[Any]:
-        """Récupère les entrées pour un utilisateur."""
+        """Retrieve entries for a user."""
         pass
 
 
 class JSONLDataStore(BaseDataStore):
-    """Store de données utilisant le format JSONL."""
+    """Data store using JSONL format."""
 
     def __init__(self, file_path: Path, entry_class: type):
         self.file_path = file_path
@@ -79,11 +79,11 @@ class JSONLDataStore(BaseDataStore):
         self._ensure_directory()
 
     def _ensure_directory(self):
-        """S'assure que le répertoire existe."""
+        """Ensure that the directory exists."""
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
 
     def save_entry(self, entry: Any) -> bool:
-        """Sauvegarde une entrée au format JSONL."""
+        """Save an entry in JSONL format."""
         try:
             with open(self.file_path, "a", encoding="utf-8") as f:
                 if isinstance(entry, dict):
@@ -93,11 +93,11 @@ class JSONLDataStore(BaseDataStore):
                 f.write("\n")
             return True
         except Exception as e:
-            logging.error(f"Erreur lors de la sauvegarde dans {self.file_path}: {e}")
+            logging.error(f"Error saving to {self.file_path}: {e}")
             return False
 
     def load_entries(self, limit: Optional[int] = None) -> List[Any]:
-        """Charge les entrées depuis le fichier JSONL."""
+        """Load entries from JSONL file."""
         entries = []
         if not self.file_path.exists():
             return entries
@@ -109,7 +109,7 @@ class JSONLDataStore(BaseDataStore):
                         data = json.loads(line.strip())
                         entries.append(data)
 
-            # Trier par timestamp (plus récent en premier)
+            # Sort by timestamp (most recent first)
             entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
             if limit:
@@ -117,11 +117,11 @@ class JSONLDataStore(BaseDataStore):
 
             return entries
         except Exception as e:
-            logging.error(f"Erreur lors du chargement depuis {self.file_path}: {e}")
+            logging.error(f"Error loading from {self.file_path}: {e}")
             return []
 
     def get_entries_by_user(self, user_id: str, limit: Optional[int] = None) -> List[Any]:
-        """Récupère les entrées pour un utilisateur spécifique."""
+        """Retrieve entries for a specific user."""
         all_entries = self.load_entries()
         user_entries = [entry for entry in all_entries if entry.get("user_id") == user_id]
 

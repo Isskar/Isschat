@@ -21,6 +21,8 @@ class PromptTemplates:
         -----
 
         Answer the following question IN FRENCH in a conversational and professional manner.
+        If the question is not clear, try to interpret the user's intent.
+        If you don't have enough information, clearly state that you cannot answer.
         Use a friendly but professional tone, as if you were a helpful colleague.
         Be concise but complete. Use French phrases like "je vous suggère de..."
         (I suggest that you...), "vous pourriez..." (you could...), etc.

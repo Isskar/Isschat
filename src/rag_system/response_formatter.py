@@ -69,7 +69,7 @@ class ResponseFormatter:
             url = metadata.get("url", "")
 
             if url and url != "#":
-                # Créer un lien cliquable pour Streamlit
+                # Create a clickable link for Streamlit
                 source_line += f"**[{title}]({url})**"
             else:
                 source_line += f"**{title}**"

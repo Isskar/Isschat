@@ -43,7 +43,7 @@ class PerformanceDashboard:
             background-color: #1E1E1E;
             color: #FFFFFF;
         }
-        
+
         .stMetric {
             background-color: #2D2D2D;
             border: 1px solid #404040;
@@ -51,7 +51,7 @@ class PerformanceDashboard:
             padding: 1rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        
+
         .metric-container {
             background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
             border-radius: 15px;
@@ -60,7 +60,7 @@ class PerformanceDashboard:
             border: 1px solid #404040;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        
+
         .performance-card {
             background: linear-gradient(135deg, #2E86AB 0%, #A23B72 100%);
             border-radius: 15px;
@@ -69,7 +69,7 @@ class PerformanceDashboard:
             color: white;
             box-shadow: 0 6px 12px rgba(0,0,0,0.4);
         }
-        
+
         .status-indicator {
             display: inline-block;
             width: 12px;
@@ -77,22 +77,22 @@ class PerformanceDashboard:
             border-radius: 50%;
             margin-right: 8px;
         }
-        
+
         .status-good { background-color: #6A994E; }
         .status-warning { background-color: #F18F01; }
         .status-critical { background-color: #C73E1D; }
-        
+
         .stTabs [data-baseweb="tab-list"] {
             background-color: #2D2D2D;
             border-radius: 10px;
         }
-        
+
         .stTabs [data-baseweb="tab"] {
             background-color: transparent;
             color: #FFFFFF;
             border-radius: 8px;
         }
-        
+
         .stTabs [aria-selected="true"] {
             background-color: #2E86AB;
         }
@@ -104,7 +104,8 @@ class PerformanceDashboard:
     def render_dashboard(self):
         """Main dashboard rendering with comprehensive chatbot metrics."""
         st.markdown(
-            "<h1 style='text-align: center; color: #2E86AB; margin-bottom: 2rem;'>🤖 Chatbot Performance Dashboard</h1>",
+            "<h1 style='text-align: center; color: #2E86AB; margin-bottom: 2rem;'>"
+            "🤖 Chatbot Performance Dashboard</h1>",
             unsafe_allow_html=True,
         )
 
@@ -326,14 +327,12 @@ class PerformanceDashboard:
     def _calculate_user_satisfaction(self, conversations: List[Dict]) -> float:
         """Calculate user satisfaction score from feedback logs."""
         import json
-        import os
         import glob
-        from datetime import datetime, timedelta
-        
+
         # Charger les feedbacks depuis les logs
         feedback_pattern = "logs/feedback/feedback_*.json"
         feedback_files = glob.glob(feedback_pattern)
-        
+
         all_feedback = []
         for file_path in feedback_files:
             try:
@@ -343,14 +342,14 @@ class PerformanceDashboard:
                         all_feedback.extend(feedback_data)
             except (FileNotFoundError, json.JSONDecodeError):
                 continue
-        
+
         if not all_feedback:
-            return 3.5  # Score par défaut
-        
+            return 3.5  # Default score
+
         # Calculer le taux de satisfaction (feedbacks positifs / total)
         positive_count = 0
         total_count = 0
-        
+
         for entry in all_feedback:
             feedback = entry.get("feedback", {})
             score = feedback.get("score")
@@ -358,14 +357,14 @@ class PerformanceDashboard:
                 total_count += 1
                 if score == 1:  # Feedback positif
                     positive_count += 1
-        
+
         if total_count == 0:
             return 3.5
-        
+
         # Convertir le pourcentage en score sur 5 (0-100% -> 1-5)
         satisfaction_percentage = (positive_count / total_count) * 100
         satisfaction_score = 1 + (satisfaction_percentage / 100) * 4  # 1-5 scale
-        
+
         return satisfaction_score
 
     def _calculate_health_score(self, system_metrics: Dict, avg_response_time: float) -> float:
@@ -675,14 +674,13 @@ class PerformanceDashboard:
         """Render feedback analysis from logs."""
         import json
         import glob
-        from collections import Counter
-        
+
         st.markdown("#### 📝 User Feedback Analysis")
 
         # Charger les feedbacks depuis les logs
         feedback_pattern = "logs/feedback/feedback_*.json"
         feedback_files = glob.glob(feedback_pattern)
-        
+
         all_feedback = []
         for file_path in feedback_files:
             try:
@@ -698,7 +696,7 @@ class PerformanceDashboard:
             positive_count = 0
             negative_count = 0
             total_count = 0
-            
+
             for entry in all_feedback:
                 feedback = entry.get("feedback", {})
                 score = feedback.get("score")
@@ -708,10 +706,10 @@ class PerformanceDashboard:
                         positive_count += 1
                     elif score == 0:
                         negative_count += 1
-            
+
             if total_count > 0:
                 satisfaction_rate = (positive_count / total_count) * 100
-                
+
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.metric("Feedbacks Positifs", positive_count)
@@ -719,20 +717,20 @@ class PerformanceDashboard:
                     st.metric("Feedbacks Négatifs", negative_count)
                 with col3:
                     st.metric("Taux de Satisfaction", f"{satisfaction_rate:.1f}%")
-                
+
                 # Afficher la distribution
                 st.write("**Distribution des feedbacks:**")
-                st.write(f"👍 Positifs: {positive_count} ({positive_count/total_count*100:.1f}%)")
-                st.write(f"👎 Négatifs: {negative_count} ({negative_count/total_count*100:.1f}%)")
-                
-                # Afficher quelques commentaires récents
+                st.write(f"👍 Positifs: {positive_count} ({positive_count / total_count * 100:.1f}%)")
+                st.write(f"👎 Négatifs: {negative_count} ({negative_count / total_count * 100:.1f}%)")
+
+                # Display some recent comments
                 recent_comments = []
                 for entry in all_feedback[-5:]:  # 5 derniers
                     feedback = entry.get("feedback", {})
                     logger.debug(f"Processing feedback entry: {entry}")
                     comment_raw = feedback.get("text", "")
                     logger.debug(f"Raw comment: {comment_raw} (type: {type(comment_raw)})")
-                    
+
                     if comment_raw is None:
                         logger.warning(f"Found None comment in feedback: {feedback}")
                         comment = ""
@@ -742,11 +740,11 @@ class PerformanceDashboard:
                         except AttributeError as e:
                             logger.error(f"Error stripping comment '{comment_raw}' (type: {type(comment_raw)}): {e}")
                             comment = str(comment_raw) if comment_raw is not None else ""
-                    
+
                     if comment:
                         score_emoji = "👍" if feedback.get("score") == 1 else "👎"
                         recent_comments.append(f"{score_emoji} {comment}")
-                
+
                 if recent_comments:
                     st.write("**Commentaires récents:**")
                     for comment in recent_comments:

@@ -30,7 +30,7 @@ st.markdown(
         background-color: #1E1E1E;
         color: #FFFFFF;
     }
-    
+
     .main-header {
         font-size: 2.5rem;
         font-weight: 600;
@@ -38,7 +38,7 @@ st.markdown(
         margin-bottom: 1rem;
         text-align: center;
     }
-    
+
     .metric-card {
         background: linear-gradient(135deg, #2E86AB 0%, #A23B72 100%);
         padding: 1.5rem;
@@ -48,8 +48,8 @@ st.markdown(
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         border: 1px solid #404040;
     }
-    
-    
+
+
     .status-healthy {
         color: #6A994E;
         font-weight: 600;
@@ -58,12 +58,12 @@ st.markdown(
         color: #C73E1D;
         font-weight: 600;
     }
-    
+
     /* Sidebar styling */
     .css-1d391kg {
         background-color: #2D2D2D;
     }
-    
+
     /* Button styling - Modern and elegant design */
     .stButton > button {
         background: #2E86AB;
@@ -76,41 +76,41 @@ st.markdown(
         transition: all 0.2s ease;
         box-shadow: none;
     }
-    
+
     .stButton > button:hover {
         background: #1e5f7a;
         border-color: #1e5f7a;
         transform: none;
         box-shadow: 0 2px 4px rgba(46, 134, 171, 0.2);
     }
-    
+
     .stButton > button:active {
         background: #164a5c;
         transform: translateY(1px);
     }
-    
+
     /* Button variants for different contexts */
     .stButton.secondary > button {
         background: transparent;
         color: #2E86AB;
         border: 1px solid #2E86AB;
     }
-    
+
     .stButton.secondary > button:hover {
         background: #2E86AB;
         color: white;
     }
-    
+
     .stButton.danger > button {
         background: #dc3545;
         border-color: #dc3545;
     }
-    
+
     .stButton.danger > button:hover {
         background: #c82333;
         border-color: #c82333;
     }
-    
+
     /* Input styling */
     .stTextInput > div > div > input {
         background-color: #2D2D2D;
@@ -118,14 +118,14 @@ st.markdown(
         border: 1px solid #404040;
         border-radius: 10px;
     }
-    
+
     .stTextArea > div > div > textarea {
         background-color: #2D2D2D;
         color: #FFFFFF;
         border: 1px solid #404040;
         border-radius: 10px;
     }
-    
+
     /* Selectbox styling */
     .stSelectbox > div > div > select {
         background-color: #2D2D2D;
@@ -133,14 +133,14 @@ st.markdown(
         border: 1px solid #404040;
         border-radius: 10px;
     }
-    
+
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {
         background-color: #2D2D2D;
         border-radius: 10px;
         gap: 8px;
     }
-    
+
     .stTabs [data-baseweb="tab"] {
         background-color: transparent;
         color: #FFFFFF;
@@ -148,12 +148,12 @@ st.markdown(
         padding: 0.5rem 1rem;
         font-weight: 500;
     }
-    
+
     .stTabs [aria-selected="true"] {
         background-color: #2E86AB;
         color: white;
     }
-    
+
     /* Metric styling */
     .stMetric {
         background-color: #2D2D2D;
@@ -162,7 +162,7 @@ st.markdown(
         padding: 1rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-    
+
     /* Expander styling */
     .streamlit-expanderHeader {
         background-color: #2D2D2D;
@@ -170,20 +170,20 @@ st.markdown(
         border-radius: 10px;
         color: #FFFFFF;
     }
-    
+
     /* Success/Info/Warning/Error message styling */
     .stSuccess {
         background-color: rgba(106, 153, 78, 0.1);
         border: 1px solid #6A994E;
         color: #6A994E;
     }
-    
+
     .stInfo {
         background-color: rgba(46, 134, 171, 0.1);
         border: 1px solid #2E86AB;
         color: #2E86AB;
     }
-    
+
     .stWarning {
         background-color: rgba(241, 143, 1, 0.1);
         border: 1px solid #F18F01;
@@ -204,7 +204,7 @@ st.markdown(
         align-items: center;
         gap: 0.5rem;
     }
-    
+
     /* Enhanced main header */
     .main-header {
         font-size: 2.8rem !important;
@@ -217,7 +217,7 @@ st.markdown(
         text-align: center !important;
         letter-spacing: -0.02em !important;
     }
-    
+
     /* Enhanced metric cards */
     .metric-card {
         background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%) !important;
@@ -230,12 +230,12 @@ st.markdown(
         backdrop-filter: blur(10px) !important;
         transition: transform 0.2s ease, box-shadow 0.2s ease !important;
     }
-    
+
     .metric-card:hover {
         transform: translateY(-2px) !important;
         box-shadow: 0 12px 40px rgba(46, 134, 171, 0.3) !important;
     }
-    
+
     /* Enhanced chat container */
     .chat-container {
         background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
@@ -246,7 +246,7 @@ st.markdown(
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
         backdrop-filter: blur(10px) !important;
     }
-    
+
     /* Dashboard grid layout */
     .dashboard-grid {
         display: grid;
@@ -254,7 +254,7 @@ st.markdown(
         gap: 1.5rem;
         margin: 2rem 0;
     }
-    
+
     /* Dashboard cards */
     .dashboard-card {
         background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
@@ -264,19 +264,19 @@ st.markdown(
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    
+
     .dashboard-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     }
-    
+
     .dashboard-card h3 {
         color: #2E86AB;
         margin-bottom: 1rem;
         font-size: 1.2rem;
         font-weight: 600;
     }
-    
+
     /* History items */
     .history-item {
         background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
@@ -287,25 +287,25 @@ st.markdown(
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
         transition: all 0.2s ease;
     }
-    
+
     .history-item:hover {
         transform: translateX(4px);
         border-color: #2E86AB;
         box-shadow: 0 6px 24px rgba(46, 134, 171, 0.2);
     }
-    
+
     .history-question {
         color: #4A9FD1;
         font-weight: 600;
         margin-bottom: 0.5rem;
     }
-    
+
     .history-answer {
         color: #FFFFFF;
         line-height: 1.6;
         margin-bottom: 0.5rem;
     }
-    
+
     .history-meta {
         color: #888;
         font-size: 0.85rem;
@@ -313,18 +313,18 @@ st.markdown(
         justify-content: space-between;
         align-items: center;
     }
-    
+
     /* Status indicators */
     .status-warning {
         color: #F18F01;
         font-weight: 600;
     }
-    
+
     /* Enhanced sidebar */
     .css-1d391kg {
         background: linear-gradient(180deg, #2D2D2D 0%, #1E1E1E 100%) !important;
     }
-    
+
     .sidebar-section {
         background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
         padding: 1.5rem !important;
@@ -333,7 +333,7 @@ st.markdown(
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
     }
-    
+
     /* Enhanced chat message styling */
     .stChatMessage {
         background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
@@ -342,15 +342,15 @@ st.markdown(
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
     }
-    
+
     .stChatMessage[data-testid="user-message"] {
         background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%) !important;
     }
-    
+
     .stChatMessage[data-testid="assistant-message"] {
         background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
     }
-    
+
     /* Enhanced expander styling */
     .streamlit-expanderHeader {
         background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
@@ -358,59 +358,59 @@ st.markdown(
         border-radius: 10px !important;
         color: #FFFFFF !important;
     }
-    
+
     /* Enhanced input styling */
     .stChatInput > div {
         background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
         border-radius: 12px !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
-    
+
     /* Loading spinner styling */
     .stSpinner > div {
         border-color: #2E86AB !important;
     }
-    
+
     /* Enhanced toggle styling */
     .stToggle > div {
         background-color: #2D2D2D !important;
     }
-    
+
     /* Page transition effects */
     .main .block-container {
         animation: fadeIn 0.3s ease-in;
     }
-    
+
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    
+
     /* Responsive design improvements */
     @media (max-width: 768px) {
         .main-header {
             font-size: 2rem !important;
         }
-        
+
         .page-header {
             font-size: 1.8rem !important;
         }
-        
+
         .dashboard-grid {
             grid-template-columns: 1fr !important;
         }
-        
+
         .welcome-container {
             padding: 1.5rem !important;
         }
-        
+
         .dashboard-card {
             margin: 0.5rem 0 !important;
         }
     }
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
+
     /* Performance metrics */
     .perf-metric {
         background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%);
@@ -420,19 +420,19 @@ st.markdown(
         text-align: center;
         margin: 0.5rem;
     }
-    
+
     .perf-metric h4 {
         margin: 0;
         font-size: 1.8rem;
         font-weight: 700;
     }
-    
+
     .perf-metric p {
         margin: 0.25rem 0 0 0;
         opacity: 0.9;
         font-size: 0.9rem;
     }
-    
+
     /* Welcome message styling */
     .welcome-container {
         background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%);
@@ -443,19 +443,19 @@ st.markdown(
         margin: 2rem 0;
         box-shadow: 0 8px 32px rgba(46, 134, 171, 0.2);
     }
-    
+
     .welcome-container h2 {
         margin: 0 0 1rem 0;
         font-size: 1.8rem;
         font-weight: 600;
     }
-    
+
     .welcome-container p {
         margin: 0;
         opacity: 0.9;
         font-size: 1.1rem;
     }
-    
+
     .stError {
         background-color: rgba(199, 62, 29, 0.1);
         border: 1px solid #C73E1D;
@@ -646,7 +646,6 @@ def show_database_status():
 @st.cache_resource
 def get_model():
     """Load RAG model with clean error handling"""
-    config = get_config()
     debug_info = get_debug_info()
 
     # Display debug information in discrete expander
@@ -887,15 +886,15 @@ def chat_page():
         else:
             with st.chat_message("assistant"):
                 st.write(msg["content"])
-                
-                # Add feedback widget pour les messages avec question_data (vraies réponses)
-                if (show_feedback and features and "question_data" in msg):
+
+                # Add feedback widget for messages with question_data (real responses)
+                if show_feedback and features and "question_data" in msg:
                     features.add_feedback_widget(
                         st,
                         question=msg["question_data"]["question"],
                         answer=msg["question_data"]["answer"],
                         sources=msg["question_data"]["sources"],
-                        key_suffix=f"history_{i}"
+                        key_suffix=f"history_{i}",
                     )
 
     # Handle reused questions from history
@@ -910,9 +909,7 @@ def chat_page():
 
             # Display response
             st.chat_message("assistant").markdown(result)
-            if sources and show_sources:
-                with st.expander("Consulted sources"):
-                    st.write(sources)
+            # Sources already included in formatted response - no need to display separately
 
             # Save data
             save_conversation_data(prompt, result, sources, response_time_ms)
@@ -921,16 +918,14 @@ def chat_page():
             response_content = result
             if sources and show_sources:
                 response_content += "\n\n" + sources
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": response_content,
-                "question_data": {
-                    "question": prompt,
-                    "answer": result,
-                    "sources": sources if sources else ""
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_content,
+                    "question_data": {"question": prompt, "answer": result, "sources": sources if sources else ""},
                 }
-            })
-            
+            )
+
             # Force rerun to display feedback widget in history (comme dans l'ancienne version)
             st.rerun()
 
@@ -946,9 +941,7 @@ def chat_page():
 
             # Display response
             st.chat_message("assistant").markdown(result)
-            if sources and show_sources:
-                with st.expander("Consulted sources"):
-                    st.write(sources)
+            # Sources already included in formatted response - no need to display separately
 
             # Save data
             save_conversation_data(prompt, result, sources, response_time_ms)
@@ -957,16 +950,14 @@ def chat_page():
             response_content = result
             if sources and show_sources:
                 response_content += "\n\n" + sources
-            st.session_state.messages.append({
-                "role": "assistant",
-                "content": response_content,
-                "question_data": {
-                    "question": prompt,
-                    "answer": result,
-                    "sources": sources if sources else ""
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_content,
+                    "question_data": {"question": prompt, "answer": result, "sources": sources if sources else ""},
                 }
-            })
-            
+            )
+
             # Force rerun to display feedback widget in history (comme dans l'ancienne version)
             st.rerun()
 
@@ -1146,8 +1137,8 @@ def render_sidebar():
             st.markdown(
                 f"""
             <div class="sidebar-section">
-                <h4 style="color: #2E86AB; margin: 0;">👤 Utilisateur</h4>
-                <p style="color: #6A994E; margin: 0.25rem 0 0 0; font-weight: 600;">Connecté: {first_name}</p>
+                <h4 style="color: #2E86AB; margin: 0;">👤 User</h4>
+                <p style="color: #6A994E; margin: 0.25rem 0 0 0; font-weight: 600;">Connected: {first_name}</p>
                 <p style="color: #888; margin: 0; font-size: 0.8rem;">{user_email}</p>
             </div>
             """,

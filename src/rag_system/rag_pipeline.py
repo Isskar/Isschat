@@ -6,6 +6,7 @@ from typing import Dict, Any, Tuple
 
 from src.retrieval.base_retriever import BaseRetriever
 from src.generation.base_generator import BaseGenerator
+from src.rag_system.query_processor import QueryProcessor
 
 
 class RAGPipeline:
@@ -24,6 +25,7 @@ class RAGPipeline:
         """
         self.retriever = retriever
         self.generator = generator
+        self.query_processor = QueryProcessor()
 
     def process_query(self, query: str, top_k: int = 3, verbose: bool = True) -> Tuple[str, str]:
         """
@@ -42,8 +44,22 @@ class RAGPipeline:
                 print(f"\n🔍 Processing query: '{query}'")
                 print("=" * 50)
 
-            # Step 1: Retrieve relevant documents
-            retrieval_result = self.retriever.retrieve(query, top_k=top_k)
+            # Step 0: Process and analyze the query
+            query_analysis = self.query_processor.process_query(query)
+
+            if verbose:
+                print("\n Query Analysis:")
+                print(f"  Original: '{query_analysis.original_query}'")
+                print(f"  Processed: '{query_analysis.processed_query}'")
+                print(f"  Intent: {query_analysis.intent}")
+                print(f"  Entities: {query_analysis.entities}")
+                print(f"  Keywords: {query_analysis.keywords}")
+                print(f"  Confidence: {query_analysis.confidence:.2f}")
+                print()
+
+            # Step 1: Retrieve relevant documents using processed query
+            search_query = query_analysis.processed_query if query_analysis.processed_query.strip() else query
+            retrieval_result = self.retriever.retrieve(search_query, top_k=top_k)
 
             if verbose:
                 print(f"\n📚 Retrieved {len(retrieval_result.documents)} documents:")
@@ -56,7 +72,7 @@ class RAGPipeline:
                         print(f"    Score: {retrieval_result.scores[i]:.4f}")
                     print()
 
-            # Step 2: Generate answer
+            # Step 2: Generate answer using original query for context
             generation_result = self.generator.generate(query, retrieval_result)
 
             if verbose:
@@ -76,14 +92,28 @@ class RAGPipeline:
                 "Aucune source disponible",
             )
 
-
     def get_pipeline_stats(self) -> Dict[str, Any]:
         """Get comprehensive pipeline statistics."""
         return {
-            "pipeline_type": "Modern RAG",
+            "pipeline_type": "Modern RAG with Query Processing",
             "retriever_stats": self.retriever.get_stats(),
             "generator_stats": self.generator.get_stats(),
+            "query_processor": "Enabled",
         }
+
+    def analyze_query(self, query: str) -> Dict[str, Any]:
+        """
+        Analyze a query without executing the full pipeline.
+        Useful for debugging query processing.
+
+        Args:
+            query: Query to analyze
+
+        Returns:
+            Query analysis information
+        """
+        analysis = self.query_processor.process_query(query)
+        return self.query_processor.get_debug_info(analysis)
 
     def health_check(self) -> Dict[str, Any]:
         """Perform a health check on the pipeline."""

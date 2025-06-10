@@ -4,8 +4,7 @@ Document chunking for processing pipeline.
 
 from typing import List, Dict, Any, Optional
 
-# Use absolute imports with fallbacks
-from src.data_pipeline.extractors.base_extractor import Document
+from src.core.interfaces import Document
 
 
 class DocumentChunker:
@@ -51,7 +50,7 @@ class DocumentChunker:
         Returns:
             List[Document]: Document chunks
         """
-        content = document.content
+        content = document.page_content
         chunks = []
 
         # Simple text splitting by separator
@@ -90,7 +89,7 @@ class DocumentChunker:
         chunk_metadata = original_doc.metadata.copy()
         chunk_metadata.update({"chunk_index": chunk_index, "chunk_size": len(chunk_content), "is_chunk": True})
 
-        return Document(content=chunk_content, metadata=chunk_metadata)
+        return Document(page_content=chunk_content, metadata=chunk_metadata)
 
     def get_chunking_stats(self, original_docs: List[Document], chunked_docs: List[Document]) -> Dict[str, Any]:
         """

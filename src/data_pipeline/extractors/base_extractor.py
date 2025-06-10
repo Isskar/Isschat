@@ -1,44 +1,31 @@
 """
-Interface abstraite pour l'extraction de données.
+Abstract interface for data extraction.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
-
-
-class Document:
-    """Représentation d'un document extrait."""
-
-    def __init__(self, content: str, metadata: Optional[Dict[str, Any]] = None):
-        # Support both content and page_content for compatibility
-        self.content = content
-        self.page_content = content  # Alias for compatibility with interfaces
-        self.metadata = metadata or {}
-
-    def to_dict(self) -> Dict[str, Any]:
-        # Return both formats for maximum compatibility
-        return {"content": self.content, "page_content": self.page_content, "metadata": self.metadata}
+from typing import List
+from src.core.interfaces import Document
 
 
 class BaseExtractor(ABC):
-    """Interface pour l'extraction de données."""
+    """Interface for data extraction."""
 
     @abstractmethod
     def extract(self) -> List[Document]:
         """
-        Extrait les documents de la source de données.
+        Extract documents from the data source.
 
         Returns:
-            List[Document]: Liste des documents extraits
+            List[Document]: List of extracted documents
         """
         pass
 
     @abstractmethod
     def validate_connection(self) -> bool:
         """
-        Valide la connexion à la source de données.
+        Validate connection to the data source.
 
         Returns:
-            bool: True si la connexion est valide
+            bool: True if connection is valid
         """
         pass

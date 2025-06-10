@@ -248,7 +248,7 @@ class ConfluenceExtractor(BaseExtractor):
 
                     # Create document with enhanced metadata
                     doc = Document(
-                        content=content,
+                        page_content=content,
                         metadata={
                             "source": "confluence",
                             "space_key": self.space_key,

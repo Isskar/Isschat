@@ -121,12 +121,12 @@ class OpenRouterGenerator(BaseGenerator):
         sources = []
         for doc in documents:
             title = doc.metadata.get("title", "Document")
-            # Utiliser l'URL Confluence complète au lieu de 'source'
+            # Use complete Confluence URL instead of 'source'
             url = doc.metadata.get("url", "#")
 
             # Format pour Streamlit avec liens cliquables
             if url and url != "#":
-                # Créer un lien HTML cliquable pour Streamlit
+                # Create a clickable HTML link for Streamlit
                 source_link = f"[{title}]({url})"
             else:
                 source_link = title

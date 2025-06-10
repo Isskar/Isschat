@@ -5,14 +5,7 @@ Base vector store interface.
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
-# Use absolute imports with fallbacks
-try:
-    from core.interfaces import Document
-except ImportError:
-    try:
-        from src.core.interfaces import Document
-    except ImportError:
-        from ..core.interfaces import Document
+from src.core.interfaces import Document
 
 
 class BaseVectorStore(ABC):

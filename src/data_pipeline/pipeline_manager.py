@@ -9,14 +9,7 @@ from .processors.chunker import DocumentChunker
 from .processors.post_processor import PostProcessor
 from .embeddings.base_embedder import BaseEmbedder
 
-# Use absolute imports with fallbacks
-try:
-    from vector_store.base_store import BaseVectorStore
-except ImportError:
-    try:
-        from src.vector_store.base_store import BaseVectorStore
-    except ImportError:
-        from ..vector_store.base_store import BaseVectorStore
+from src.vector_store.base_store import BaseVectorStore
 
 
 class PipelineManager:

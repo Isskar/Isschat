@@ -7,7 +7,6 @@ from streamlit_feedback import streamlit_feedback
 import os
 import logging
 import time
-import uuid
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -61,68 +60,68 @@ class ConversationAnalyzer:
 
 
 class FeedbackSystem:
-    """Système de feedback avec pouces (👍/👎) utilisant streamlit_feedback"""
+    """Feedback system with thumbs (👍/👎) using streamlit_feedback"""
 
     def __init__(self, feedback_file: Optional[str] = None):
         if feedback_file is None:
-            # Créer un nom de fichier avec la date actuelle
+            # Create a filename with current date
             date_str = datetime.now().strftime("%Y-%m-%d")
             feedback_file = f"./data/logs/feedback/feedback_{date_str}.json"
         self.feedback_file = feedback_file
         self._ensure_feedback_file_exists()
 
     def _ensure_feedback_file_exists(self):
-        """S'assurer que le fichier de feedback existe"""
+        """Ensure that the feedback file exists"""
         os.makedirs(os.path.dirname(self.feedback_file), exist_ok=True)
         if not os.path.exists(self.feedback_file):
             with open(self.feedback_file, "w") as f:
                 json.dump([], f)
 
     def _load_feedback_data(self):
-        """Charger les données de feedback depuis tous les fichiers des 30 derniers jours"""
+        """Load feedback data from all files from the last 30 days"""
         from datetime import datetime, timedelta
         import logging
 
         logger = logging.getLogger(__name__)
         all_feedback = []
 
-        # Calculer les 30 derniers jours
+        # Calculate the last 30 days
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
 
-        logger.info(f"Chargement des feedbacks du {start_date.date()} au {end_date.date()}")
+        logger.info(f"Loading feedbacks from {start_date.date()} to {end_date.date()}")
 
-        # Générer les noms de fichiers pour chaque jour
+        # Generate filenames for each day
         current_date = start_date
         files_found = 0
         while current_date <= end_date:
             date_str = current_date.strftime("%Y-%m-%d")
             feedback_file_path = f"logs/feedback/feedback_{date_str}.json"
 
-            # Charger le fichier s'il existe
+            # Load the file if it exists
             try:
                 if os.path.exists(feedback_file_path):
                     files_found += 1
-                    logger.info(f"Fichier de feedback trouvé: {feedback_file_path}")
+                    logger.info(f"Feedback file found: {feedback_file_path}")
                     with open(feedback_file_path, "r") as f:
                         daily_feedback = json.load(f)
                         if isinstance(daily_feedback, list):
                             all_feedback.extend(daily_feedback)
-                            logger.info(f"Chargé {len(daily_feedback)} feedbacks depuis {feedback_file_path}")
+                            logger.info(f"Loaded {len(daily_feedback)} feedbacks from {feedback_file_path}")
                 else:
-                    logger.debug(f"Fichier non trouvé: {feedback_file_path}")
+                    logger.debug(f"File not found: {feedback_file_path}")
             except (json.JSONDecodeError, IOError) as e:
-                # Ignorer les fichiers corrompus ou inaccessibles
-                logger.error(f"Erreur lors du chargement de {feedback_file_path}: {e}")
+                # Ignore corrupted or inaccessible files
+                logger.error(f"Error loading {feedback_file_path}: {e}")
                 continue
 
             current_date += timedelta(days=1)
 
-        logger.info(f"Total: {files_found} fichiers trouvés, {len(all_feedback)} feedbacks chargés")
+        logger.info(f"Total: {files_found} files found, {len(all_feedback)} feedbacks loaded")
         return all_feedback
 
     def _save_feedback_data(self, data):
-        """Sauvegarder les données de feedback dans le fichier"""
+        """Save feedback data to file"""
         with open(self.feedback_file, "w") as f:
             json.dump(data, f, indent=2, default=str)
 
@@ -130,41 +129,41 @@ class FeedbackSystem:
         self, user_id: str, question: str, answer: str, sources: str, key_suffix: str = ""
     ) -> Optional[Dict]:
         """
-        Afficher le widget de feedback avec pouces pour éviter les problèmes de rerun
+        Display feedback widget with thumbs to avoid rerun issues
 
         Args:
-            user_id: ID utilisateur
-            question: Question posée
-            answer: Réponse donnée
-            sources: Sources utilisées
-            key_suffix: Suffixe pour la clé unique du widget
+            user_id: User ID
+            question: Question asked
+            answer: Answer given
+            sources: Sources used
+            key_suffix: Suffix for unique widget key
 
         Returns:
-            Dictionnaire avec les données de feedback si soumis
+            Dictionary with feedback data if submitted
         """
 
-        # Créer une clé unique basée sur le contenu (plus stable)
+        # Create a unique key based on content (more stable)
         content_hash = abs(hash(f"{question}_{answer}_{key_suffix}"))
         feedback_key = f"feedback_{content_hash}"
 
-        # États persistants pour ce feedback spécifique
+        # Persistent states for this specific feedback
         feedback_submitted_key = f"feedback_submitted_{feedback_key}"
 
-        # Initialiser l'état de soumission
+        # Initialize submission state
         if feedback_submitted_key not in st.session_state:
             st.session_state[feedback_submitted_key] = False
 
-        # Afficher le feedback déjà soumis si disponible
+        # Display already submitted feedback if available
         if st.session_state[feedback_submitted_key]:
             return None
 
-        # Callback simplifié pour traiter le feedback soumis
+        # Simplified callback to handle submitted feedback
         def feedback_callback(response):
             """
-            Callback pour traiter le feedback soumis
+            Callback to handle submitted feedback
 
             Args:
-                response: Réponse du widget de feedback
+                response: Response from feedback widget
             """
             try:
                 # Marquer le feedback comme soumis
@@ -182,66 +181,67 @@ class FeedbackSystem:
                 }
                 feedback_data.append(feedback_entry)
                 self._save_feedback_data(feedback_data)
-                
+
                 # Log pour debug
                 print(f"Feedback sauvegardé: {feedback_entry}")
-                
+
                 # Forcer un rerun pour mettre à jour l'interface
                 st.rerun()
-                
+
             except Exception as e:
                 print(f"Erreur lors de la sauvegarde du feedback: {e}")
                 st.error(f"Erreur lors de la sauvegarde: {e}")
 
         # CSS targeted to make feedback widget background transparent
-        st.markdown(f"""
+        st.markdown(
+            """
         <style>
         /* Target all feedback widget containers */
-        div[data-testid="stVerticalBlock"] div[style*="background"] {{
+        div[data-testid="stVerticalBlock"] div[style*="background"] {
             background: transparent !important;
             background-color: transparent !important;
             border: none !important;
             box-shadow: none !important;
-        }}
-        
+        }
+
         /* Target specifically black backgrounds in feedback widget */
         div[style*="rgb(0, 0, 0)"],
         div[style*="background-color: black"],
         div[style*="background-color: #000"],
-        div[style*="background-color: #000000"] {{
+        div[style*="background-color: #000000"] {
             background: transparent !important;
             background-color: transparent !important;
-        }}
-        
+        }
+
         /* Target main streamlit-feedback container */
         .streamlit-feedback,
         .streamlit-feedback > div,
-        .streamlit-feedback div {{
+        .streamlit-feedback div {
             background: transparent !important;
             background-color: transparent !important;
             border: none !important;
             box-shadow: none !important;
-        }}
-        
+        }
+
         /* Force transparency on all dark background elements */
         [style*="background-color: rgb(0, 0, 0)"],
-        [style*="background: rgb(0, 0, 0)"] {{
+        [style*="background: rgb(0, 0, 0)"] {
             background: transparent !important;
             background-color: transparent !important;
-        }}
-        
+        }
+
         /* Style pour le titre du feedback */
-        .feedback-title {{
+        .feedback-title {
             color: #888;
             font-size: 0.8rem;
             font-weight: 400;
             margin: 0.5rem 0 0.3rem 0;
             padding-top: 0.5rem;
             border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }}
-        
+        }
+
         /* Boutons du feedback - VISIBLES avec style */
-        button[kind="secondary"] {{
+        button[kind="secondary"] {
             background: rgba(46, 134, 171, 0.1) !important;
             background-color: rgba(46, 134, 171, 0.1) !important;
             color: #2E86AB !important;
@@ -252,18 +252,18 @@ class FeedbackSystem:
             font-size: 0.85rem !important;
             font-weight: 500 !important;
             transition: all 0.2s ease !important;
-        }}
-        
-        button[kind="secondary"]:hover {{
+        }
+
+        button[kind="secondary"]:hover {
             background: rgba(46, 134, 171, 0.2) !important;
             background-color: rgba(46, 134, 171, 0.2) !important;
             color: #FFFFFF !important;
             border-color: #2E86AB !important;
             transform: translateY(-1px) !important;
-        }}
-        
+        }
+
         /* Boutons avec emojis (👍👎) */
-        button[title*="👍"], button[title*="👎"] {{
+        button[title*="👍"], button[title*="👎"] {
             background: rgba(46, 134, 171, 0.1) !important;
             background-color: rgba(46, 134, 171, 0.1) !important;
             color: #2E86AB !important;
@@ -274,20 +274,24 @@ class FeedbackSystem:
             font-size: 1rem !important;
             min-width: 50px !important;
             min-height: 35px !important;
-        }}
-        
-        button[title*="👍"]:hover, button[title*="👎"]:hover {{
+        }
+
+        button[title*="👍"]:hover, button[title*="👎"]:hover {
             background: rgba(46, 134, 171, 0.2) !important;
             background-color: rgba(46, 134, 171, 0.2) !important;
             border-color: #2E86AB !important;
             transform: translateY(-1px) !important;
-        }}
+        }
         </style>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         # Titre simple et intégré
-        st.markdown('<div class="feedback-title">💬 Cette réponse vous a-t-elle été utile ?</div>', unsafe_allow_html=True)
-        
+        st.markdown(
+            '<div class="feedback-title">💬 Cette réponse vous a-t-elle été utile ?</div>', unsafe_allow_html=True
+        )
+
         # Afficher le widget de feedback si pas encore soumis
         try:
             feedback_response = streamlit_feedback(
@@ -297,7 +301,7 @@ class FeedbackSystem:
                 key=f"feedback_widget_{content_hash}",
                 on_submit=feedback_callback,
             )
-            
+
             return feedback_response
         except Exception as e:
             st.error(f"Erreur avec le widget de feedback: {e}")
@@ -331,10 +335,10 @@ class FeedbackSystem:
                     if entry_date >= cutoff_date:
                         recent_feedback.append(entry)
                 except (KeyError, ValueError):
-                    # Inclure les entrées sans timestamp valide
+                    # Include entries without valid timestamp
                     recent_feedback.append(entry)
         else:
-            # Utiliser toutes les données déjà filtrées par _load_feedback_data
+            # Use all data already filtered by _load_feedback_data
             recent_feedback = feedback_data
 
         total = len(recent_feedback)
@@ -345,7 +349,7 @@ class FeedbackSystem:
             feedback_obj = entry.get("feedback", {})
             score = feedback_obj.get("score")
 
-            # Gérer les formats emoji ('👍'/'👎') et numérique (1/0)
+            # Handle emoji ('👍'/'👎') and numeric (1/0) formats
             if score == 1 or score == "👍":
                 positive += 1
             elif score == 0 or score == "👎":
@@ -361,11 +365,11 @@ class FeedbackSystem:
         }
 
     def get_all_feedback(self):
-        """Obtenir tous les feedbacks enregistrés"""
+        """Get all recorded feedbacks"""
         return self._load_feedback_data()
 
     def get_feedback_by_user(self, user_id: str):
-        """Obtenir les feedbacks d'un utilisateur spécifique"""
+        """Get feedbacks from a specific user"""
         all_feedback = self._load_feedback_data()
         return [entry for entry in all_feedback if entry.get("user_id") == user_id]
 
@@ -545,11 +549,7 @@ class FeaturesManager:
     def render_feedback_widget(self, question: str, answer: str, sources: str = "", key_suffix: str = ""):
         """Render feedback widget with thumbs (👍/👎) for a response."""
         return self.feedback_system.render_feedback_widget(
-            user_id=self.user_id,
-            question=question,
-            answer=answer,
-            sources=sources,
-            key_suffix=key_suffix
+            user_id=self.user_id, question=question, answer=answer, sources=sources, key_suffix=key_suffix
         )
 
     def get_feedback_statistics(self, days: int = 30) -> Dict[str, Any]:
@@ -557,21 +557,7 @@ class FeaturesManager:
         return self.feedback_system.get_feedback_statistics(days)
 
     def add_feedback_widget(self, st, question: str, answer: str, sources: str, key_suffix: str = ""):
-        """Méthode compatible avec l'ancienne version pour ajouter un widget de feedback"""
+        """Compatible method with old version to add a feedback widget"""
         return self.feedback_system.render_feedback_widget(
-            user_id=self.user_id,
-            question=question,
-            answer=answer,
-            sources=sources,
-            key_suffix=key_suffix
+            user_id=self.user_id, question=question, answer=answer, sources=sources, key_suffix=key_suffix
         )
-
-    def get_dashboard_data(self) -> Dict[str, Any]:
-        """Get data for admin dashboard."""
-        return {
-            "conversation_stats": self.analyzer.get_conversation_stats(),
-            "feedback_stats": self.get_feedback_statistics(),  # Utilise le nouveau système
-            "performance_stats": self.performance_tracker.get_performance_stats(),
-            "recent_queries": self.query_history.get_recent_queries(10),
-            "user_history": self.query_history.get_user_history(self.user_id, 5),
-        }
