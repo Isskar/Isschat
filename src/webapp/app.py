@@ -817,12 +817,15 @@ def chat_page():
     st.session_state["page"] = "chat"
 
     # Enhanced header with icon
-    st.markdown('''
+    st.markdown(
+        """
     <div class="welcome-container">
         <h2>🤖 Bienvenue sur ISSCHAT</h2>
         <p>Votre assistant intelligent pour toutes vos questions</p>
     </div>
-    ''', unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # Load model
     model = get_model()
@@ -951,25 +954,29 @@ def chat_page():
 def performance_page():
     """Performance dashboard page"""
     st.session_state["page"] = "performance"
-    
+
     # Enhanced header
-    st.markdown('''
+    st.markdown(
+        """
     <div class="page-header">
         📊 Dashboard de Performance
     </div>
-    ''', unsafe_allow_html=True)
-    
+    """,
+        unsafe_allow_html=True,
+    )
+
     if render_performance_dashboard and get_data_manager:
         data_manager = get_data_manager()
-        
+
         # Create dashboard grid
         st.markdown('<div class="dashboard-grid">', unsafe_allow_html=True)
-        
+
         # Performance metrics in cards
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
-            st.markdown('''
+            st.markdown(
+                """
             <div class="dashboard-card">
                 <h3>⚡ Temps de Réponse</h3>
                 <div class="perf-metric">
@@ -977,10 +984,13 @@ def performance_page():
                     <p>Moyenne</p>
                 </div>
             </div>
-            ''', unsafe_allow_html=True)
-        
+            """,
+                unsafe_allow_html=True,
+            )
+
         with col2:
-            st.markdown('''
+            st.markdown(
+                """
             <div class="dashboard-card">
                 <h3>💬 Requêtes Traitées</h3>
                 <div class="perf-metric">
@@ -988,10 +998,13 @@ def performance_page():
                     <p>Aujourd'hui</p>
                 </div>
             </div>
-            ''', unsafe_allow_html=True)
-        
+            """,
+                unsafe_allow_html=True,
+            )
+
         with col3:
-            st.markdown('''
+            st.markdown(
+                """
             <div class="dashboard-card">
                 <h3>✅ Taux de Succès</h3>
                 <div class="perf-metric">
@@ -999,62 +1012,79 @@ def performance_page():
                     <p>Cette semaine</p>
                 </div>
             </div>
-            ''', unsafe_allow_html=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-        
+            """,
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
         # Render the actual dashboard
         render_performance_dashboard(data_manager)
     else:
-        st.markdown('''
+        st.markdown(
+            """
         <div class="dashboard-card">
             <h3>⚠️ Dashboard Indisponible</h3>
             <p>Le système de monitoring des performances n'est pas disponible actuellement.</p>
         </div>
-        ''', unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
 
 @login_required
 def history_page():
     """Conversation history page"""
     st.session_state["page"] = "history"
-    
+
     # Enhanced header
-    st.markdown('''
+    st.markdown(
+        """
     <div class="page-header">
         📚 Historique des Conversations
     </div>
-    ''', unsafe_allow_html=True)
-    
+    """,
+        unsafe_allow_html=True,
+    )
+
     try:
         if get_history_manager:
             history_manager = get_history_manager()
             user_id = st.session_state.get("user", {}).get("email", "anonymous")
-            
+
             # Add some intro text
-            st.markdown('''
+            st.markdown(
+                """
             <div class="dashboard-card">
                 <h3>💬 Vos Conversations Récentes</h3>
                 <p>Retrouvez et réutilisez vos questions précédentes</p>
             </div>
-            ''', unsafe_allow_html=True)
-            
+            """,
+                unsafe_allow_html=True,
+            )
+
             # Render the history with enhanced styling
             history_manager.render_history_page(user_id)
         else:
-            st.markdown('''
+            st.markdown(
+                """
             <div class="dashboard-card">
                 <h3>⚠️ Historique Indisponible</h3>
                 <p>Le système d'historique des conversations n'est pas disponible actuellement.</p>
             </div>
-            ''', unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
     except Exception as e:
-        st.markdown('''
+        st.markdown(
+            """
         <div class="dashboard-card">
             <h3>❌ Erreur de Chargement</h3>
             <p>Une erreur s'est produite lors du chargement de l'historique.</p>
         </div>
-        ''', unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
         st.error(f"Détails de l'erreur: {e}")
         logger.error(f"History error: {e}")
 
@@ -1076,35 +1106,44 @@ def render_sidebar():
     """Render modern sidebar"""
     with st.sidebar:
         # Enhanced logo and title
-        st.markdown('''
+        st.markdown(
+            """
         <div class="sidebar-section">
             <h2 style="color: #2E86AB; margin: 0; font-size: 1.8rem;">🤖 ISSCHAT</h2>
             <p style="color: #888; margin: 0.5rem 0 0 0; font-style: italic;">Assistant Intelligent</p>
         </div>
-        ''', unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         # User information with enhanced styling
         if "user" in st.session_state:
             user_email = st.session_state["user"]["email"]
             first_name = user_email.split("@")[0].split(".")[0].capitalize()
-            st.markdown(f'''
+            st.markdown(
+                f"""
             <div class="sidebar-section">
                 <h4 style="color: #2E86AB; margin: 0;">👤 Utilisateur</h4>
                 <p style="color: #6A994E; margin: 0.25rem 0 0 0; font-weight: 600;">Connecté: {first_name}</p>
                 <p style="color: #888; margin: 0; font-size: 0.8rem;">{user_email}</p>
             </div>
-            ''', unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
 
         # Enhanced navigation with icons
-        st.markdown('''
+        st.markdown(
+            """
         <div class="sidebar-section">
             <h4 style="color: #2E86AB; margin: 0 0 1rem 0;">🧭 Navigation</h4>
         </div>
-        ''', unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         # Current page indicator
         current_page = st.session_state.get("page", "chat")
-        
+
         # Chat button
         chat_type = "primary" if current_page == "chat" else "secondary"
         if st.button("💬 Chat", use_container_width=True, type=chat_type):
