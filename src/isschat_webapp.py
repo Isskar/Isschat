@@ -34,9 +34,6 @@ except Exception as e:
 # Import custom modules
 from src.help_desk import HelpDesk
 from src.auth import (
-    get_all_users,
-    add_user,
-    delete_user,
     login_required,
     admin_required,
 )
@@ -213,7 +210,7 @@ def chat_page():
     # Sidebar for advanced options
     with st.sidebar:
         st.subheader("Advanced Options")
-        show_feedback = st.toggle("Response feedback", value=True)
+        show_feedback = st.toggle("Enable feedback", value=True)
 
         # Query history
         if st.button("Query History"):
@@ -237,9 +234,23 @@ def chat_page():
             }
         ]  # ;)
 
-    # Display message history
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+    # Display message history with feedback widgets
+    for i, msg in enumerate(st.session_state.messages):
+        if msg["role"] == "user":
+            st.chat_message("user").write(msg["content"])
+        else:
+            with st.chat_message("assistant"):
+                st.write(msg["content"])
+
+                # Add feedback widget for assistant messages (except welcome)
+                if i > 0 and show_feedback and "question_data" in msg:
+                    features.add_feedback_widget(
+                        st,
+                        msg["question_data"]["question"],
+                        msg["question_data"]["answer"],
+                        msg["question_data"]["sources"],
+                        key_suffix=f"history_{i}",
+                    )
 
     # Check if there's a question to reuse from history
     if "reuse_question" in st.session_state:
@@ -261,12 +272,17 @@ def chat_page():
             if sources:
                 st.chat_message("assistant").write(sources)
 
-            # Add feedback widget if enabled
-            if show_feedback:
-                features._add_feedback_widget(st, prompt, result, sources)
+            # Add to message history with question data for feedback
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_content,
+                    "question_data": {"question": prompt, "answer": result, "sources": sources},
+                }
+            )
 
-            # Add to message history
-            st.session_state.messages.append({"role": "assistant", "content": response_content})
+            # Force rerun to display feedback widget in history
+            st.rerun()
 
     # Chat interface
     if prompt := st.chat_input("Ask your question here..."):
@@ -288,12 +304,17 @@ def chat_page():
             if sources:
                 st.chat_message("assistant").write(sources)
 
-            # Add feedback widget if enabled
-            if show_feedback:
-                features._add_feedback_widget(st, prompt, result, sources)
+            # Add to message history with question data for feedback
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_content,
+                    "question_data": {"question": prompt, "answer": result, "sources": sources},
+                }
+            )
 
-            # Add to message history
-            st.session_state.messages.append({"role": "assistant", "content": response_content})
+            # Force rerun to display feedback widget in history
+            st.rerun()
 
 
 @login_required
@@ -325,63 +346,12 @@ def admin_page():
     """Display the administration page"""
     st.title("Administration Dashboard")
 
-    # Create tabs to separate different features
-    tab1, tab2 = st.tabs(["User Management", "Analytics and Performance"])
-
-    with tab1:
-        st.header("User Management")
-
-        # Form to add a user
-        with st.expander("Add User", expanded=True):
-            with st.form("add_user_form"):
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
-                is_admin = st.checkbox("Administrator")
-                submit = st.form_submit_button("Add")
-
-                if submit and email and password:
-                    success = add_user(email, password, is_admin)
-                    if success:
-                        st.success(f"User {email} added successfully.")
-                    else:
-                        st.error(f"Email {email} already exists.")
-
-        # User list
-        st.subheader("User List")
-        users = get_all_users()
-
-        if users:
-            # Create a table to display users
-            cols = st.columns([3, 2, 1, 1])
-            cols[0].write("**Email**")
-            cols[1].write("**Creation Date**")
-            cols[2].write("**Admin**")
-            cols[3].write("**Actions**")
-
-            for user in users:
-                cols = st.columns([3, 2, 1, 1])
-                cols[0].write(user["email"])
-                cols[1].write(user["created_at"])
-                cols[2].write("Yes" if user["is_admin"] else "No")
-
-                # Don't allow deleting the currently logged in user
-                if user["id"] != st.session_state["user"]["id"]:
-                    if cols[3].button("Delete", key=f"delete_{user['id']}"):
-                        delete_user(user["id"])
-                        st.success(f"User {user['email']} deleted.")
-                        st.rerun()
-                else:
-                    cols[3].write("(You)")
-        else:
-            st.info("No users found.")
-
-    with tab2:
-        # Check if the features manager is initialized
-        if "features_manager" in st.session_state:
-            features = st.session_state["features_manager"]
-            features.render_admin_dashboard(st)
-        else:
-            st.warning("Please interact with the chatbot first to initialize the analytics features.")
+    # Check if the features manager is initialized
+    if "features_manager" in st.session_state:
+        features = st.session_state["features_manager"]
+        features.render_admin_dashboard(st)
+    else:
+        st.warning("Please interact with the chatbot first to initialize the analytics features.")
 
     # Return button
     if st.button("Return to chat"):

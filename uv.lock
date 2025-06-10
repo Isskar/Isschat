@@ -798,6 +798,7 @@ dependencies = [
     { name = "seaborn" },
     { name = "sentence-transformers" },
     { name = "streamlit" },
+    { name = "streamlit-feedback" },
     { name = "torch" },
     { name = "tqdm" },
     { name = "transformers" },
@@ -834,6 +835,7 @@ requires-dist = [
     { name = "seaborn", specifier = ">=0.12.0" },
     { name = "sentence-transformers", specifier = ">=2.2.2" },
     { name = "streamlit", specifier = ">=1.31.0" },
+    { name = "streamlit-feedback", specifier = ">=0.1.4" },
     { name = "torch", specifier = ">=2.0.0,<=2.7.0" },
     { name = "tqdm", specifier = ">=4.65.0" },
     { name = "transformers", specifier = ">=4.30.0" },
@@ -2408,6 +2410,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f0/46/9b3f73886f82d27849ce1e7a74ae7c39f5323e46da0b6e8847ad4c25f44c/streamlit-1.45.1.tar.gz", hash = "sha256:e37d56c0af5240dbc240976880e81366689c290a559376417246f9b3f51b4217", size = 9463953, upload-time = "2025-05-12T20:40:30.562Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/13/e6/69fcbae3dd2fcb2f54283a7cbe03c8b944b79997f1b526984f91d4796a02/streamlit-1.45.1-py3-none-any.whl", hash = "sha256:9ab6951585e9444672dd650850f81767b01bba5d87c8dac9bc2e1c859d6cc254", size = 9856294, upload-time = "2025-05-12T20:40:27.875Z" },
+]
+
+[[package]]
+name = "streamlit-feedback"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "streamlit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e0/2f/56c1b43a8b5e442248366094699dc74f4fdbcfb84c3b74764562dabb94b9/streamlit-feedback-0.1.4.tar.gz", hash = "sha256:4c34429aaea308cbf902bb353260600ecab6f455bc60faf34b8083492523aa8b", size = 741285, upload-time = "2025-01-13T08:33:10.14Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5a/e4/67fda9a746aa4d1684dfef7747e9968cc1fb36832cc686dd3276fc4d8bd5/streamlit_feedback-0.1.4-py3-none-any.whl", hash = "sha256:8e760b16ecaf2f7024f277fe6bc94da63e87a132643ecfc462666c4524a3f5b4", size = 5684699, upload-time = "2025-01-13T08:33:04.766Z" },
 ]
 
 [[package]]
