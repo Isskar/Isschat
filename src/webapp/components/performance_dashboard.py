@@ -307,9 +307,14 @@ class PerformanceDashboard:
     def _is_today(self, timestamp_str: str) -> bool:
         """Check if timestamp is from today."""
         try:
+            if timestamp_str is None:
+                logger.warning("Received None timestamp in _is_today")
+                return False
+            logger.debug(f"Processing timestamp: {timestamp_str} (type: {type(timestamp_str)})")
             dt = datetime.fromisoformat(timestamp_str)
             return dt.date() == datetime.now().date()
-        except:
+        except Exception as e:
+            logger.error(f"Error processing timestamp '{timestamp_str}': {e}")
             return False
 
     def _calculate_avg_response_time(self, performance_data: List[Dict]) -> float:
@@ -319,14 +324,49 @@ class PerformanceDashboard:
         return sum(p.get("duration_ms", 0) for p in performance_data) / len(performance_data)
 
     def _calculate_user_satisfaction(self, conversations: List[Dict]) -> float:
-        """Calculate user satisfaction score."""
-        ratings = []
-        for conv in conversations:
-            feedback = conv.get("feedback")
-            if feedback and feedback.get("rating"):
-                ratings.append(feedback["rating"])
-
-        return sum(ratings) / len(ratings) if ratings else 3.5
+        """Calculate user satisfaction score from feedback logs."""
+        import json
+        import os
+        import glob
+        from datetime import datetime, timedelta
+        
+        # Charger les feedbacks depuis les logs
+        feedback_pattern = "logs/feedback/feedback_*.json"
+        feedback_files = glob.glob(feedback_pattern)
+        
+        all_feedback = []
+        for file_path in feedback_files:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    feedback_data = json.load(f)
+                    if isinstance(feedback_data, list):
+                        all_feedback.extend(feedback_data)
+            except (FileNotFoundError, json.JSONDecodeError):
+                continue
+        
+        if not all_feedback:
+            return 3.5  # Score par défaut
+        
+        # Calculer le taux de satisfaction (feedbacks positifs / total)
+        positive_count = 0
+        total_count = 0
+        
+        for entry in all_feedback:
+            feedback = entry.get("feedback", {})
+            score = feedback.get("score")
+            if score is not None:
+                total_count += 1
+                if score == 1:  # Feedback positif
+                    positive_count += 1
+        
+        if total_count == 0:
+            return 3.5
+        
+        # Convertir le pourcentage en score sur 5 (0-100% -> 1-5)
+        satisfaction_percentage = (positive_count / total_count) * 100
+        satisfaction_score = 1 + (satisfaction_percentage / 100) * 4  # 1-5 scale
+        
+        return satisfaction_score
 
     def _calculate_health_score(self, system_metrics: Dict, avg_response_time: float) -> float:
         """Calculate overall system health score."""
@@ -471,12 +511,24 @@ class PerformanceDashboard:
         # Extract keywords from questions
         all_words = []
         for conv in conversations:
-            words = conv.get("question", "").lower().split()
-            filtered_words = [
-                word.strip(".,!?;:")
-                for word in words
-                if len(word) > 3 and word not in ["what", "how", "when", "where", "why"]
-            ]
+            question = conv.get("question", "")
+            logger.debug(f"Processing question: {question} (type: {type(question)})")
+            if question is None:
+                logger.warning(f"Found None question in conversation: {conv}")
+                question = ""
+            words = question.lower().split()
+            filtered_words = []
+            for word in words:
+                if word is None:
+                    logger.warning(f"Found None word in conversation question: {conv.get('question')}")
+                    continue
+                try:
+                    stripped_word = word.strip(".,!?;:")
+                    if len(stripped_word) > 3 and stripped_word not in ["what", "how", "when", "where", "why"]:
+                        filtered_words.append(stripped_word)
+                except AttributeError as e:
+                    logger.error(f"Error stripping word '{word}' (type: {type(word)}): {e}")
+                    continue
             all_words.extend(filtered_words)
 
         if all_words:
@@ -523,7 +575,21 @@ class PerformanceDashboard:
     def _filter_by_days(self, data: List[Dict], days: int) -> List[Dict]:
         """Filter data by number of days."""
         cutoff = datetime.now() - timedelta(days=days)
-        return [item for item in data if datetime.fromisoformat(item["timestamp"]) >= cutoff]
+        filtered_data = []
+        for item in data:
+            try:
+                timestamp = item.get("timestamp")
+                if timestamp is None:
+                    logger.warning(f"Found None timestamp in data item: {item}")
+                    continue
+                logger.debug(f"Processing timestamp in filter: {timestamp} (type: {type(timestamp)})")
+                dt = datetime.fromisoformat(timestamp)
+                if dt >= cutoff:
+                    filtered_data.append(item)
+            except Exception as e:
+                logger.error(f"Error processing timestamp '{item.get('timestamp')}' in filter: {e}")
+                continue
+        return filtered_data
 
     def _render_performance_timeline(self, performance_data: List[Dict]):
         """Render performance timeline."""
@@ -606,26 +672,89 @@ class PerformanceDashboard:
                 st.metric("P99", f"{p99:.0f}ms")
 
     def _render_feedback_analysis(self, conversations: List[Dict]):
-        """Render feedback analysis."""
+        """Render feedback analysis from logs."""
+        import json
+        import glob
+        from collections import Counter
+        
         st.markdown("#### 📝 User Feedback Analysis")
 
-        ratings = []
-        for conv in conversations:
-            feedback = conv.get("feedback")
-            if feedback and feedback.get("rating"):
-                ratings.append(feedback["rating"])
+        # Charger les feedbacks depuis les logs
+        feedback_pattern = "logs/feedback/feedback_*.json"
+        feedback_files = glob.glob(feedback_pattern)
+        
+        all_feedback = []
+        for file_path in feedback_files:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    feedback_data = json.load(f)
+                    if isinstance(feedback_data, list):
+                        all_feedback.extend(feedback_data)
+            except (FileNotFoundError, json.JSONDecodeError):
+                continue
 
-        if ratings:
-            avg_rating = sum(ratings) / len(ratings)
-            rating_dist = Counter(ratings)
-
-            st.metric("Average Rating", f"{avg_rating:.1f}/5.0")
-
-            for rating in range(1, 6):
-                count = rating_dist.get(rating, 0)
-                st.write(f"{'⭐' * rating}: {count} reviews")
+        if all_feedback:
+            # Analyser les scores de feedback (0/1)
+            positive_count = 0
+            negative_count = 0
+            total_count = 0
+            
+            for entry in all_feedback:
+                feedback = entry.get("feedback", {})
+                score = feedback.get("score")
+                if score is not None:
+                    total_count += 1
+                    if score == 1:
+                        positive_count += 1
+                    elif score == 0:
+                        negative_count += 1
+            
+            if total_count > 0:
+                satisfaction_rate = (positive_count / total_count) * 100
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Feedbacks Positifs", positive_count)
+                with col2:
+                    st.metric("Feedbacks Négatifs", negative_count)
+                with col3:
+                    st.metric("Taux de Satisfaction", f"{satisfaction_rate:.1f}%")
+                
+                # Afficher la distribution
+                st.write("**Distribution des feedbacks:**")
+                st.write(f"👍 Positifs: {positive_count} ({positive_count/total_count*100:.1f}%)")
+                st.write(f"👎 Négatifs: {negative_count} ({negative_count/total_count*100:.1f}%)")
+                
+                # Afficher quelques commentaires récents
+                recent_comments = []
+                for entry in all_feedback[-5:]:  # 5 derniers
+                    feedback = entry.get("feedback", {})
+                    logger.debug(f"Processing feedback entry: {entry}")
+                    comment_raw = feedback.get("text", "")
+                    logger.debug(f"Raw comment: {comment_raw} (type: {type(comment_raw)})")
+                    
+                    if comment_raw is None:
+                        logger.warning(f"Found None comment in feedback: {feedback}")
+                        comment = ""
+                    else:
+                        try:
+                            comment = comment_raw.strip()
+                        except AttributeError as e:
+                            logger.error(f"Error stripping comment '{comment_raw}' (type: {type(comment_raw)}): {e}")
+                            comment = str(comment_raw) if comment_raw is not None else ""
+                    
+                    if comment:
+                        score_emoji = "👍" if feedback.get("score") == 1 else "👎"
+                        recent_comments.append(f"{score_emoji} {comment}")
+                
+                if recent_comments:
+                    st.write("**Commentaires récents:**")
+                    for comment in recent_comments:
+                        st.write(f"- {comment}")
+            else:
+                st.info("Aucun feedback avec score trouvé")
         else:
-            st.info("No feedback data available")
+            st.info("Aucune donnée de feedback disponible dans les logs")
 
     def _render_response_quality_metrics(self, conversations: List[Dict]):
         """Render response quality metrics."""

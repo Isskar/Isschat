@@ -49,14 +49,6 @@ st.markdown(
         border: 1px solid #404040;
     }
     
-    .chat-container {
-        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        border: 1px solid #404040;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    }
     
     .status-healthy {
         color: #6A994E;
@@ -342,12 +334,7 @@ st.markdown(
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
     }
     
-    /* Chat message styling */
-    .stChatMessage {
-        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
-        border-radius: 12px;
-        margin: 0.5rem 0;
-/* Enhanced chat message styling */
+    /* Enhanced chat message styling */
     .stChatMessage {
         background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
         border-radius: 12px !important;
@@ -477,18 +464,6 @@ st.markdown(
     .status-error {
         color: #dc3545;
         font-weight: 600;
-    }
-    .sidebar-section {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-    }
-    .chat-container {
-        background-color: #ffffff;
-        border-radius: 10px;
-        padding: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 </style>
 """,
@@ -893,9 +868,6 @@ def chat_page():
             st.markdown('<span class="status-error">Legacy architecture</span>', unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Chat interface in modern container
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-
     # Welcome message
     user_email = st.session_state.get("user", {}).get("email", "")
     first_name = user_email.split("@")[0].split(".")[0].capitalize()
@@ -905,9 +877,26 @@ def chat_page():
     if "messages" not in st.session_state:
         st.session_state["messages"] = [{"role": "assistant", "content": welcome_message}]
 
-    # Display message history
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+    # Chat interface in modern container
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+
+    # Display message history with feedback widgets (comme dans l'ancienne version)
+    for i, msg in enumerate(st.session_state.messages):
+        if msg["role"] == "user":
+            st.chat_message("user").write(msg["content"])
+        else:
+            with st.chat_message("assistant"):
+                st.write(msg["content"])
+                
+                # Add feedback widget pour les messages avec question_data (vraies réponses)
+                if (show_feedback and features and "question_data" in msg):
+                    features.add_feedback_widget(
+                        st,
+                        question=msg["question_data"]["question"],
+                        answer=msg["question_data"]["answer"],
+                        sources=msg["question_data"]["sources"],
+                        key_suffix=f"history_{i}"
+                    )
 
     # Handle reused questions from history
     if "reuse_question" in st.session_state:
@@ -928,15 +917,22 @@ def chat_page():
             # Save data
             save_conversation_data(prompt, result, sources, response_time_ms)
 
-            # Feedback widget
-            if show_feedback and features:
-                features.render_feedback_widget(f"resp_{len(st.session_state.messages)}")
-
-            # Add to history
+            # Add to history with question data for feedback (comme dans l'ancienne version)
             response_content = result
             if sources and show_sources:
                 response_content += "\n\n" + sources
-            st.session_state.messages.append({"role": "assistant", "content": response_content})
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response_content,
+                "question_data": {
+                    "question": prompt,
+                    "answer": result,
+                    "sources": sources if sources else ""
+                }
+            })
+            
+            # Force rerun to display feedback widget in history (comme dans l'ancienne version)
+            st.rerun()
 
     # Input interface
     if prompt := st.chat_input("Ask your question here..."):
@@ -957,15 +953,22 @@ def chat_page():
             # Save data
             save_conversation_data(prompt, result, sources, response_time_ms)
 
-            # Feedback widget
-            if show_feedback and features:
-                features.render_feedback_widget(f"resp_{len(st.session_state.messages)}")
-
-            # Add to history
+            # Add to history with question data for feedback (comme dans l'ancienne version)
             response_content = result
             if sources and show_sources:
                 response_content += "\n\n" + sources
-            st.session_state.messages.append({"role": "assistant", "content": response_content})
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": response_content,
+                "question_data": {
+                    "question": prompt,
+                    "answer": result,
+                    "sources": sources if sources else ""
+                }
+            })
+            
+            # Force rerun to display feedback widget in history (comme dans l'ancienne version)
+            st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
