@@ -42,7 +42,6 @@ dependencies = [
     "azure-keyvault-secrets>=4.9.0",
     "azure-identity>=1.23.0",
     "plotly>=6.1.2",
-    "psutils>=3.3.10",
     "streamlit-feedback>=0.1.4",
 ]
 
