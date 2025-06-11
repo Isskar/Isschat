@@ -239,11 +239,6 @@ def chat_page():
         st.subheader("Advanced Options")
         show_feedback = st.toggle("Enable feedback", value=True)
 
-        # Query history
-        if st.button("Query History"):
-            st.session_state["page"] = "history"
-            st.rerun()
-
     # Display main interface
     st.subheader("Ask questions about our Confluence documentation")
 
