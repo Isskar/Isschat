@@ -12,7 +12,6 @@ from src.rag_system.query_processor import QueryProcessor
 class RAGPipeline:
     """
     Main RAG pipeline that orchestrates retrieval and generation.
-    This is the new architecture equivalent of HelpDesk.
     """
 
     def __init__(self, retriever: BaseRetriever, generator: BaseGenerator):
@@ -152,7 +151,7 @@ class RAGPipelineFactory:
     @staticmethod
     def create_default_pipeline() -> RAGPipeline:
         """
-        Create a default RAG pipeline with FAISS retriever and OpenRouter generator.
+        Create a default RAG pipeline.
 
         Returns:
             Configured RAGPipeline
