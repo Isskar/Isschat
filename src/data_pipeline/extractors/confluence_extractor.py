@@ -3,7 +3,8 @@ Confluence extractor with sub-pages support.
 """
 
 from typing import List, Dict, Any, Set
-from .base_extractor import BaseExtractor, Document
+from .base_extractor import BaseExtractor
+from src.core.interfaces import Document
 
 
 class ConfluenceExtractor(BaseExtractor):
@@ -187,15 +188,37 @@ class ConfluenceExtractor(BaseExtractor):
                 raise ValueError(f"Missing required configuration fields: {missing_fields}")
 
             # Initialize Confluence connection
-            confluence = Confluence(
-                url=self.base_url,
-                username=self.username,
-                password=self.api_token,
-                cloud=True,
-            )
+            print("🔍 Initializing Confluence connection...")
+            try:
+                confluence = Confluence(
+                    url=self.base_url,
+                    username=self.username,
+                    password=self.api_token,
+                    cloud=True,
+                )
+                print("✅ Confluence connection initialized")
+            except Exception as conn_error:
+                print(f"❌ Failed to initialize Confluence connection: {conn_error}")
+                raise
+
+            # Test connection
+            print("🔍 Testing Confluence connection...")
+            try:
+                # Test with a simple API call
+                spaces = confluence.get_all_spaces(limit=1)
+                print(f"✅ Connection test successful, found {len(spaces)} spaces")
+            except Exception as test_error:
+                print(f"❌ Connection test failed: {test_error}")
+                raise
 
             # Retrieve all pages (including sub-pages)
-            all_pages = self._get_all_pages_recursive(confluence, self.space_key)
+            print(f"🔍 Retrieving pages from space: {self.space_key}")
+            try:
+                all_pages = self._get_all_pages_recursive(confluence, self.space_key)
+                print(f"✅ Retrieved {len(all_pages)} pages from Confluence")
+            except Exception as pages_error:
+                print(f"❌ Failed to retrieve pages: {pages_error}")
+                raise
 
             # Analyze page hierarchy
             root_pages = [p for p in all_pages if not p.get("ancestors", [])]

@@ -78,6 +78,22 @@ def get_model(rebuild_db=False):
         # Create the model
         try:
             pipeline = RAGPipelineFactory.create_default_pipeline()
+
+            # 🔧 FIX: Force vector DB construction if needed
+            if rebuild_db:
+                st.info("🚀 Building vector database from Confluence...")
+                # Force initialization of the retriever with rebuild
+                if hasattr(pipeline.retriever, "_initialize_db"):
+                    pipeline.retriever._initialize_db(force_rebuild=True)
+                else:
+                    # Fallback: trigger retrieval to force DB construction
+                    try:
+                        pipeline.retriever.retrieve("test initialization", top_k=1)
+                    except Exception as init_error:
+                        st.error(f"Failed to initialize vector database: {init_error}")
+                        raise
+                st.success("✅ Vector database successfully built!")
+
             return pipeline
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")

@@ -159,8 +159,8 @@ class PostProcessor:
         Returns:
             Dict: Processing statistics
         """
-        original_total_length = sum(len(doc.content) for doc in original_docs)
-        processed_total_length = sum(len(doc.content) for doc in processed_docs)
+        original_total_length = sum(len(doc.page_content) for doc in original_docs)
+        processed_total_length = sum(len(doc.page_content) for doc in processed_docs)
 
         return {
             "original_count": len(original_docs),

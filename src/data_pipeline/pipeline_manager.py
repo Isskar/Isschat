@@ -100,32 +100,32 @@ class PipelineManager:
 
         # Step 5: Generate embeddings
         print("Step 5: Generating embeddings...")
-        embeddings = self.embedder.embed_documents(documents)
-        self.stats["embedding"] = {
-            "document_count": len(documents),
-            "embedding_count": len(embeddings),
-            "embedding_dimension": self.embedder.get_embedding_dimension(),
-        }
+        print(f"🔍 About to embed {len(documents)} documents")
+
+        try:
+            embeddings = self.embedder.embed_documents(documents)
+            print(f"🔍 Successfully generated {len(embeddings)} embeddings")
+
+            if embeddings:
+                print(f"🔍 First embedding shape: {len(embeddings[0]) if embeddings[0] else 'None'}")
+
+            self.stats["embedding"] = {
+                "document_count": len(documents),
+                "embedding_count": len(embeddings),
+                "embedding_dimension": self.embedder.get_embedding_dimension(),
+            }
+        except Exception as e:
+            print(f"❌ Embedding generation failed: {str(e)}")
+            print(f"🔍 Error type: {type(e)}")
+            import traceback
+
+            print(f"🔍 Traceback: {traceback.format_exc()}")
+            raise
 
         # Step 6: Store in vector database
         print("Step 6: Storing in vector database...")
 
-        # DEBUG: Check document structure
-        if documents:
-            print(f"🔍 First document type: {type(documents[0])}")
-            print(f"🔍 First document attributes: {dir(documents[0])}")
-            if hasattr(documents[0], "content"):
-                print("🔍 Document has 'content' attribute")
-            if hasattr(documents[0], "page_content"):
-                print("🔍 Document has 'page_content' attribute")
-            print(f"🔍 First document dict: {documents[0].to_dict()}")
-
         doc_dicts = [doc.to_dict() for doc in documents]
-        print(f"🔍 Number of documents to store: {len(doc_dicts)}")
-        print(f"🔍 Number of embeddings: {len(embeddings)}")
-
-        if doc_dicts:
-            print(f"🔍 First doc_dict keys: {list(doc_dicts[0].keys())}")
 
         self.vector_store.save_documents(doc_dicts, embeddings)
         self.stats["storage"] = {"stored_documents": len(doc_dicts), "stored_embeddings": len(embeddings)}
@@ -140,6 +140,8 @@ class PipelineManager:
         Returns:
             bool: True if all required components are set
         """
+        print("🔍 Validating pipeline components...")
+
         required_components = [
             ("extractor", self.extractor),
             ("embedder", self.embedder),
@@ -148,9 +150,25 @@ class PipelineManager:
 
         for name, component in required_components:
             if component is None:
-                print(f"Error: {name} is required but not set")
+                print(f"❌ Error: {name} is required but not set")
                 return False
+            else:
+                print(f"✅ {name}: {type(component).__name__}")
 
+        # Additional validation for optional components
+        optional_components = [
+            ("filter", self.filter),
+            ("chunker", self.chunker),
+            ("post_processor", self.post_processor),
+        ]
+
+        for name, component in optional_components:
+            if component is not None:
+                print(f"✅ {name}: {type(component).__name__}")
+            else:
+                print(f"ℹ️ {name}: Not configured (optional)")
+
+        print("✅ All required components are properly configured")
         return True
 
     def get_pipeline_stats(self) -> Dict[str, Any]:

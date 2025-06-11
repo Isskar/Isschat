@@ -51,7 +51,7 @@ class HuggingFaceEmbedder(BaseEmbedder):
         self._load_model()
 
         # Extract text content from documents
-        texts = [doc.content for doc in documents]
+        texts = [doc.page_content for doc in documents]
 
         # Generate embeddings in batches
         embeddings = []

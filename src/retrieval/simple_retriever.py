@@ -83,7 +83,6 @@ class SimpleRetriever(BaseRetriever):
             if not force_rebuild and persist_path.exists() and index_file.exists():
                 print("✅ Using existing vector database")
                 # Load existing vector store
-                # Convert config object to dict for FAISSVectorStore
                 config_dict = {
                     "persist_directory": config.persist_directory,
                     "confluence_url": config.confluence_space_name
@@ -96,21 +95,20 @@ class SimpleRetriever(BaseRetriever):
                 vector_store = FAISSVectorStore(config_dict)
 
                 try:
-                    loaded_store = vector_store.load()  # This loads the store internally and returns self
+                    loaded_store = vector_store.load()
                 except Exception as load_error:
-                    print(f"❌ ERROR: Failed to load vector store: {load_error}")
+                    print(f"❌ Failed to load vector store: {load_error}")
                     return False
 
                 if loaded_store is None:
-                    print("❌ ERROR: loaded_store is None, cannot create retriever")
+                    print("❌ loaded_store is None, cannot create retriever")
                     return False
 
                 try:
                     self._retriever = loaded_store.as_retriever(search_kwargs=self.search_kwargs)
-                    # IMPORTANT: Set self._db for compatibility with dynamic search_kwargs
                     self._db = loaded_store._store
                 except Exception as retriever_error:
-                    print(f"❌ ERROR: Failed to create retriever: {retriever_error}")
+                    print(f"❌ Failed to create retriever: {retriever_error}")
                     return False
 
                 return True
@@ -127,7 +125,6 @@ class SimpleRetriever(BaseRetriever):
                 "confluence_space_key": getattr(config, "confluence_space_key", ""),
             }
 
-            # Convert config object to dict for pipeline components
             config_dict = {
                 "persist_directory": config.persist_directory,
                 "confluence_url": config.confluence_space_name
@@ -151,27 +148,26 @@ class SimpleRetriever(BaseRetriever):
 
             # Run the pipeline
             stats = pipeline.run_pipeline()
-            print(f"✅ Pipeline completed successfully: {stats}")
+            print(f"✅ Pipeline completed: {stats['storage']['stored_documents']} documents stored")
 
             # Load the created vector store
             vector_store = FAISSVectorStore(config_dict)
 
             try:
-                loaded_store = vector_store.load()  # This loads the store internally and returns self
+                loaded_store = vector_store.load()
             except Exception as load_error:
-                print(f"❌ ERROR: Failed to load new vector store: {load_error}")
+                print(f"❌ Failed to load new vector store: {load_error}")
                 return False
 
             if loaded_store is None:
-                print("❌ ERROR: loaded_store is None after pipeline, cannot create retriever")
+                print("❌ loaded_store is None after pipeline")
                 return False
 
             try:
                 self._retriever = loaded_store.as_retriever(search_kwargs=self.search_kwargs)
-                # IMPORTANT: Set self._db for compatibility with dynamic search_kwargs
                 self._db = loaded_store._store
             except Exception as retriever_error:
-                print(f"❌ ERROR: Failed to create new retriever: {retriever_error}")
+                print(f"❌ Failed to create new retriever: {retriever_error}")
                 return False
 
             return True
