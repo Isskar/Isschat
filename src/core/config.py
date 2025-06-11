@@ -23,6 +23,23 @@ class ConfigurationData:
     db_path: str
     persist_directory: str
 
+    # Embeddings configuration
+    embeddings_model: str = "sentence-transformers/all-MiniLM-L12-v2"
+    embeddings_device: str = "cpu"
+    embeddings_batch_size: int = 32
+    embeddings_normalize: bool = True
+    embeddings_trust_remote_code: bool = False
+
+    # Vector DB configuration
+    vector_db_type: str = "faiss"
+    search_k: int = 3
+    search_fetch_k: int = 5
+
+    # LLM Config
+    generator_model_name: str = "google/gemini-2.5-flash-preview-05-20"
+    generator_temperature: float = 0.1
+    generator_max_tokens: int = 512
+
     def validate(self) -> bool:
         """Validate that all required fields are present"""
         required_fields = [

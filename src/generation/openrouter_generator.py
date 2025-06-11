@@ -21,7 +21,7 @@ from src.core.config import get_config
 class OpenRouterGenerator(BaseGenerator):
     """OpenRouter-based generator implementation."""
 
-    def __init__(self, model_name: str = "openai/gpt-4.1-mini", **kwargs):
+    def __init__(self, model_name: str, temperature: float, max_tokens: int):
         """
         Initialize OpenRouter generator.
 
@@ -30,8 +30,8 @@ class OpenRouterGenerator(BaseGenerator):
             **kwargs: Additional configuration parameters
         """
         self.model_name = model_name
-        self.temperature = kwargs.get("temperature", 0.1)
-        self.max_tokens = kwargs.get("max_tokens", 512)
+        self.temperature = temperature
+        self.max_tokens = max_tokens
         self._llm = None
         self._prompt = None
         self._chain = None

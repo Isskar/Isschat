@@ -1,53 +1,38 @@
 """
 FAISS vector store implementation.
+Refactored to work with centralized configuration.
 """
 
 from typing import List, Dict, Any
 from pathlib import Path
 
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
 
 from src.vector_store.base_store import BaseVectorStore
 from src.core.interfaces import Document
 from src.core.exceptions import VectorStoreError
+from src.core.embeddings_manager import EmbeddingsManager
 
 
 class FAISSVectorStore(BaseVectorStore):
-    """FAISS-based vector store implementation."""
+    """FAISS-based vector store implementation with centralized configuration."""
 
-    def __init__(self, config_or_embeddings=None, persist_directory: str = "./db"):
+    def __init__(self, config: Dict[str, Any]):
         """
         Initialize FAISS vector store.
 
         Args:
-            config_or_embeddings: Either a config dict or embeddings model
-            persist_directory: Directory to persist the store
+            config: Configuration dictionary containing persist_directory and other settings
         """
-        if FAISS is None or HuggingFaceEmbeddings is None:
-            raise VectorStoreError("FAISS or HuggingFaceEmbeddings not available")
+        self.config = config
+        self.persist_directory = Path(config.get("persist_directory", "./data/vector_db"))
+        self.persist_directory.mkdir(parents=True, exist_ok=True)
 
-        # Handle both config dict and direct embeddings
-        if isinstance(config_or_embeddings, dict):
-            # Config dict provided
-            config = config_or_embeddings
-            self.embeddings = self._get_default_embeddings()
-            self.persist_directory = Path(config.get("persist_directory", persist_directory))
-        else:
-            # Embeddings object provided (or None)
-            self.embeddings = config_or_embeddings or self._get_default_embeddings()
-            self.persist_directory = Path(persist_directory)
-
-        self.persist_directory.mkdir(exist_ok=True)
+        # Use centralized embeddings manager
+        self.embeddings = EmbeddingsManager.get_embeddings()
         self._store = None
 
-    def _get_default_embeddings(self) -> HuggingFaceEmbeddings:
-        """Get default embeddings."""
-        return HuggingFaceEmbeddings(
-            model_name="all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu", "trust_remote_code": False},
-            encode_kwargs={"normalize_embeddings": True, "batch_size": 16},
-        )
+        print(f"✅ FAISSVectorStore initialized with persist_directory: {self.persist_directory}")
 
     def add_documents(self, documents: List[Document]) -> None:
         """Add documents to the vector store."""
@@ -103,7 +88,7 @@ class FAISSVectorStore(BaseVectorStore):
             return {
                 "status": "initialized",
                 "store_type": "FAISS",
-                "embeddings_model": "all-MiniLM-L6-v2",
+                "embeddings_model": self.config.embeddings_model,
                 "persist_directory": str(self.persist_directory),
             }
         except Exception as e:

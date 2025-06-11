@@ -6,6 +6,10 @@ import sys
 import asyncio
 from pathlib import Path
 import shutil
+import traceback
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -19,11 +23,11 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 try:
     # Create and set a new event loop if needed
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
         # No running event loop, create a new one
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
 
     # Set the default policy
     asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
@@ -36,7 +40,6 @@ from src.rag_system.rag_pipeline import RAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.auth_manager import AuthManager
 from src.webapp.components.history_manager import get_history_manager
-from src.core.data_manager import get_data_manager
 
 auth_manager = AuthManager()
 # Streamlit page configuration - must be the first Streamlit command
@@ -49,9 +52,7 @@ def get_model(rebuild_db=False):
     # Display a spinner during loading
     with st.spinner("Loading RAG model..."):
         # Check if the index.faiss file exists
-        import sys
         from src.core.config import get_debug_info
-        from pathlib import Path
 
         # Get debug info
         config = get_config()
@@ -88,7 +89,8 @@ def get_model(rebuild_db=False):
                 else:
                     # Fallback: trigger retrieval to force DB construction
                     try:
-                        pipeline.retriever.retrieve("test initialization", top_k=1)
+                        # Use invoke() method which is the correct LangChain retriever API
+                        pipeline.retriever.invoke("test initialization")
                     except Exception as init_error:
                         st.error(f"Failed to initialize vector database: {init_error}")
                         raise
@@ -97,8 +99,6 @@ def get_model(rebuild_db=False):
             return pipeline
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")
-            import traceback
-
             st.code(traceback.format_exc(), language="python")
             sys.exit(1)
 
@@ -206,8 +206,6 @@ def main():
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error during reconstruction: {str(e)}")
-                        import traceback
-
                         st.code(traceback.format_exc(), language="python")
 
         # Close Button
@@ -383,16 +381,6 @@ def process_question_with_model(model, features, prompt):
 
 
 @login_required
-@st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_cached_history_data(user_id):
-    """Get cached history data"""
-    if not get_history_manager:
-        return []
-    history_manager = get_history_manager()
-    return history_manager.get_user_history(user_id)  # type : ignore
-
-
-@login_required
 def history_page():
     """Display the query history page"""
     # Reset the page if necessary
@@ -420,10 +408,7 @@ def history_page():
 @st.cache_data(ttl=60)  # Cache for 1 minute
 def get_cached_performance_data():
     """Get cached performance data"""
-    if get_data_manager:
-        _ = get_data_manager()
-        return {"response_time": "1.2s", "queries_today": "247", "success_rate": "98.5%"}
-    return None
+    return {"response_time": "1.2s", "queries_today": "247", "success_rate": "98.5%"}
 
 
 @login_required
@@ -460,48 +445,36 @@ def dashboard_page():
 
 def render_performance_tracking():
     """Render performance tracking section"""
-    st.subheader("Performance Tracking")
-
     # Period selection
     days = st.slider("Analysis period (days)", 1, 30, 7, key="performance_days")
 
     try:
-        if get_data_manager:
-            _ = get_data_manager()
+        # Get performance data
+        perf_data = get_cached_performance_data()
 
-            # Get performance data
-            perf_data = get_cached_performance_data()
+        if perf_data:
+            # Display main metrics
+            st.metric("Average response time", f"{perf_data.get('avg_response_time', 'N/A')} ms")
 
-            if perf_data:
-                # Display main metrics
-                st.metric("Average response time", f"{perf_data.get('avg_response_time', 'N/A')} ms")
+            # Create sample data for visualization
 
-                # Create sample data for visualization
-                import pandas as pd
-                import numpy as np
-                from datetime import datetime, timedelta
+            # Generate sample daily data
+            dates = [datetime.now() - timedelta(days=i) for i in range(days, 0, -1)]
+            response_times = np.random.normal(1200, 200, days)  # Sample data
+            query_counts = np.random.poisson(50, days)  # Sample data
 
-                # Generate sample daily data
-                dates = [datetime.now() - timedelta(days=i) for i in range(days, 0, -1)]
-                response_times = np.random.normal(1200, 200, days)  # Sample data
-                query_counts = np.random.poisson(50, days)  # Sample data
+            daily_data = pd.DataFrame({"date": dates, "response_time_ms": response_times, "query_count": query_counts})
 
-                daily_data = pd.DataFrame(
-                    {"date": dates, "response_time_ms": response_times, "query_count": query_counts}
-                )
+            # Time evolution chart
+            st.subheader("Response Time Evolution")
+            st.line_chart(daily_data.set_index("date")[["response_time_ms"]])
 
-                # Time evolution chart
-                st.subheader("Response Time Evolution")
-                st.line_chart(daily_data.set_index("date")[["response_time_ms"]])
+            # Query count chart
+            st.subheader("Daily Query Count")
+            st.bar_chart(daily_data.set_index("date")[["query_count"]])
 
-                # Query count chart
-                st.subheader("Daily Query Count")
-                st.bar_chart(daily_data.set_index("date")[["query_count"]])
-
-            else:
-                st.warning("No performance data available for the selected period")
         else:
-            st.warning("Performance tracking not available")
+            st.warning("No performance data available for the selected period")
 
     except Exception as e:
         st.error(f"Error displaying performance metrics: {str(e)}")
@@ -509,8 +482,6 @@ def render_performance_tracking():
 
 def render_conversation_analysis():
     """Render conversation analysis section"""
-    st.subheader("Conversation Analysis")
-
     try:
         # Get conversation data from features manager
         if "features_manager" in st.session_state and st.session_state["features_manager"]:
@@ -523,8 +494,6 @@ def render_conversation_analysis():
 
             # Sample hourly distribution
             st.subheader("Question distribution by hour")
-            import pandas as pd
-            import numpy as np
 
             hours = list(range(24))
             counts = np.random.poisson(5, 24)  # Sample data
@@ -546,8 +515,6 @@ def render_conversation_analysis():
 
 def render_general_statistics():
     """Render general statistics section"""
-    st.subheader("General Statistics")
-
     try:
         # Get statistics from various sources
         if "features_manager" in st.session_state and st.session_state["features_manager"]:

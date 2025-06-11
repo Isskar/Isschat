@@ -103,8 +103,17 @@ class PipelineManager:
         print(f"🔍 About to embed {len(documents)} documents")
 
         try:
+            import time
+
+            start_time = time.time()
+
             embeddings = self.embedder.embed_documents(documents)
-            print(f"🔍 Successfully generated {len(embeddings)} embeddings")
+
+            end_time = time.time()
+            duration = end_time - start_time
+
+            print(f"🎉 Successfully generated {len(embeddings)} embeddings in {duration:.1f} seconds")
+            print(f"🔍 Average time per document: {duration / len(documents):.3f}s")
 
             if embeddings:
                 print(f"🔍 First embedding shape: {len(embeddings[0]) if embeddings[0] else 'None'}")
@@ -113,13 +122,20 @@ class PipelineManager:
                 "document_count": len(documents),
                 "embedding_count": len(embeddings),
                 "embedding_dimension": self.embedder.get_embedding_dimension(),
+                "duration_seconds": duration,
+                "avg_time_per_doc": duration / len(documents) if documents else 0,
             }
+        except MemoryError as e:
+            print(f"❌ Memory error during embedding generation: {str(e)}")
+            print("💡 Try reducing batch_size in config or using a lighter model")
+            raise
         except Exception as e:
             print(f"❌ Embedding generation failed: {str(e)}")
             print(f"🔍 Error type: {type(e)}")
             import traceback
 
             print(f"🔍 Traceback: {traceback.format_exc()}")
+
             raise
 
         # Step 6: Store in vector database

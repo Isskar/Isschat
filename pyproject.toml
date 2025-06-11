@@ -44,6 +44,7 @@ dependencies = [
     "plotly>=6.1.2",
     "streamlit-feedback>=0.1.4",
     "psutil>=7.0.0",
+    "einops>=0.8.1",
 ]
 
 [tool.ruff]

@@ -324,7 +324,7 @@ class PerformanceDashboard:
             return 0.0
         return sum(p.get("duration_ms", 0) for p in performance_data) / len(performance_data)
 
-    def _calculate_user_satisfaction(self, conversations: List[Dict]) -> float:
+    def _calculate_user_satisfaction(self, conversations: List[Dict]) -> float | str:
         """Calculate user satisfaction score from feedback logs."""
         import json
         import glob
@@ -344,7 +344,7 @@ class PerformanceDashboard:
                 continue
 
         if not all_feedback:
-            return 3.5  # Default score
+            return "N/A"  # No feedback available
 
         # Calculer le taux de satisfaction (feedbacks positifs / total)
         positive_count = 0

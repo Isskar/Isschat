@@ -1,38 +1,81 @@
 """
 Main RAG pipeline orchestrating retrieval and generation.
+Refactored to use centralized configuration and database management.
 """
 
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 
-from src.retrieval.base_retriever import BaseRetriever
-from src.generation.base_generator import BaseGenerator
+from src.core.config import get_config
+from src.data_pipeline.offline_db_manager import OfflineDatabaseManager
+from src.core.embeddings_manager import EmbeddingsManager
+from src.core.exceptions import ConfigurationError
 from src.rag_system.query_processor import QueryProcessor
 
 
 class RAGPipeline:
     """
     Main RAG pipeline that orchestrates retrieval and generation.
+    Now handles database verification and initialization automatically.
     """
 
-    def __init__(self, retriever: BaseRetriever, generator: BaseGenerator):
+    def __init__(self, config=None, force_rebuild: bool = False):
         """
-        Initialize RAG pipeline.
+        Initialize RAG pipeline with automatic database verification.
 
         Args:
-            retriever: Retriever component
-            generator: Generator component
+            config: Optional configuration (uses get_config() by default)
+            force_rebuild: Force database rebuild
         """
-        self.retriever = retriever
-        self.generator = generator
+        from src.generation.openrouter_generator import OpenRouterGenerator
+
+        self.config = config or get_config()
         self.query_processor = QueryProcessor()
 
-    def process_query(self, query: str, top_k: int = 3, verbose: bool = True) -> Tuple[str, str]:
+        # 1. Ensure database exists
+        print("🔍 Checking vector database...")
+        self.db_manager = OfflineDatabaseManager(self.config)
+
+        # Check if database exists
+        if not self.db_manager.database_exists() and not force_rebuild:
+            print("⚠️  Vector database not found. Building database...")
+            force_rebuild = True
+
+        if not self.db_manager.ensure_database(force_rebuild):
+            raise ConfigurationError("Failed to initialize vector database")
+
+        # 2. Load vector store
+        print("📚 Loading vector store...")
+        self.vector_store = self.db_manager.load_vector_store()
+        if not self.vector_store:
+            # If loading fails, try to rebuild database
+            print("⚠️  Failed to load vector store. Attempting to rebuild...")
+            if self.db_manager.build_database():
+                self.vector_store = self.db_manager.load_vector_store()
+                if not self.vector_store:
+                    raise ConfigurationError("Failed to load vector store after rebuild")
+            else:
+                raise ConfigurationError("Failed to build and load vector store")
+
+        # 3. Create retriever with centralized configuration
+        search_kwargs = {"k": self.config.search_k, "fetch_k": self.config.search_fetch_k}
+        self.retriever = self.vector_store.as_retriever(search_kwargs=search_kwargs)
+
+        # 4. Create generator
+        self.generator = OpenRouterGenerator(
+            model_name=self.config.generator_model_name,
+            temperature=self.config.generator_temperature,
+            max_tokens=self.config.generator_max_tokens,
+        )
+
+        print("✅ RAG Pipeline initialized successfully")
+
+    def process_query(self, query: str, top_k: Optional[int] = None, verbose: bool = True) -> Tuple[str, str]:
         """
         Process a query through the RAG pipeline.
 
         Args:
             query: User query
-            top_k: Number of documents to retrieve
+            top_k: Number of documents to retrieve (uses config default if None)
             verbose: Whether to print verbose output
 
         Returns:
@@ -46,19 +89,32 @@ class RAGPipeline:
             # Step 0: Process and analyze the query
             query_analysis = self.query_processor.process_query(query)
 
-            if verbose:
-                print("\n Query Analysis:")
-                print(f"  Original: '{query_analysis.original_query}'")
-                print(f"  Processed: '{query_analysis.processed_query}'")
-                print(f"  Intent: {query_analysis.intent}")
-                print(f"  Entities: {query_analysis.entities}")
-                print(f"  Keywords: {query_analysis.keywords}")
-                print(f"  Confidence: {query_analysis.confidence:.2f}")
-                print()
-
-            # Step 1: Retrieve relevant documents using processed query
+            # Step 1: Determine retriever to use based on top_k
             search_query = query_analysis.processed_query if query_analysis.processed_query.strip() else query
-            retrieval_result = self.retriever.retrieve(search_query, top_k=top_k)
+
+            # Use custom top_k if provided, otherwise use default retriever
+            if top_k and top_k != self.config.search_k:
+                search_kwargs = {"k": top_k, "fetch_k": max(top_k + 2, self.config.search_fetch_k)}
+                retriever = self.vector_store.as_retriever(search_kwargs=search_kwargs)
+                docs = retriever.invoke(search_query)
+            else:
+                docs = self.retriever.invoke(search_query)
+
+            # Convert to our format for compatibility
+            from src.core.interfaces import RetrievalResult, Document
+
+            documents = []
+            scores = []
+            for doc in docs:
+                documents.append(Document(page_content=doc.page_content, metadata=doc.metadata))
+                scores.append(getattr(doc, "score", 0.0))
+
+            retrieval_result = RetrievalResult(
+                documents=documents,
+                scores=scores,
+                query=search_query,
+                retrieval_time=0.0,  # We don't track time here anymore
+            )
 
             if verbose:
                 print(f"\n📚 Retrieved {len(retrieval_result.documents)} documents:")
@@ -94,101 +150,74 @@ class RAGPipeline:
     def get_pipeline_stats(self) -> Dict[str, Any]:
         """Get comprehensive pipeline statistics."""
         return {
-            "pipeline_type": "Modern RAG with Query Processing",
-            "retriever_stats": self.retriever.get_stats(),
+            "pipeline_type": "Modern RAG with Centralized Configuration",
+            "database_info": self.db_manager.get_database_info(),
+            "embeddings_info": EmbeddingsManager.get_model_info(),
             "generator_stats": self.generator.get_stats(),
             "query_processor": "Enabled",
+            "config": {
+                "search_k": self.config.search_k,
+                "search_fetch_k": self.config.search_fetch_k,
+                "embeddings_model": self.config.embeddings_model,
+                "embeddings_device": self.config.embeddings_device,
+            },
         }
-
-    def analyze_query(self, query: str) -> Dict[str, Any]:
-        """
-        Analyze a query without executing the full pipeline.
-        Useful for debugging query processing.
-
-        Args:
-            query: Query to analyze
-
-        Returns:
-            Query analysis information
-        """
-        analysis = self.query_processor.process_query(query)
-        return self.query_processor.get_debug_info(analysis)
-
-    def health_check(self) -> Dict[str, Any]:
-        """Perform a health check on the pipeline."""
-        health = {"status": "healthy", "components": {}, "issues": []}
-
-        try:
-            # Check retriever
-            retriever_stats = self.retriever.get_stats()
-            health["components"]["retriever"] = {
-                "status": retriever_stats.get("status", "unknown"),
-                "type": retriever_stats.get("retriever_type", "unknown"),
-            }
-
-            # Check generator
-            generator_stats = self.generator.get_stats()
-            health["components"]["generator"] = {
-                "status": generator_stats.get("status", "unknown"),
-                "type": generator_stats.get("generator_type", "unknown"),
-            }
-
-            # Test with a simple query
-            test_result = self.retriever.retrieve("test", top_k=1)
-            if not test_result.documents:
-                health["issues"].append("No documents retrieved for test query")
-
-        except Exception as e:
-            health["status"] = "unhealthy"
-            health["issues"].append(f"Health check failed: {str(e)}")
-
-        return health
 
 
 class RAGPipelineFactory:
-    """Factory for creating RAG pipelines with different configurations."""
+    """Factory for creating RAG pipelines with centralized configuration."""
 
     @staticmethod
-    def create_default_pipeline() -> RAGPipeline:
+    def create_default_pipeline(force_rebuild: bool = False) -> RAGPipeline:
         """
-        Create a default RAG pipeline.
-
-        Returns:
-            Configured RAGPipeline
-        """
-        # Use absolute imports with fallbacks
-        from src.retrieval.simple_retriever import SimpleRetriever
-        from src.generation.openrouter_generator import OpenRouterGenerator
-
-        retriever = SimpleRetriever()
-        generator = OpenRouterGenerator()
-
-        return RAGPipeline(retriever, generator)
-
-    @staticmethod
-    def create_pipeline(retriever_type: str = "faiss", generator_type: str = "openrouter", **kwargs) -> RAGPipeline:
-        """
-        Create a RAG pipeline with specified components.
+        Create a default RAG pipeline with automatic database management.
 
         Args:
-            retriever_type: Type of retriever ("faiss")
-            generator_type: Type of generator ("openrouter")
-            **kwargs: Additional configuration
+            force_rebuild: Force database rebuild
 
         Returns:
             Configured RAGPipeline
         """
-        # Import here to avoid circular imports
-        from src.retrieval.retriever_factory import RetrieverFactory
-        from src.generation.openrouter_generator import OpenRouterGenerator
+        return RAGPipeline(force_rebuild=force_rebuild)
 
-        # Create retriever
-        retriever = RetrieverFactory.create_retriever(retriever_type, **kwargs.get("retriever_config", {}))
+    @staticmethod
+    def create_pipeline(config=None, force_rebuild: bool = False, **kwargs) -> RAGPipeline:
+        """
+        Create a RAG pipeline with custom configuration.
 
-        # Create generator
-        if generator_type.lower() == "openrouter":
-            generator = OpenRouterGenerator(**kwargs.get("generator_config", {}))
-        else:
-            raise ValueError(f"Unknown generator type: {generator_type}")
+        Args:
+            config: Custom configuration (optional)
+            force_rebuild: Force database rebuild
+            **kwargs: Additional configuration (deprecated, use config instead)
 
-        return RAGPipeline(retriever, generator)
+        Returns:
+            Configured RAGPipeline
+        """
+        if kwargs:
+            print("⚠️  Warning: **kwargs is deprecated, use config parameter instead")
+
+        return RAGPipeline(config=config, force_rebuild=force_rebuild)
+
+    @staticmethod
+    def create_pipeline_with_custom_embeddings(embeddings_model: str, force_rebuild: bool = False) -> RAGPipeline:
+        """
+        Create a RAG pipeline with custom embeddings model.
+
+        Args:
+            embeddings_model: Custom embeddings model name
+            force_rebuild: Force database rebuild
+
+        Returns:
+            Configured RAGPipeline
+        """
+        from src.core.config import get_config
+        from dataclasses import replace
+
+        # Get default config and override embeddings model
+        base_config = get_config()
+        custom_config = replace(base_config, embeddings_model=embeddings_model)
+
+        # Reset embeddings manager to use new model
+        EmbeddingsManager.reset()
+
+        return RAGPipeline(config=custom_config, force_rebuild=force_rebuild)
