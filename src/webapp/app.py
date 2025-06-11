@@ -1,723 +1,355 @@
-"""
-Streamlit Application for Isschat - Clean Professional Interface
-Refactored version with integrated performance dashboard
-"""
-
 import streamlit as st
 import time
+import signal
 import os
 import sys
 import asyncio
-import logging
 from pathlib import Path
-from typing import Optional, Tuple, Any
+import shutil
 
-# Logging configuration
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Add the parent directory to the Python search path
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
-# Streamlit configuration - modern dark interface
-st.set_page_config(
-    page_title="Isschat - AI Chatbot Assistant", page_icon="🤖", layout="wide", initial_sidebar_state="expanded"
-)
+from src.core.config import get_config
 
-# Custom CSS for modern dark interface
-st.markdown(
-    """
-<style>
-    /* Global dark theme */
-    .main > div {
-        background-color: #1E1E1E;
-        color: #FFFFFF;
-    }
+# Set tokenizers parallelism to false to avoid deadlocks
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: 600;
-        color: #2E86AB;
-        margin-bottom: 1rem;
-        text-align: center;
-    }
-
-    .metric-card {
-        background: linear-gradient(135deg, #2E86AB 0%, #A23B72 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        color: white;
-        margin: 0.5rem 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        border: 1px solid #404040;
-    }
-
-
-    .status-healthy {
-        color: #6A994E;
-        font-weight: 600;
-    }
-    .status-critical {
-        color: #C73E1D;
-        font-weight: 600;
-    }
-
-    /* Sidebar styling */
-    .css-1d391kg {
-        background-color: #2D2D2D;
-    }
-
-    /* Button styling - Modern and elegant design */
-    .stButton > button {
-        background: #2E86AB;
-        color: white;
-        border: 1px solid #2E86AB;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 500;
-        font-size: 0.95rem;
-        transition: all 0.2s ease;
-        box-shadow: none;
-    }
-
-    .stButton > button:hover {
-        background: #1e5f7a;
-        border-color: #1e5f7a;
-        transform: none;
-        box-shadow: 0 2px 4px rgba(46, 134, 171, 0.2);
-    }
-
-    .stButton > button:active {
-        background: #164a5c;
-        transform: translateY(1px);
-    }
-
-    /* Button variants for different contexts */
-    .stButton.secondary > button {
-        background: transparent;
-        color: #2E86AB;
-        border: 1px solid #2E86AB;
-    }
-
-    .stButton.secondary > button:hover {
-        background: #2E86AB;
-        color: white;
-    }
-
-    .stButton.danger > button {
-        background: #dc3545;
-        border-color: #dc3545;
-    }
-
-    .stButton.danger > button:hover {
-        background: #c82333;
-        border-color: #c82333;
-    }
-
-    /* Input styling */
-    .stTextInput > div > div > input {
-        background-color: #2D2D2D;
-        color: #FFFFFF;
-        border: 1px solid #404040;
-        border-radius: 10px;
-    }
-
-    .stTextArea > div > div > textarea {
-        background-color: #2D2D2D;
-        color: #FFFFFF;
-        border: 1px solid #404040;
-        border-radius: 10px;
-    }
-
-    /* Selectbox styling */
-    .stSelectbox > div > div > select {
-        background-color: #2D2D2D;
-        color: #FFFFFF;
-        border: 1px solid #404040;
-        border-radius: 10px;
-    }
-
-    /* Tab styling */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: #2D2D2D;
-        border-radius: 10px;
-        gap: 8px;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        background-color: transparent;
-        color: #FFFFFF;
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-    }
-
-    .stTabs [aria-selected="true"] {
-        background-color: #2E86AB;
-        color: white;
-    }
-
-    /* Metric styling */
-    .stMetric {
-        background-color: #2D2D2D;
-        border: 1px solid #404040;
-        border-radius: 10px;
-        padding: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-
-    /* Expander styling */
-    .streamlit-expanderHeader {
-        background-color: #2D2D2D;
-        border: 1px solid #404040;
-        border-radius: 10px;
-        color: #FFFFFF;
-    }
-
-    /* Success/Info/Warning/Error message styling */
-    .stSuccess {
-        background-color: rgba(106, 153, 78, 0.1);
-        border: 1px solid #6A994E;
-        color: #6A994E;
-    }
-
-    .stInfo {
-        background-color: rgba(46, 134, 171, 0.1);
-        border: 1px solid #2E86AB;
-        color: #2E86AB;
-    }
-
-    .stWarning {
-        background-color: rgba(241, 143, 1, 0.1);
-        border: 1px solid #F18F01;
-        color: #F18F01;
-    }
-/* Enhanced page headers */
-    .page-header {
-        font-size: 2.2rem;
-        font-weight: 600;
-        background: linear-gradient(135deg, #2E86AB 0%, #4A9FD1 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #2E86AB;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    /* Enhanced main header */
-    .main-header {
-        font-size: 2.8rem !important;
-        font-weight: 700 !important;
-        background: linear-gradient(135deg, #2E86AB 0%, #4A9FD1 100%) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        background-clip: text !important;
-        margin-bottom: 2rem !important;
-        text-align: center !important;
-        letter-spacing: -0.02em !important;
-    }
-
-    /* Enhanced metric cards */
-    .metric-card {
-        background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%) !important;
-        padding: 2rem !important;
-        border-radius: 16px !important;
-        color: white !important;
-        margin: 1rem 0 !important;
-        box-shadow: 0 8px 32px rgba(46, 134, 171, 0.2) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(10px) !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-    }
-
-    .metric-card:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 12px 40px rgba(46, 134, 171, 0.3) !important;
-    }
-
-    /* Enhanced chat container */
-    .chat-container {
-        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
-        border-radius: 20px !important;
-        padding: 2rem !important;
-        margin: 1.5rem 0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
-        backdrop-filter: blur(10px) !important;
-    }
-
-    /* Dashboard grid layout */
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-        margin: 2rem 0;
-    }
-
-    /* Dashboard cards */
-    .dashboard-card {
-        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
-        border-radius: 16px;
-        padding: 1.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .dashboard-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-    }
-
-    .dashboard-card h3 {
-        color: #2E86AB;
-        margin-bottom: 1rem;
-        font-size: 1.2rem;
-        font-weight: 600;
-    }
-
-    /* History items */
-    .history-item {
-        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        transition: all 0.2s ease;
-    }
-
-    .history-item:hover {
-        transform: translateX(4px);
-        border-color: #2E86AB;
-        box-shadow: 0 6px 24px rgba(46, 134, 171, 0.2);
-    }
-
-    .history-question {
-        color: #4A9FD1;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    .history-answer {
-        color: #FFFFFF;
-        line-height: 1.6;
-        margin-bottom: 0.5rem;
-    }
-
-    .history-meta {
-        color: #888;
-        font-size: 0.85rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    /* Status indicators */
-    .status-warning {
-        color: #F18F01;
-        font-weight: 600;
-    }
-
-    /* Enhanced sidebar */
-    .css-1d391kg {
-        background: linear-gradient(180deg, #2D2D2D 0%, #1E1E1E 100%) !important;
-    }
-
-    .sidebar-section {
-        background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
-        padding: 1.5rem !important;
-        border-radius: 12px !important;
-        margin: 1rem 0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
-    }
-
-    /* Enhanced chat message styling */
-    .stChatMessage {
-        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
-        border-radius: 12px !important;
-        margin: 0.5rem 0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
-    }
-
-    .stChatMessage[data-testid="user-message"] {
-        background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%) !important;
-    }
-
-    .stChatMessage[data-testid="assistant-message"] {
-        background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
-    }
-
-    /* Enhanced expander styling */
-    .streamlit-expanderHeader {
-        background: linear-gradient(135deg, #3D3D3D 0%, #2D2D2D 100%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 10px !important;
-        color: #FFFFFF !important;
-    }
-
-    /* Enhanced input styling */
-    .stChatInput > div {
-        background: linear-gradient(135deg, #2D2D2D 0%, #3D3D3D 100%) !important;
-        border-radius: 12px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    }
-
-    /* Loading spinner styling */
-    .stSpinner > div {
-        border-color: #2E86AB !important;
-    }
-
-    /* Enhanced toggle styling */
-    .stToggle > div {
-        background-color: #2D2D2D !important;
-    }
-
-    /* Page transition effects */
-    .main .block-container {
-        animation: fadeIn 0.3s ease-in;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Responsive design improvements */
-    @media (max-width: 768px) {
-        .main-header {
-            font-size: 2rem !important;
-        }
-
-        .page-header {
-            font-size: 1.8rem !important;
-        }
-
-        .dashboard-grid {
-            grid-template-columns: 1fr !important;
-        }
-
-        .welcome-container {
-            padding: 1.5rem !important;
-        }
-
-        .dashboard-card {
-            margin: 0.5rem 0 !important;
-        }
-    }
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    /* Performance metrics */
-    .perf-metric {
-        background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 12px;
-        text-align: center;
-        margin: 0.5rem;
-    }
-
-    .perf-metric h4 {
-        margin: 0;
-        font-size: 1.8rem;
-        font-weight: 700;
-    }
-
-    .perf-metric p {
-        margin: 0.25rem 0 0 0;
-        opacity: 0.9;
-        font-size: 0.9rem;
-    }
-
-    /* Welcome message styling */
-    .welcome-container {
-        background: linear-gradient(135deg, #2E86AB 0%, #1e5f7a 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 16px;
-        text-align: center;
-        margin: 2rem 0;
-        box-shadow: 0 8px 32px rgba(46, 134, 171, 0.2);
-    }
-
-    .welcome-container h2 {
-        margin: 0 0 1rem 0;
-        font-size: 1.8rem;
-        font-weight: 600;
-    }
-
-    .welcome-container p {
-        margin: 0;
-        opacity: 0.9;
-        font-size: 1.1rem;
-    }
-
-    .stError {
-        background-color: rgba(199, 62, 29, 0.1);
-        border: 1px solid #C73E1D;
-        color: #C73E1D;
-    }
-    .status-error {
-        color: #dc3545;
-        font-weight: 600;
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-
-# === PROJECT CONFIGURATION ===
-def setup_project_paths():
-    """Configure project paths cleanly"""
-    current_file = Path(__file__)
-    project_root = current_file.parent.parent.parent
-
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-        logger.info(f"Project path added: {project_root}")
-
-    return project_root
-
-
-def setup_environment():
-    """Configure system environment"""
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
+# Fix asyncio event loop issues with Streamlit
+try:
+    # Create and set a new event loop if needed
     try:
-        asyncio.get_running_loop()
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        pass
+        # No running event loop, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    # Set the default policy
+    asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+except Exception as e:
+    print(f"Note: asyncio configuration: {str(e)}")
+    pass  # Continue even if there's an issue with the event loop
+
+# Import custom modules
+from src.rag_system.rag_pipeline import RAGPipelineFactory
+from src.webapp.components.features_manager import FeaturesManager
+from src.webapp.components.auth_manager import AuthManager
+from src.webapp.components.history_manager import get_history_manager
+from src.core.data_manager import get_data_manager
+
+auth_manager = AuthManager()
+# Streamlit page configuration - must be the first Streamlit command
+st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
 
-# === SECURE IMPORTS ===
-def import_core_config():
-    """Import core configuration"""
-    try:
-        from src.core.config import get_config, get_debug_info
-
-        logger.info("Core configuration imported")
-        return get_config, get_debug_info
-    except ImportError as e:
-        logger.error(f"Cannot import configuration: {e}")
-        st.error("Critical error: Configuration unavailable")
-        st.stop()
-
-
-def import_auth_system():
-    """Import authentication system"""
-    try:
-        from src.webapp.components.auth_manager import AuthManager
-
-        logger.info("Auth system imported")
-        return AuthManager()
-    except ImportError as e:
-        logger.warning(f"Auth unavailable: {e}")
-        return None
-
-
-def import_features_manager():
-    """Import features manager"""
-    try:
-        from src.webapp.components.features_manager import FeaturesManager
-
-        logger.info("FeaturesManager imported")
-        return FeaturesManager
-    except ImportError as e:
-        logger.warning(f"FeaturesManager unavailable: {e}")
-        return None
-
-
-def import_rag_pipeline():
-    """Import RAG pipeline"""
-    try:
-        from src.rag_system.rag_pipeline import RAGPipelineFactory
-
-        logger.info("RAG Pipeline imported")
-        return RAGPipelineFactory, True
-    except ImportError as e:
-        logger.error(f"RAG Pipeline unavailable: {e}")
-        return None, False
-
-
-def import_history_components():
-    """Import history components"""
-    try:
-        from src.webapp.components.history_manager import get_history_manager
-        from src.core.data_manager import get_data_manager
-
-        logger.info("History components imported")
-        return get_history_manager, get_data_manager
-    except ImportError as e:
-        logger.warning(f"History components unavailable: {e}")
-        return None, None
-
-
-def import_performance_dashboard():
-    """Import performance dashboard"""
-    try:
-        from src.webapp.components.performance_dashboard import render_performance_dashboard
-
-        logger.info("Performance dashboard imported")
-        return render_performance_dashboard
-    except ImportError as e:
-        logger.warning(f"Performance dashboard unavailable: {e}")
-        return None
-
-
-# === INITIALIZATION ===
-setup_project_paths()
-setup_environment()
-
-# Imports
-get_config, get_debug_info = import_core_config()
-auth_manager = import_auth_system()
-FeaturesManager = import_features_manager()
-RAGPipelineFactory, NEW_RAG_AVAILABLE = import_rag_pipeline()
-get_history_manager, get_data_manager = import_history_components()
-render_performance_dashboard = import_performance_dashboard()
-
-logger.info(f"Initialization complete - RAG: {NEW_RAG_AVAILABLE}, Auth: {auth_manager is not None}")
-
-
-# === UTILITY FUNCTIONS ===
-def create_auth_decorators():
-    """Create authentication decorators"""
-
-    def login_required(func):
-        """Decorator for pages requiring authentication"""
-
-        def wrapper(*args, **kwargs):
-            if auth_manager and not auth_manager.is_authenticated():
-                if not auth_manager.render_login_form():
-                    return
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    def admin_required(func):
-        """Decorator for admin pages"""
-
-        def wrapper(*args, **kwargs):
-            if auth_manager and not auth_manager.is_admin():
-                st.error("Administrator access required")
-                return
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return login_required, admin_required
-
-
-login_required, admin_required = create_auth_decorators()
-
-
-# === RAG MODEL MANAGEMENT ===
-def show_database_status():
-    """Show database creation status if needed"""
-    # Initialize session state for database status
-    if "db_status" not in st.session_state:
-        st.session_state.db_status = "checking"
-
-    config = get_config()
-    persist_path = Path(config.persist_directory)
-    index_file = persist_path / "index.faiss"
-
-    # Check if database exists
-    db_exists = persist_path.exists() and index_file.exists()
-
-    if not db_exists and st.session_state.db_status == "checking":
-        st.session_state.db_status = "creating"
-    elif db_exists and st.session_state.db_status == "creating":
-        st.session_state.db_status = "completed"
-        # Force a rerun to clear the message
-        st.rerun()
-
-    # Show message only during creation
-    if st.session_state.db_status == "creating":
-        st.info("🚀 Première exécution - Création de la base de données vectorielle en cours...")
-        st.write("Cette opération peut prendre plusieurs minutes. Veuillez patienter...")
-
-
+# Cache the model loading
 @st.cache_resource
-def get_model():
-    """Load RAG model with clean error handling"""
-    debug_info = get_debug_info()
+def get_model(rebuild_db=False):
+    # Display a spinner during loading
+    with st.spinner("Loading RAG model..."):
+        # Check if the index.faiss file exists
+        import sys
+        from src.core.config import get_debug_info
+        from pathlib import Path
 
-    # Display debug information in discrete expander
-    with st.sidebar.expander("System Information", expanded=False):
-        st.code(f"""
-Configuration:
-- Provider: {debug_info["provider"]}
-- Vector store: {debug_info["persist_directory"]}
-- Confluence URL: {debug_info["confluence_url"]}
-- Space key: {debug_info["space_key"]}
-- User: {debug_info["user_email"]}
-        """)
+        # Get debug info
+        config = get_config()
+        debug_info = get_debug_info()
 
-    with st.spinner("Chargement du système..."):
+        st.sidebar.expander("Debug", expanded=False).write(f"""
+                **Configuration**:
+                - Provider: `{debug_info["provider"]}`
+                - Vector store directory: `{debug_info["persist_directory"]}`
+                - Confluence URL: `{debug_info["confluence_url"]}`
+                - Space key: `{debug_info["space_key"]}`
+                - User: `{debug_info["user_email"]}`
+                - API key: `{debug_info["confluence_api_key"]}`
+                - OpenRouter key: `{debug_info["openrouter_api_key"]}`
+                """)
+
+        persist_path = Path(config.persist_directory)
+        index_file = persist_path / "index.faiss"
+        if not rebuild_db:
+            if not persist_path.exists() or not index_file.exists():
+                st.info("First Launch Detected - Creating Vector DB...")
+                rebuild_db = True
+
+        # Create the model
         try:
-            if not NEW_RAG_AVAILABLE:
-                st.error("RAG architecture unavailable!")
-                return None
-
             pipeline = RAGPipelineFactory.create_default_pipeline()
             return pipeline
-
         except Exception as e:
-            st.error(f"Erreur lors du chargement du modèle: {str(e)}")
+            st.error(f"Error loading model: {str(e)}")
             import traceback
 
-            with st.expander("Détails de l'erreur"):
-                st.code(traceback.format_exc(), language="python")
-            return None
+            st.code(traceback.format_exc(), language="python")
+            sys.exit(1)
 
 
-# === USER MANAGEMENT ===
-def setup_user_session():
-    """Configure user session"""
+# Cache functions
+@st.cache_resource
+def get_cached_features_manager(user_id: str):
+    """Get cached features manager"""
+    if FeaturesManager:
+        return FeaturesManager(user_id)
+    return None
+
+
+# Authentication decorators
+def login_required(func):
+    """Decorator for pages requiring authentication"""
+
+    def wrapper(*args, **kwargs):
+        if "user" not in st.session_state:
+            st.error("Authentication required")
+            return
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def admin_required(func):
+    """Decorator for admin pages"""
+
+    def wrapper(*args, **kwargs):
+        if not st.session_state.get("user", {}).get("is_admin"):
+            st.error("Administrator access required")
+            return
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+# User interface initialization
+def main():
     if "user" not in st.session_state:
+        # Create or retrieve admin user immediately
         config = get_config()
         email = config.confluence_email_address or "admin@auto.login"
 
-        if auth_manager:
-            try:
-                user = auth_manager.authenticate_user(email, "admin123")
-                if not user:
-                    if auth_manager.register_user(email, "admin123"):
-                        user = auth_manager.authenticate_user(email, "admin123")
-                    else:
-                        user = auth_manager.authenticate_user("admin@isschat.com", "admin123")
-
-                if user:
-                    st.session_state["user"] = user
-                    st.session_state["user_id"] = f"user_{user['id']}"
-                    logger.info(f"User connected: {user['email']}")
-                else:
-                    logger.warning("Fallback: creating session user")
-                    st.session_state["user"] = {"email": email, "id": 1, "is_admin": True}
-                    st.session_state["user_id"] = "user_1"
-            except Exception as e:
-                logger.error(f"Auth error: {e}")
-                st.session_state["user"] = {"email": email, "id": 1, "is_admin": True}
-                st.session_state["user_id"] = "user_1"
-        else:
-            st.session_state["user"] = {"email": email, "id": 1, "is_admin": True}
-            st.session_state["user_id"] = "user_1"
-
+        # Auto-create user session (simplified approach like in reference file)
+        st.session_state["user"] = {"email": email, "id": 1, "is_admin": True}
+        st.session_state["user_id"] = "user_1"
         st.session_state["page"] = "chat"
 
+    # Sidebar for navigation and options
+    with st.sidebar:
+        st.image("https://img.icons8.com/color/96/000000/confluence--v2.png", width=100)
+        st.title("ISSCHAT")
 
-# === QUESTION PROCESSING ===
-def process_question(model, features_manager: Optional[Any], prompt: str) -> Tuple[str, str, float]:
-    """Process question with RAG model"""
-    start_time = time.time()
+        # Always display user info
+        st.success(f"Connected as: {st.session_state['user']['email']}")
 
+        # Main navigation
+        st.subheader("Navigation")
+        if st.button("Chat", key="nav_chat"):
+            st.session_state["page"] = "chat"
+            st.rerun()
+
+        if st.button("History", key="nav_history"):
+            st.session_state["page"] = "history"
+            st.rerun()
+
+        # Admin options
+        if st.session_state["user"].get("is_admin"):
+            st.divider()
+            st.info("Status: Administrator")
+            if st.button("Admin Dashboard", key="nav_admin"):
+                st.session_state["page"] = "admin"
+                st.rerun()
+
+            if st.button("Performance Dashboard", key="nav_dashboard"):
+                st.session_state["page"] = "dashboard"
+                st.rerun()
+
+            # Option to rebuild the database
+            st.divider()
+            st.subheader("Database Management")
+
+            # Add button to force complete reconstruction
+            if st.button("Rebuild from Confluence", type="primary"):
+                with st.spinner("Rebuilding database from Confluence..."):
+                    # Delete existing files
+                    config = get_config()
+
+                    try:
+                        if os.path.exists(config.persist_directory):
+                            shutil.rmtree(config.persist_directory)
+                            st.info(f"Directory {config.persist_directory} successfully deleted.")
+                        os.makedirs(config.persist_directory, exist_ok=True)
+                    except Exception as e:
+                        st.error(f"Error deleting directory: {str(e)}")
+
+                    # Force model reload with new_db=True
+                    try:
+                        st.cache_resource.clear()
+                        get_model(rebuild_db=True)
+                        st.success("Database successfully rebuilt from Confluence!")
+                        time.sleep(2)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error during reconstruction: {str(e)}")
+                        import traceback
+
+                        st.code(traceback.format_exc(), language="python")
+
+        # Close Button
+        st.divider()
+        if st.button("Close App", key="nav_close_app"):
+            st.warning("Shutting down the Streamlit app...")
+            time.sleep(1)
+            os.kill(os.getpid(), signal.SIGKILL)
+
+    # Determine which page to display - user is already authenticated at the beginning of main()
+    if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
+        admin_page()
+    elif st.session_state.get("page") == "history":
+        history_page()
+    elif st.session_state.get("page") == "dashboard":
+        dashboard_page()
+    else:
+        # Default to chat page
+        chat_page()
+
+
+@login_required
+def chat_page():
+    # Reset page if necessary
+    st.session_state["page"] = "chat"
+
+    # Load the model
+    model = get_model()
+
+    # Initialize the features manager with caching
+    if "features_manager" not in st.session_state:
+        user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
+        if FeaturesManager:
+            st.session_state["features_manager"] = get_cached_features_manager(user_id)
+        else:
+            st.session_state["features_manager"] = None
+
+    features = st.session_state["features_manager"]
+
+    # Create layout
+    st.title("Welcome to ISSCHAT")
+
+    # Sidebar for advanced options
+    with st.sidebar:
+        st.subheader("Advanced Options")
+        show_feedback = st.toggle("Enable feedback", value=True)
+
+        # Query history
+        if st.button("Query History"):
+            st.session_state["page"] = "history"
+            st.rerun()
+
+    # Display main interface
+    st.subheader("Ask questions about our Confluence documentation")
+
+    # Extract first name from email (part before @)
+    user_email = st.session_state.get("user", {}).get("email", "")
+    first_name = user_email.split("@")[0].split(".")[0].capitalize()
+    welcome_message = f"Bonjour {first_name} ! Comment puis-je vous aider aujourd'hui ?"
+
+    # Initialize message history
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = [
+            {
+                "role": "assistant",
+                "content": welcome_message,
+            }
+        ]
+
+    # Display message history with feedback widgets
+    for i, msg in enumerate(st.session_state.messages):
+        if msg["role"] == "user":
+            st.chat_message("user").write(msg["content"])
+        else:
+            with st.chat_message("assistant"):
+                st.write(msg["content"])
+
+                # Add feedback widget for assistant messages (except welcome)
+                if i > 0 and show_feedback and features and "question_data" in msg:
+                    features.add_feedback_widget(
+                        st,
+                        msg["question_data"]["question"],
+                        msg["question_data"]["answer"],
+                        msg["question_data"]["sources"],
+                        key_suffix=f"history_{i}",
+                    )
+
+    # Check if there's a question to reuse from history
+    if "reuse_question" in st.session_state:
+        prompt = st.session_state.pop("reuse_question")
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.chat_message("user").write(prompt)
+
+        # Process the question with all features
+        with st.spinner("Analysis in progress..."):
+            result, sources = process_question_with_model(model, features, prompt)
+
+            # Build the response content
+            response_content = result
+            if sources:
+                response_content += "\n\n" + sources
+
+            # Display the response
+            st.chat_message("assistant").markdown(result)
+            if sources:
+                st.chat_message("assistant").write(sources)
+
+            # Add to message history with question data for feedback
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_content,
+                    "question_data": {"question": prompt, "answer": result, "sources": sources},
+                }
+            )
+
+            # Force rerun to display feedback widget in history
+            st.rerun()
+
+    # Chat interface
+    if prompt := st.chat_input("Ask your question here..."):
+        # Add the question
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.chat_message("user").write(prompt)
+
+        # Process the question with all features
+        with st.spinner("Analysis in progress..."):
+            result, sources = process_question_with_model(model, features, prompt)
+
+            # Build the response content
+            response_content = result
+            if sources:
+                response_content += "\n\n" + sources
+
+            # Display the response
+            st.chat_message("assistant").markdown(result)
+            if sources:
+                st.chat_message("assistant").write(sources)
+
+            # Add to message history with question data for feedback
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": response_content,
+                    "question_data": {"question": prompt, "answer": result, "sources": sources},
+                }
+            )
+
+            # Force rerun to display feedback widget in history
+            st.rerun()
+
+
+def process_question_with_model(model, features, prompt):
+    """Process question with model and features"""
     try:
+        start_time = time.time()
+
+        # Process with model directly
         if hasattr(model, "process_query"):
             result, sources = model.process_query(prompt)
         elif hasattr(model, "query"):
@@ -727,489 +359,241 @@ def process_question(model, features_manager: Optional[Any], prompt: str) -> Tup
             result = "Model unavailable"
             sources = ""
 
-        if features_manager and result != "Model unavailable":
-            response_time_ms = (time.time() - start_time) * 1000
-            features_manager.process_query_response(prompt, result, response_time_ms)
+        # Calculate response time
+        response_time = (time.time() - start_time) * 1000  # in milliseconds
+
+        # Process with features manager if available
+        if features and result != "Model unavailable":
+            features.process_query_response(prompt, result, response_time)
+
+        return result, sources
     except Exception as e:
-        result = f"Error: {str(e)}"
-        sources = ""
-
-    response_time_ms = (time.time() - start_time) * 1000
-    return result, sources, response_time_ms
-
-
-def save_conversation_data(prompt: str, result: str, sources: str, response_time_ms: float):
-    """Save conversation data"""
-    if not (get_history_manager and get_data_manager):
-        return
-
-    try:
-        history_manager = get_history_manager()
-        data_manager = get_data_manager()
-        user_id = st.session_state.get("user", {}).get("email", "anonymous")
-
-        # Prepare sources
-        sources_data = []
-        if sources and isinstance(sources, str):
-            sources_data = [{"content": sources, "type": "text"}]
-        elif sources and isinstance(sources, list):
-            for source in sources:
-                if hasattr(source, "metadata"):
-                    source_data = {
-                        "title": source.metadata.get("title", "Document"),
-                        "url": source.metadata.get("url", ""),
-                        "content": source.page_content[:200] + "..."
-                        if len(source.page_content) > 200
-                        else source.page_content,
-                        "type": "confluence",
-                    }
-                elif isinstance(source, dict):
-                    source_data = {
-                        "title": source.get("title", source.get("metadata", {}).get("title", "Document")),
-                        "url": source.get("url", source.get("metadata", {}).get("url", "")),
-                        "content": source.get("content", "")[:200] + "..."
-                        if len(source.get("content", "")) > 200
-                        else source.get("content", ""),
-                        "type": "confluence",
-                    }
-                else:
-                    source_data = {"content": str(source), "type": "text"}
-                sources_data.append(source_data)
-
-        # Save data
-        history_manager.save_conversation(
-            user_id=user_id,
-            question=prompt,
-            answer=result,
-            response_time_ms=response_time_ms,
-            sources=sources_data,
-        )
-
-        data_manager.save_performance(
-            operation="query_processing",
-            duration_ms=response_time_ms,
-            user_id=user_id,
-            metadata={
-                "question_length": len(prompt),
-                "answer_length": len(result),
-                "sources_count": len(sources_data),
-                "has_sources": len(sources_data) > 0,
-            },
-        )
-
-    except Exception as e:
-        st.warning(f"Cannot save conversation: {e}")
-
-
-# === APPLICATION PAGES ===
-@login_required
-def chat_page():
-    """Main chat page with modern interface"""
-    st.session_state["page"] = "chat"
-
-    # Enhanced header with icon
-    st.markdown(
-        """
-    <div class="welcome-container">
-        <h2>🤖 Bienvenue sur ISSCHAT</h2>
-        <p>Votre assistant intelligent pour toutes vos questions</p>
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    # Show database status if needed (will disappear once creation is complete)
-    show_database_status()
-
-    # Load model
-    model = get_model()
-    if not model:
-        st.error("No RAG model available")
-        return
-
-    # Initialize features manager
-    if "features_manager" not in st.session_state:
-        user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
-        if FeaturesManager:
-            st.session_state["features_manager"] = FeaturesManager(user_id)
-        else:
-            st.session_state["features_manager"] = None
-
-    features = st.session_state["features_manager"]
-
-    # Sidebar options
-    with st.sidebar:
-        st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-        st.subheader("Options")
-        show_feedback = st.toggle("Response feedback", value=True)
-        show_sources = st.toggle("Show sources", value=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # System status
-        st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-        st.subheader("System Status")
-        if NEW_RAG_AVAILABLE:
-            st.markdown('<span class="status-healthy">System operational</span>', unsafe_allow_html=True)
-
-            if hasattr(model, "health_check"):
-                try:
-                    health = model.health_check()
-                    if health.get("status") == "healthy":
-                        st.caption("All checks passed")
-                    else:
-                        st.markdown('<span class="status-warning">Issues detected</span>', unsafe_allow_html=True)
-                        if health.get("issues"):
-                            for issue in health["issues"]:
-                                st.caption(f"• {issue}")
-                except Exception:
-                    st.caption("Health check unavailable")
-        else:
-            st.markdown('<span class="status-error">Legacy architecture</span>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # Welcome message
-    user_email = st.session_state.get("user", {}).get("email", "")
-    first_name = user_email.split("@")[0].split(".")[0].capitalize()
-    welcome_message = f"Bonjour {first_name}, je suis votre assistant, comment puis-je vous aider ?"
-
-    # Initialize message history
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = [{"role": "assistant", "content": welcome_message}]
-
-    # Chat interface in modern container
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-
-    # Display message history with feedback widgets (comme dans l'ancienne version)
-    for i, msg in enumerate(st.session_state.messages):
-        if msg["role"] == "user":
-            st.chat_message("user").write(msg["content"])
-        else:
-            with st.chat_message("assistant"):
-                st.write(msg["content"])
-
-                # Add feedback widget for messages with question_data (real responses)
-                if show_feedback and features and "question_data" in msg:
-                    features.add_feedback_widget(
-                        st,
-                        question=msg["question_data"]["question"],
-                        answer=msg["question_data"]["answer"],
-                        sources=msg["question_data"]["sources"],
-                        key_suffix=f"history_{i}",
-                    )
-
-    # Handle reused questions from history
-    if "reuse_question" in st.session_state:
-        prompt = st.session_state.pop("reuse_question")
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.chat_message("user").write(prompt)
-
-        # Process question
-        with st.spinner("Analyzing..."):
-            result, sources, response_time_ms = process_question(model, features, prompt)
-
-            # Display response
-            st.chat_message("assistant").markdown(result)
-            # Sources already included in formatted response - no need to display separately
-
-            # Save data
-            save_conversation_data(prompt, result, sources, response_time_ms)
-
-            # Add to history with question data for feedback (comme dans l'ancienne version)
-            response_content = result
-            if sources and show_sources:
-                response_content += "\n\n" + sources
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": response_content,
-                    "question_data": {"question": prompt, "answer": result, "sources": sources if sources else ""},
-                }
-            )
-
-            # Force rerun to display feedback widget in history (comme dans l'ancienne version)
-            st.rerun()
-
-    # Input interface
-    if prompt := st.chat_input("Ask your question here..."):
-        # Add question
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.chat_message("user").write(prompt)
-
-        # Process question
-        with st.spinner("Analyzing..."):
-            result, sources, response_time_ms = process_question(model, features, prompt)
-
-            # Display response
-            st.chat_message("assistant").markdown(result)
-            # Sources already included in formatted response - no need to display separately
-
-            # Save data
-            save_conversation_data(prompt, result, sources, response_time_ms)
-
-            # Add to history with question data for feedback (comme dans l'ancienne version)
-            response_content = result
-            if sources and show_sources:
-                response_content += "\n\n" + sources
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": response_content,
-                    "question_data": {"question": prompt, "answer": result, "sources": sources if sources else ""},
-                }
-            )
-
-            # Force rerun to display feedback widget in history (comme dans l'ancienne version)
-            st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
+        return f"Error processing question: {str(e)}", ""
 
 
 @login_required
-def performance_page():
-    """Performance dashboard page"""
-    st.session_state["page"] = "performance"
-
-    # Enhanced header
-    st.markdown(
-        """
-    <div class="page-header">
-        📊 Dashboard de Performance
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    if render_performance_dashboard and get_data_manager:
-        data_manager = get_data_manager()
-
-        # Create dashboard grid
-        st.markdown('<div class="dashboard-grid">', unsafe_allow_html=True)
-
-        # Performance metrics in cards
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.markdown(
-                """
-            <div class="dashboard-card">
-                <h3>⚡ Temps de Réponse</h3>
-                <div class="perf-metric">
-                    <h4>1.2s</h4>
-                    <p>Moyenne</p>
-                </div>
-            </div>
-            """,
-                unsafe_allow_html=True,
-            )
-
-        with col2:
-            st.markdown(
-                """
-            <div class="dashboard-card">
-                <h3>💬 Requêtes Traitées</h3>
-                <div class="perf-metric">
-                    <h4>247</h4>
-                    <p>Aujourd'hui</p>
-                </div>
-            </div>
-            """,
-                unsafe_allow_html=True,
-            )
-
-        with col3:
-            st.markdown(
-                """
-            <div class="dashboard-card">
-                <h3>✅ Taux de Succès</h3>
-                <div class="perf-metric">
-                    <h4>98.5%</h4>
-                    <p>Cette semaine</p>
-                </div>
-            </div>
-            """,
-                unsafe_allow_html=True,
-            )
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # Render the actual dashboard
-        render_performance_dashboard(data_manager)
-    else:
-        st.markdown(
-            """
-        <div class="dashboard-card">
-            <h3>⚠️ Dashboard Indisponible</h3>
-            <p>Le système de monitoring des performances n'est pas disponible actuellement.</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def get_cached_history_data(user_id):
+    """Get cached history data"""
+    if not get_history_manager:
+        return []
+    history_manager = get_history_manager()
+    return history_manager.get_user_history(user_id)  # type : ignore
 
 
 @login_required
 def history_page():
-    """Conversation history page"""
+    """Display the query history page"""
+    # Reset the page if necessary
     st.session_state["page"] = "history"
-
-    # Enhanced header
-    st.markdown(
-        """
-    <div class="page-header">
-        📚 Historique des Conversations
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
 
     try:
         if get_history_manager:
             history_manager = get_history_manager()
             user_id = st.session_state.get("user", {}).get("email", "anonymous")
 
-            # Add some intro text
-            st.markdown(
-                """
-            <div class="dashboard-card">
-                <h3>💬 Vos Conversations Récentes</h3>
-                <p>Retrouvez et réutilisez vos questions précédentes</p>
-            </div>
-            """,
-                unsafe_allow_html=True,
-            )
-
-            # Render the history with enhanced styling
+            # Render history page
             history_manager.render_history_page(user_id)
         else:
-            st.markdown(
-                """
-            <div class="dashboard-card">
-                <h3>⚠️ Historique Indisponible</h3>
-                <p>Le système d'historique des conversations n'est pas disponible actuellement.</p>
-            </div>
-            """,
-                unsafe_allow_html=True,
-            )
+            st.info("History functionality not available")
     except Exception as e:
-        st.markdown(
-            """
-        <div class="dashboard-card">
-            <h3>❌ Erreur de Chargement</h3>
-            <p>Une erreur s'est produite lors du chargement de l'historique.</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-        st.error(f"Détails de l'erreur: {e}")
-        logger.error(f"History error: {e}")
+        st.error(f"Error loading history: {str(e)}")
+
+    # Return button
+    if st.button("Return to chat", key="return_from_history"):
+        st.session_state["page"] = "chat"
+        st.rerun()
+
+
+@login_required
+@st.cache_data(ttl=60)  # Cache for 1 minute
+def get_cached_performance_data():
+    """Get cached performance data"""
+    if get_data_manager:
+        _ = get_data_manager()
+        return {"response_time": "1.2s", "queries_today": "247", "success_rate": "98.5%"}
+    return None
+
+
+@login_required
+def dashboard_page():
+    """Performance dashboard page - inspired by src/dashboard.py"""
+    st.session_state["page"] = "dashboard"
+
+    st.title("Performance Dashboard")
+
+    try:
+        # Create tabs for different dashboard sections
+        tabs = st.tabs(["Performance Tracking", "Conversation Analysis", "General Statistics"])
+
+        # Tab 1: Performance Tracking
+        with tabs[0]:
+            render_performance_tracking()
+
+        # Tab 2: Conversation Analysis
+        with tabs[1]:
+            render_conversation_analysis()
+
+        # Tab 3: General Statistics
+        with tabs[2]:
+            render_general_statistics()
+
+    except Exception as e:
+        st.error(f"Error loading dashboard: {str(e)}")
+
+    # Return button
+    if st.button("Return to chat", key="return_from_dashboard"):
+        st.session_state["page"] = "chat"
+        st.rerun()
+
+
+def render_performance_tracking():
+    """Render performance tracking section"""
+    st.subheader("Performance Tracking")
+
+    # Period selection
+    days = st.slider("Analysis period (days)", 1, 30, 7, key="performance_days")
+
+    try:
+        if get_data_manager:
+            _ = get_data_manager()
+
+            # Get performance data
+            perf_data = get_cached_performance_data()
+
+            if perf_data:
+                # Display main metrics
+                st.metric("Average response time", f"{perf_data.get('avg_response_time', 'N/A')} ms")
+
+                # Create sample data for visualization
+                import pandas as pd
+                import numpy as np
+                from datetime import datetime, timedelta
+
+                # Generate sample daily data
+                dates = [datetime.now() - timedelta(days=i) for i in range(days, 0, -1)]
+                response_times = np.random.normal(1200, 200, days)  # Sample data
+                query_counts = np.random.poisson(50, days)  # Sample data
+
+                daily_data = pd.DataFrame(
+                    {"date": dates, "response_time_ms": response_times, "query_count": query_counts}
+                )
+
+                # Time evolution chart
+                st.subheader("Response Time Evolution")
+                st.line_chart(daily_data.set_index("date")[["response_time_ms"]])
+
+                # Query count chart
+                st.subheader("Daily Query Count")
+                st.bar_chart(daily_data.set_index("date")[["query_count"]])
+
+            else:
+                st.warning("No performance data available for the selected period")
+        else:
+            st.warning("Performance tracking not available")
+
+    except Exception as e:
+        st.error(f"Error displaying performance metrics: {str(e)}")
+
+
+def render_conversation_analysis():
+    """Render conversation analysis section"""
+    st.subheader("Conversation Analysis")
+
+    try:
+        # Get conversation data from features manager
+        if "features_manager" in st.session_state and st.session_state["features_manager"]:
+            # Display basic metrics
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total conversations", "156")  # Sample data
+            with col2:
+                st.metric("Average response time", "1.2s")  # Sample data
+
+            # Sample hourly distribution
+            st.subheader("Question distribution by hour")
+            import pandas as pd
+            import numpy as np
+
+            hours = list(range(24))
+            counts = np.random.poisson(5, 24)  # Sample data
+            hour_df = pd.DataFrame({"Hour": hours, "Questions": counts})
+            st.bar_chart(hour_df.set_index("Hour"))
+
+            # Most frequent keywords (sample)
+            st.subheader("Most frequent keywords")
+            keywords_data = [["confluence", 15], ["documentation", 12], ["access", 8], ["login", 6], ["help", 5]]
+            keywords_df = pd.DataFrame(keywords_data, columns=["Keyword", "Frequency"])
+            st.dataframe(keywords_df)
+
+        else:
+            st.warning("Conversation analysis not available")
+
+    except Exception as e:
+        st.error(f"Error displaying conversation analysis: {str(e)}")
+
+
+def render_general_statistics():
+    """Render general statistics section"""
+    st.subheader("General Statistics")
+
+    try:
+        # Get statistics from various sources
+        if "features_manager" in st.session_state and st.session_state["features_manager"]:
+            features = st.session_state["features_manager"]
+
+            # Get feedback statistics
+            feedback_stats = features.get_feedback_statistics(days=30)
+
+            # Display statistics in columns
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Total conversations", feedback_stats.get("total_feedback", 0))
+
+            with col2:
+                st.metric("Average response time", "1200 ms")  # Sample data
+
+            with col3:
+                st.metric("Satisfaction rate", f"{feedback_stats.get('satisfaction_rate', 0):.1f}%")
+
+            # Additional metrics
+            col4, col5 = st.columns(2)
+
+            with col4:
+                st.metric("Positive feedback", feedback_stats.get("positive_feedback", 0))
+
+            with col5:
+                st.metric("Negative feedback", feedback_stats.get("negative_feedback", 0))
+
+        else:
+            st.warning("Statistics not available")
+
+    except Exception as e:
+        st.error(f"Error collecting statistics: {str(e)}")
 
 
 @admin_required
 def admin_page():
-    """Clean administration page"""
-    st.title("Administration")
+    """Display the administration page"""
+    st.title("Administration Dashboard")
 
-    if auth_manager:
-        st.subheader("User Management")
-        st.info("User management functionality to be implemented")
+    # Check if the features manager is initialized
+    if "features_manager" in st.session_state:
+        features = st.session_state["features_manager"]
+        if features and hasattr(features, "render_admin_dashboard"):
+            features.render_admin_dashboard(st)
+        else:
+            st.info("Admin dashboard functionality not available")
     else:
-        st.warning("Authentication system unavailable")
+        st.warning("Please interact with the chatbot first to initialize the analytics features.")
+
+    # Return button
+    if st.button("Return to chat"):
+        st.session_state["page"] = "chat"
+        st.rerun()
 
 
-# === MAIN INTERFACE ===
-def render_sidebar():
-    """Render modern sidebar"""
-    with st.sidebar:
-        # Enhanced logo and title
-        st.markdown(
-            """
-        <div class="sidebar-section">
-            <h2 style="color: #2E86AB; margin: 0; font-size: 1.8rem;">🤖 ISSCHAT</h2>
-            <p style="color: #888; margin: 0.5rem 0 0 0; font-style: italic;">Assistant Intelligent</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-        # User information with enhanced styling
-        if "user" in st.session_state:
-            user_email = st.session_state["user"]["email"]
-            first_name = user_email.split("@")[0].split(".")[0].capitalize()
-            st.markdown(
-                f"""
-            <div class="sidebar-section">
-                <h4 style="color: #2E86AB; margin: 0;">👤 User</h4>
-                <p style="color: #6A994E; margin: 0.25rem 0 0 0; font-weight: 600;">Connected: {first_name}</p>
-                <p style="color: #888; margin: 0; font-size: 0.8rem;">{user_email}</p>
-            </div>
-            """,
-                unsafe_allow_html=True,
-            )
-
-        # Enhanced navigation with icons
-        st.markdown(
-            """
-        <div class="sidebar-section">
-            <h4 style="color: #2E86AB; margin: 0 0 1rem 0;">🧭 Navigation</h4>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-        # Current page indicator
-        current_page = st.session_state.get("page", "chat")
-
-        # Chat button
-        chat_type = "primary" if current_page == "chat" else "secondary"
-        if st.button("💬 Chat", use_container_width=True, type=chat_type):
-            st.session_state["page"] = "chat"
-            st.rerun()
-
-        # History button
-        history_type = "primary" if current_page == "history" else "secondary"
-        if st.button("📚 Historique", use_container_width=True, type=history_type):
-            st.session_state["page"] = "history"
-            st.rerun()
-
-        # Dashboard button
-        dashboard_type = "primary" if current_page == "performance" else "secondary"
-        if st.button("📊 Dashboard", use_container_width=True, type=dashboard_type):
-            st.session_state["page"] = "performance"
-            st.rerun()
-
-        # Admin options
-        if st.session_state.get("user", {}).get("is_admin"):
-            st.markdown("---")
-            st.info("Administrator Mode")
-            if st.button("Administration", use_container_width=True):
-                st.session_state["page"] = "admin"
-                st.rerun()
-
-        # System information
-        st.markdown("---")
-        st.caption("Version 2.0 - Modern Interface")
-
-
-def main():
-    """Main application function"""
-    # Configure user session
-    setup_user_session()
-
-    # Render sidebar
-    render_sidebar()
-
-    # Page routing
-    page = st.session_state.get("page", "chat")
-
-    if page == "performance":
-        performance_page()
-    elif page == "admin" and st.session_state.get("user", {}).get("is_admin"):
-        admin_page()
-    elif page == "history":
-        history_page()
-    else:
-        chat_page()
-
-
-# === ENTRY POINT ===
+# Launch the application
 if __name__ == "__main__":
     main()

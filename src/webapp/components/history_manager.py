@@ -39,7 +39,7 @@ class ConversationHistoryManager:
             border: 1px solid #404040;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        
+
         .search-highlight {
             background-color: #F18F01;
             color: #000000;
@@ -54,13 +54,13 @@ class ConversationHistoryManager:
     def render_history_page(self, user_id: Optional[str] = None):
         """Render the conversation history page."""
         st.markdown(
-            "<h1 style='text-align: center; color: #2E86AB; margin-bottom: 2rem;'>💬 Conversation History</h1>",
+            "<h1 style='text-align: left; margin-bottom: 2rem;'> Conversation History</h1>",
             unsafe_allow_html=True,
         )
 
         # Sidebar for filters
         with st.sidebar:
-            st.subheader("🔍 Filters")
+            st.subheader("Filters")
 
             # Period filter
             period_options = {
@@ -94,7 +94,7 @@ class ConversationHistoryManager:
             return
 
         # Tabs for different views
-        tab1, tab2, tab3 = st.tabs(["📋 Conversation List", "📊 Statistics", "🔍 Search"])
+        tab1, tab2, tab3 = st.tabs(["Conversation List", "Statistics", "Search"])
 
         with tab1:
             self._render_conversations_list(conversations)
@@ -119,7 +119,7 @@ class ConversationHistoryManager:
 
     def _render_conversations_list(self, conversations: List[Dict]):
         """Render the conversations list."""
-        st.markdown("### 📋 Recent Conversations")
+        st.markdown("### Recent Conversations")
 
         if not conversations:
             st.info("No conversations to display.")
@@ -130,7 +130,7 @@ class ConversationHistoryManager:
         with col1:
             show_details = st.checkbox("Show full details", value=False)
         with col2:
-            export_btn = st.button("📥 Export CSV")
+            export_btn = st.button("Export CSV")
 
         if export_btn:
             self._export_conversations_csv(conversations)
@@ -138,17 +138,17 @@ class ConversationHistoryManager:
         # Display conversations
         for i, conv in enumerate(conversations):
             with st.expander(
-                f"🕐 {self._format_timestamp(conv['timestamp'])} - "
-                f"👤 {conv.get('user_id', 'Anonymous')} - "
-                f"⏱️ {conv.get('response_time_ms', 0):.0f}ms",
+                f"{self._format_timestamp(conv['timestamp'])} - "
+                f"{conv.get('user_id', 'Anonymous')} - "
+                f"{conv.get('response_time_ms', 0):.0f}ms",
                 expanded=False,
             ):
                 # Question
-                st.markdown("**❓ Question:**")
+                st.markdown("**Question:**")
                 st.write(conv["question"])
 
                 # Answer
-                st.markdown("**💡 Answer:**")
+                st.markdown("**Answer:**")
                 if show_details:
                     st.write(conv["answer"])
                 else:
@@ -173,7 +173,7 @@ class ConversationHistoryManager:
 
                 # Sources if available
                 if show_details and conv.get("sources"):
-                    st.markdown("**📚 Sources used:**")
+                    st.markdown("**Sources used:**")
                     for j, source in enumerate(conv["sources"][:3]):  # Limit to 3 sources
                         title = source.get("title", "Unknown source")
                         url = source.get("url", "")
@@ -185,14 +185,14 @@ class ConversationHistoryManager:
                             st.write(f"{j + 1}. {title}")
 
                 # Button to reuse the question
-                if st.button("🔄 Reuse this question", key=f"reuse_{i}"):
+                if st.button("Reuse this question", key=f"reuse_{i}"):
                     st.session_state["reuse_question"] = conv["question"]
                     st.session_state["page"] = "chat"
                     st.rerun()
 
     def _render_statistics(self, conversations: List[Dict]):
         """Render conversation statistics."""
-        st.markdown("### 📊 Conversation Statistics")
+        st.markdown("### Conversation Statistics")
 
         if not conversations:
             st.info("No data available for statistics.")
@@ -217,7 +217,7 @@ class ConversationHistoryManager:
             st.metric("Total Sources Used", total_sources)
 
         # Charts
-        st.markdown("### 📈 Trends")
+        st.markdown("### Trends")
 
         # Prepare data for charts
         df = pd.DataFrame(conversations)
@@ -254,7 +254,7 @@ class ConversationHistoryManager:
 
     def _render_search_interface(self, conversations: List[Dict]):
         """Render the search interface."""
-        st.markdown("### 🔍 Search Conversations")
+        st.markdown("### Search Conversations")
 
         # Search interface
         search_term = st.text_input("Search in questions and answers:")
@@ -285,7 +285,7 @@ class ConversationHistoryManager:
                     )
                     st.markdown(highlighted_question, unsafe_allow_html=True)
 
-                    st.markdown("**💡 Answer:**")
+                    st.markdown("**Answer:**")
                     answer = conv["answer"][:300] + "..." if len(conv["answer"]) > 300 else conv["answer"]
                     highlighted_answer = answer.replace(
                         search_term, f'<span class="search-highlight">{search_term}</span>'
@@ -303,7 +303,7 @@ class ConversationHistoryManager:
                         rating = feedback.get("rating", "N/A") if feedback else "Not rated"
                         st.write(f"**Rating:** {rating}")
 
-                    if st.button("🔄 Reuse", key=f"search_reuse_{i}"):
+                    if st.button("Reuse", key=f"search_reuse_{i}"):
                         st.session_state["reuse_question"] = conv["question"]
                         st.session_state["page"] = "chat"
                         st.rerun()
@@ -311,7 +311,7 @@ class ConversationHistoryManager:
             st.info("Enter a search term to find relevant conversations.")
 
             # Show popular topics when no search
-            st.markdown("#### 🏷️ Popular Topics")
+            st.markdown("#### Popular Topics")
             self._render_popular_topics(conversations)
 
     def _render_popular_topics(self, conversations: List[Dict]):
@@ -360,7 +360,7 @@ class ConversationHistoryManager:
         csv = df.to_csv(index=False)
 
         st.download_button(
-            label="📥 Download CSV",
+            label="Download CSV",
             data=csv,
             file_name=f"conversations_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
