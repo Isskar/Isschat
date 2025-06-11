@@ -38,10 +38,8 @@ except Exception as e:
 # Import custom modules
 from src.rag_system.rag_pipeline import RAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
-from src.webapp.components.auth_manager import AuthManager
 from src.webapp.components.history_manager import get_history_manager
 
-auth_manager = AuthManager()
 # Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
