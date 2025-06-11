@@ -10,7 +10,7 @@ import shutil
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from config import get_config
+from config_import import get_config
 
 # Set tokenizers parallelism to false to avoid deadlocks
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -54,7 +54,7 @@ def get_model(rebuild_db=False):
     with st.spinner("Loading RAG model..."):
         # Check if the index.faiss file exists
         import sys  # noqa: E402
-        from config import get_debug_info  # noqa: E402
+        from config_import import get_debug_info  # noqa: E402
         from pathlib import Path  # noqa: E402
 
         # Get debug info

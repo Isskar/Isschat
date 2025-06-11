@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Simple runner script for Isschat evaluation
+Simple runner script for Isschat evaluation system
 """
 
 import sys
 from pathlib import Path
 
 # Add the current directory to Python path
-sys.path.append(str(Path(__file__).parent))
+sys.path.append(str(Path(__file__).parent.parent))
 
-from eval_answer_relevance import main
+from rag_evaluation.main import main
 
 if __name__ == "__main__":
     print("🚀 Starting Isschat Evaluation System")

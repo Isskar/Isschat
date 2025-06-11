@@ -1,0 +1,14 @@
+[
+  {
+    "test_id": "feed_001",
+    "category": "feedback",
+    "test_name": "Positive Feedback Simulation - Good Answer",
+    "question": "Comment installer Isschat ?",
+    "expected_behavior": "Should provide clear installation instructions that would generate positive user feedback. Response should be comprehensive and helpful.",
+    "metadata": {
+      "test_type": "positive_feedback_simulation",
+      "language": "french",
+      "expected_feedback": "positive",
+      "feedback_category": "helpfulness"
+    }
+  }]

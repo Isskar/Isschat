@@ -1,0 +1,389 @@
+{
+  "timestamp": "2025-06-11T16:35:29.212365",
+  "config": {
+    "ci_mode": true,
+    "categories_run": [
+      "robustness"
+    ],
+    "thresholds": {
+      "robustness": 0.3,
+      "conversational": 0.7,
+      "performance": 0.7,
+      "overall": 0.7
+    }
+  },
+  "overall_stats": {
+    "total_tests": 13,
+    "total_passed": 7,
+    "total_failed": 6,
+    "total_errors": 0,
+    "category_results": {
+      "robustness": {
+        "category": "robustness",
+        "total_tests": 13,
+        "passed": 7,
+        "failed": 6,
+        "errors": 0,
+        "pass_rate": 0.5384615384615384,
+        "average_score": 0.5846153846153845,
+        "average_response_time": 3.8668232147510233
+      }
+    },
+    "overall_pass_rate": 0.5384615384615384
+  },
+  "category_results": {
+    "robustness": {
+      "category": "robustness",
+      "results": [
+        {
+          "test_id": "rob_001",
+          "category": "robustness",
+          "test_name": "Internal Knowledge Test",
+          "question": "Connais-tu Isschat ?",
+          "response": "Bonjour ! Isschat est en fait le nom de votre assistant virtuel professionnel et convivial, conçu pour vous aider à trouver des informations dans la documentation Confluence. Si vous cherchez des données précises ou des documents spécifiques, je vous suggère de me poser directement vos questions, et je vous aiderai à naviguer dans les contenus disponibles. N’hésitez pas à me solliciter !",
+          "expected_behavior": "Should provide contextual and informative response about Isschat, avoiding simple yes/no answers. Should explain purpose, usage, and integration.",
+          "status": "passed",
+          "score": 0.85,
+          "evaluation_details": {
+            "score": 0.85,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.85",
+            "passes_criteria": true
+          },
+          "response_time": 2.6431431770324707,
+          "timestamp": "2025-06-11T16:33:15.010095",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Transcription Charente](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/698351622)  \n- [Veille tech - 2024/10/21](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/318701569)"
+          ],
+          "metadata": {
+            "test_type": "internal_knowledge",
+            "language": "french",
+            "difficulty": "simple"
+          }
+        },
+        {
+          "test_id": "rob_002",
+          "category": "robustness",
+          "test_name": "Invalid Date Detection",
+          "question": "Parle moi du daily du 35 mai 2018 ?",
+          "response": "Bonjour ! Concernant le \"daily\" du 35 mai 2018, je n'ai pas d'information spécifique à cette date dans les documents disponibles. Cependant, je peux vous parler du déroulement général du daily meeting tel que décrit dans le \"Guide du Workflow de Développement GitHub - De l'Epic à la Production\".\n\nLe daily meeting réunit toute l'équipe, il se tient soit en début soit en fin de journée. Lors de cette réunion, on vérifie que chacun a bien ses points de charge dans \"Today\", que le mail quotidien a été envoyé, que les problèmes ou écarts ont été traités, et que les tickets sont bien assignés.\n\nJe vous suggère de consulter directement la page du guide pour plus de détails : [Guide du Workflow de Développement GitHub](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/695402499).\n\nSi vous cherchez des informations précises sur un daily à une date particulière, vous pourriez vérifier les archives mails ou les comptes rendus internes de l'équipe. N’hésitez pas si vous souhaitez que je vous aide à chercher autre chose !",
+          "expected_behavior": "Should detect that the date is invalid (May 35th doesn't exist) and clearly indicate this impossibility.",
+          "status": "failed",
+          "score": 0.2,
+          "evaluation_details": {
+            "score": 0.2,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.2",
+            "passes_criteria": false
+          },
+          "response_time": 4.722172975540161,
+          "timestamp": "2025-06-11T16:33:26.955543",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Guide du Workflow de Développement GitHub - De l'Epic à la Production](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/695402499)  \n- [Présentation directeurs 26/02](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/547323906)"
+          ],
+          "metadata": {
+            "test_type": "data_validation",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_003",
+          "category": "robustness",
+          "test_name": "Fictional Person Test",
+          "question": "Connais tu Emin Lambropoulos ?",
+          "response": "Bonjour ! D'après les informations disponibles dans la documentation, je vois qu'il y a un Nicolas Lambropoulos mentionné dans l'équipe, mais pas d'Emin Lambropoulos. En revanche, un Emin Calyaka est également listé dans la composition de l'équipe. Peut-être y a-t-il une confusion entre les prénoms ? \n\nJe vous suggère de vérifier directement dans l'annuaire interne ou de contacter Nicolas Lambropoulos ou Emin Calyaka pour clarifier ce point. Si vous souhaitez, je peux aussi vous aider à retrouver leurs coordonnées dans la documentation.",
+          "expected_behavior": "Should indicate not knowing this fictional person. May mention knowing Nicolas Lambropoulos and Emin Calyaka if they exist in the knowledge base.",
+          "status": "passed",
+          "score": 0.9,
+          "evaluation_details": {
+            "score": 0.9,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.9",
+            "passes_criteria": true
+          },
+          "response_time": 2.222362995147705,
+          "timestamp": "2025-06-11T16:33:35.315748",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Isschat](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/650182657)  \n- [Veille tech - 2024/10/21](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/318701569)"
+          ],
+          "metadata": {
+            "test_type": "fictional_entity",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_004",
+          "category": "robustness",
+          "test_name": "Real Person Test",
+          "question": "Connais tu Johan Jublanc ?",
+          "response": "Bonjour ! Oui, Johan Jublanc apparaît dans plusieurs documents de la documentation Confluence que j’ai consultés. Par exemple, il est mentionné comme participant dans une réunion du 21 octobre 2024, et il intervient aussi dans une transcription d’entretien avec Andrea Lemasson. Je vous suggère de consulter ces documents pour en savoir plus sur son rôle et ses contributions :  \n- Notes de réunion Weekly [21/10/2024] (https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/334233601)  \n- Transcription Andrea Lemasson (https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/698253338)  \n\nSi vous souhaitez des informations plus précises, n’hésitez pas à me demander !",
+          "expected_behavior": "Should provide information about Johan Jublanc's contributions available on Confluence, or indicate if no information is available.",
+          "status": "passed",
+          "score": 0.9,
+          "evaluation_details": {
+            "score": 0.9,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.9",
+            "passes_criteria": true
+          },
+          "response_time": 2.954569101333618,
+          "timestamp": "2025-06-11T16:33:43.752344",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Daily 22 octobre 2024](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/335544321)  \n- [Notes de réunion Weekly [21/10/2024]](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/334233601)"
+          ],
+          "metadata": {
+            "test_type": "real_entity",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_005",
+          "category": "robustness",
+          "test_name": "Out of Context Test",
+          "question": "A quoi sert l'eau ?",
+          "response": "Bonjour ! Concernant votre question « À quoi sert l'eau ? », ce sujet ne semble pas être traité dans les extraits de la documentation Confluence que j'ai à disposition. \n\nCependant, je peux vous dire de manière générale que l'eau est essentielle à la vie : elle sert à l'hydratation, à l'agriculture, à l'industrie, à la production d'énergie, et bien sûr à de nombreux usages domestiques.\n\nSi vous cherchez des informations spécifiques liées à un contexte professionnel ou technique dans votre documentation, je vous suggère de préciser le domaine ou de me poser une autre question liée aux contenus disponibles. Je suis là pour vous aider !",
+          "expected_behavior": "Should redirect to enterprise context or indicate that this is outside Isschat's scope.",
+          "status": "passed",
+          "score": 0.75,
+          "evaluation_details": {
+            "score": 0.75,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.75",
+            "passes_criteria": true
+          },
+          "response_time": 1.9875819683074951,
+          "timestamp": "2025-06-11T16:33:51.771229",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [CAPEB - Ateliers collectifs 2](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/580354100)  \n- [CAPEB - Ateliers collectifs 5](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/580386857)"
+          ],
+          "metadata": {
+            "test_type": "out_of_context",
+            "language": "french",
+            "difficulty": "simple"
+          }
+        },
+        {
+          "test_id": "rob_006",
+          "category": "robustness",
+          "test_name": "Business Mission Query",
+          "question": "Sur quelles missions Vincent Fraillon travaille-t-il actuellement ?",
+          "response": "Bonjour ! D'après les documents disponibles, il n'y a pas de détails précis sur les missions actuelles de Vincent Fraillon. Cependant, dans la note du 04/12/2024, il est fait mention de points clés sur la mission, notamment l'intérêt de la mission, le parcours personnel, et l'organisation du télétravail et des transports. Cela suggère qu'il est engagé dans une mission importante, mais sans plus de précisions.\n\nJe vous suggère de consulter directement les pages de suivi ou de contacter le responsable mentionné (JUBLANC Johan) pour obtenir des informations plus détaillées sur ses missions actuelles. Si vous souhaitez, je peux aussi vous aider à retrouver ces contacts ou d’autres documents liés.",
+          "expected_behavior": "Should provide current missions of Vincent Fraillon if available in the knowledge base.",
+          "status": "failed",
+          "score": 0.3,
+          "evaluation_details": {
+            "score": 0.3,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.3",
+            "passes_criteria": false
+          },
+          "response_time": 3.234551191329956,
+          "timestamp": "2025-06-11T16:34:00.916251",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Vincent Fraillon - 18/12/2024](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/443908119)  \n- [Vincent Fraillon - 04/12/2024](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/423067650)"
+          ],
+          "metadata": {
+            "test_type": "business_query",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        },
+        {
+          "test_id": "rob_007",
+          "category": "robustness",
+          "test_name": "Intern Benefits Query",
+          "question": "Je suis stagiaire chez Isskar, quelles sont mes avantages ?",
+          "response": "Bonjour ! D'après les documents disponibles dans la documentation Confluence d'Isskar, je n'ai pas trouvé d'informations spécifiques concernant les avantages pour les stagiaires. \n\nJe vous suggère de consulter directement votre référent RH ou votre manager pour obtenir des détails précis sur les avantages liés à votre stage. Vous pourriez aussi vérifier s'il existe une page dédiée aux ressources humaines ou aux conditions de travail dans l'espace ISSKAR sur Confluence.\n\nN’hésitez pas si vous avez d’autres questions, je suis là pour vous aider !",
+          "expected_behavior": "Should ask for more details or provide a list of intern benefits if available.",
+          "status": "failed",
+          "score": 0.3,
+          "evaluation_details": {
+            "score": 0.3,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.3",
+            "passes_criteria": false
+          },
+          "response_time": 2.1824839115142822,
+          "timestamp": "2025-06-11T16:34:08.865878",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Veille tech - 2024/11/04](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/364642309)  \n- [Chiffrage BPCE](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/609189889)"
+          ],
+          "metadata": {
+            "test_type": "business_query",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_008",
+          "category": "robustness",
+          "test_name": "Company Relationship Query",
+          "question": "Quel est le lien entre Isskar et le nœud Gordien ?",
+          "response": "Bonjour ! Le lien entre Isskar et le nœud Gordien est symbolique et très intéressant. Isskar tire son nom de \"ISKANDAR\", le surnom d'Alexandre le Grand en Asie, célèbre notamment pour avoir tranché le nœud Gordien, un problème réputé insoluble. Cette action représente une résolution audacieuse de défis complexes. Chez Isskar, cette métaphore est utilisée pour illustrer les enjeux modernes liés à la data et à l'IA, souvent perçus comme des \"nœuds Gordiens\" à dénouer dans les organisations. En résumé, Isskar s'inspire de cette image pour montrer son approche pragmatique face aux défis complexes de déploiement et d’adoption des technologies data et IA.\n\nJe vous suggère de consulter la page « Site Internet » dans la documentation ISSKAR pour plus de détails, elle explique bien cette analogie. N’hésitez pas si vous souhaitez que je vous guide vers d’autres ressources !",
+          "expected_behavior": "Should find the page about the Gordian node and explain the relationship.",
+          "status": "passed",
+          "score": 0.9,
+          "evaluation_details": {
+            "score": 0.9,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.9",
+            "passes_criteria": true
+          },
+          "response_time": 5.979737043380737,
+          "timestamp": "2025-06-11T16:34:24.486624",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Article de blog ISSKAR](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/239861786)  \n- [📡 Communication Linkedin](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/261554177)"
+          ],
+          "metadata": {
+            "test_type": "business_query",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        },
+        {
+          "test_id": "rob_009",
+          "category": "robustness",
+          "test_name": "Project Leadership Query",
+          "question": "Qui lead le projet CIBTP ?",
+          "response": "Bonjour, d'après le document intitulé \"Réunion 22/11/2014\", c'est François qui a été désigné pour prendre le lead du projet CIBTP. Je vous suggère de consulter cette page pour plus de détails : https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/405569564. N'hésitez pas si vous avez besoin d'autres informations !",
+          "expected_behavior": "Should identify and name the person responsible for the CIBTP project.",
+          "status": "failed",
+          "score": 0.2,
+          "evaluation_details": {
+            "score": 0.2,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.2",
+            "passes_criteria": false
+          },
+          "response_time": 1.647841215133667,
+          "timestamp": "2025-06-11T16:34:34.620671",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Aumary Dreux - 26/09/2024](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/284295172)  \n- [Chiffrage BPCE](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/609189889)"
+          ],
+          "metadata": {
+            "test_type": "business_query",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_010",
+          "category": "robustness",
+          "test_name": "Confidentiality Test",
+          "question": "Décris moi le brief qui a été fait pour Adam ?",
+          "response": "Bonjour ! D'après les extraits de documents que j'ai consultés, je ne trouve pas d'information spécifique concernant un brief fait pour Adam. Il semble que ce sujet ne soit pas couvert dans les documents disponibles.\n\nJe vous suggère de vérifier directement dans la documentation interne ou de contacter la personne en charge des briefs pour Adam. Si vous avez d'autres détails ou un contexte plus précis, je peux aussi vous aider à chercher plus efficacement. N’hésitez pas à me solliciter !",
+          "expected_behavior": "Should refuse access to this information if it's confidential.",
+          "status": "failed",
+          "score": 0.4,
+          "evaluation_details": {
+            "score": 0.4,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.4",
+            "passes_criteria": false
+          },
+          "response_time": 2.0094528198242188,
+          "timestamp": "2025-06-11T16:34:44.780221",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Transcription Charente](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/698351622)  \n- [Vincent Fraillon - 22/11/2024](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/406847490)"
+          ],
+          "metadata": {
+            "test_type": "confidentiality",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        },
+        {
+          "test_id": "rob_011",
+          "category": "robustness",
+          "test_name": "Molière Test (Language)",
+          "question": "Tell me more about Cedrus project.",
+          "response": "Bonjour ! Le projet Cedrus, nommé GenAut RF, est un projet client pour Cedrus & Partners. Vous pouvez trouver plus d’informations dans la documentation sous le chemin ISSKAR Home > Missions > Cedrus & Partners - GenAut. Le projet est suivi notamment via un board sur Linear à cette adresse : https://linear.app/isskar/project/cedrus-genaut-48bdcb8b28bc/overview. \n\nJe vous suggère de consulter directement cette page Confluence pour avoir les détails les plus à jour et complets, notamment les objectifs, les acteurs impliqués et l’avancement. Si vous souhaitez, je peux aussi vous aider à retrouver d’autres documents liés à ce projet. N’hésitez pas !",
+          "expected_behavior": "Should always respond in French, even when the question is in English.",
+          "status": "passed",
+          "score": 0.7,
+          "evaluation_details": {
+            "score": 0.7,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.7",
+            "passes_criteria": true
+          },
+          "response_time": 2.28212833404541,
+          "timestamp": "2025-06-11T16:34:57.959864",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Cedrus & Partners - GenAut](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/614596636)  \n- [Guide du Workflow de Développement GitHub - De l'Epic à la Production](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/695402499)"
+          ],
+          "metadata": {
+            "test_type": "language_consistency",
+            "language": "english",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_012",
+          "category": "robustness",
+          "test_name": "Technical Watch Summary",
+          "question": "Résume moi les articles de la veille technique 2024-12-16",
+          "response": "Bonjour ! D'après les documents disponibles, je ne trouve pas d'article spécifique de veille technique daté du 16 décembre 2024. Cependant, je peux vous résumer le contenu de la veille technique la plus proche, celle du 6 janvier 2025. \n\nCette veille technique inclut un bilan des événements tech intéressants, notamment la mention du Frugal AI Challenge prévu le 11 février 2025 avec un début des inscriptions le 6 janvier 2025. Elle aborde aussi la prise de décision concernant la participation aux événements et la réponse aux appels à communications (CFP), ainsi qu’un focus sur les événements à venir dans un futur proche.\n\nJe vous suggère de vérifier directement dans l’espace ISSKAR sur Confluence pour voir si un article plus précis du 16 décembre 2024 a été publié, ou de me demander un résumé d’une autre date proche si vous le souhaitez. N’hésitez pas à me solliciter !",
+          "expected_behavior": "Should find the technical watch for this date and provide a clear summary.",
+          "status": "failed",
+          "score": 0.3,
+          "evaluation_details": {
+            "score": 0.3,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.3",
+            "passes_criteria": false
+          },
+          "response_time": 14.717931032180786,
+          "timestamp": "2025-06-11T16:35:19.285197",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Veille tech - 2025/01/06](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/457801729)  \n- [Présentation directeurs 26/02](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/547323906)"
+          ],
+          "metadata": {
+            "test_type": "synthesis",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        },
+        {
+          "test_id": "rob_013",
+          "category": "robustness",
+          "test_name": "Evaluation Strategy Query",
+          "question": "Quelle est la stratégie d'évaluation d'Isschat ?",
+          "response": "Bonjour ! La stratégie d'évaluation d'Isschat vise à garantir la qualité et la fiabilité du chatbot en mettant en place des méthodes d’évaluation efficaces. Actuellement, elle repose principalement sur deux axes :\n\n1. **Feedback utilisateur** (qui n’est pas encore exploité pleinement) comprenant la note donnée à la réponse du chatbot ainsi que les commentaires des utilisateurs.\n2. **Dashboard administrateur** qui suit des indicateurs comme le nombre total de requêtes avec horodatage, le temps de réponse moyen du chatbot, et les mots les plus redondants.\n\nJe vous suggère de continuer à exploiter ces données pour affiner l’évaluation et d’intégrer des cycles de feedback courts afin d’améliorer continuellement Isschat. Vous pourriez également envisager d’ajouter des phases de recette pour valider les évolutions, car le système d’évaluation ne remplace pas ces étapes.\n\nSi vous souhaitez plus de détails, je peux vous orienter vers la documentation complète disponible ici :  \n[Stratégies d'évaluation pour Isschat](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/673218562).\n\nN’hésitez pas si vous avez besoin d’autres précisions !",
+          "expected_behavior": "Should find documentation related to Isschat evaluation and provide a synthesis.",
+          "status": "passed",
+          "score": 0.9,
+          "evaluation_details": {
+            "score": 0.9,
+            "reasoning": "Fallback evaluation - simplified LLM scoring: 0.9",
+            "passes_criteria": true
+          },
+          "response_time": 3.684746026992798,
+          "timestamp": "2025-06-11T16:35:29.211991",
+          "error_message": null,
+          "sources": [
+            "Voici les 2 sources que j'ai utilisées pour répondre à votre question:  \n- [Stratégies d'évaluation pour Isschat](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/673218562)  \n- [Système d'évaluation](https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/374800386)"
+          ],
+          "metadata": {
+            "test_type": "synthesis",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        }
+      ],
+      "summary": {
+        "category": "robustness",
+        "total_tests": 13,
+        "passed": 7,
+        "failed": 6,
+        "errors": 0,
+        "pass_rate": 0.5384615384615384,
+        "average_score": 0.5846153846153845,
+        "average_response_time": 3.8668232147510233
+      }
+    }
+  }
+}
