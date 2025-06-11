@@ -43,6 +43,7 @@ dependencies = [
     "azure-identity>=1.23.0",
     "plotly>=6.1.2",
     "streamlit-feedback>=0.1.4",
+    "psutil>=7.0.0",
 ]
 
 [tool.ruff]

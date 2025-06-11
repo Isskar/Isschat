@@ -3,8 +3,8 @@ Factory for creating different types of retrievers.
 """
 
 from typing import Dict, Any
-from base_retriever import BaseRetriever
-from simple_retriever import SimpleRetriever
+from src.retrieval.base_retriever import BaseRetriever
+from src.retrieval.simple_retriever import SimpleRetriever
 
 from src.core.exceptions import ConfigurationError
 
