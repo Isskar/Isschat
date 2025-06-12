@@ -95,3 +95,6 @@ jobs:
       - name: Run unit tests
         run: |
           uv run pytest tests/ -v --tb=short --disable-warnings
+        env:
+          ENVIRONMENT: ci
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

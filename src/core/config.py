@@ -204,6 +204,31 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
         return f"Azure Key Vault ({self.key_vault_url})"
 
 
+class ContinuousIntegrationConfigProvider(ConfigProvider):
+    """Configuration provider for Continuous Integration environment"""
+
+    def load_config(self) -> ConfigurationData:
+        """Load configuration for CI environment"""
+        base_dir = os.getcwd()
+        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
+        db_path = os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db"))
+
+        config_dict = {
+            "confluence_private_api_key": "",
+            "confluence_space_key": "",
+            "confluence_space_name": "",
+            "confluence_email_address": "",
+            "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", ""),
+            "db_path": db_path,
+            "persist_directory": persist_dir,
+        }
+
+        return ConfigurationData(**config_dict)  # ty : ignore
+
+    def get_provider_name(self) -> str:
+        return "Continuous Integration (CI)"
+
+
 class ConfigurationManager:
     """Main configuration manager that handles different providers"""
 
@@ -243,7 +268,7 @@ class ConfigurationManager:
 
     def _initialize_ci_config(self) -> bool:  # FIXME : Add secrets when CD deployed
         """Initialize configuration for CI environment"""
-        provider = LocalConfigProvider()
+        provider = ContinuousIntegrationConfigProvider()
         return self.initialize(provider)
 
     def _initialize_production_config(self) -> bool:
