@@ -13,6 +13,25 @@ from core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, TestC
 from core.isschat_client import IsschatClient
 from core.llm_judge import LLMJudge
 
+CONVERSATIONAL_PROMPT = """You are an expert evaluator for conversational AI systems.
+
+CONVERSATION CONTEXT: {context}
+CURRENT QUESTION: {question}
+ISSCHAT RESPONSE: {response}
+EXPECTED BEHAVIOR: {expected}
+
+EVALUATION CRITERIA:
+- Does the response globally maintain conversation context?
+- Does it demonstrate conversational memory?
+- Is the response coherent with the conversation flow?
+
+Respond with a JSON object containing:
+- "score": float between 0.0 and 1.0
+- "reasoning": brief explanation of the score
+- "passes_criteria": boolean indicating if it meets expectations
+
+EVALUATION:"""
+
 
 class ConversationalEvaluator(BaseEvaluator):
     """Evaluator for conversational history tests"""
@@ -61,10 +80,14 @@ class ConversationalEvaluator(BaseEvaluator):
                     sources=sources,
                 )
 
-            # Evaluate with LLM judge (including conversation context)
-            evaluation = self.llm_judge.evaluate_conversational(
-                test_case.question, response, test_case.expected_behavior, context_str
+            # Evaluate with conversational prompt
+            prompt = CONVERSATIONAL_PROMPT.format(
+                context=context_str,
+                question=test_case.question,
+                response=response,
+                expected=test_case.expected_behavior
             )
+            evaluation = self.llm_judge._evaluate_with_prompt(prompt)
 
             # Perform conversational-specific analysis
             conversational_analysis = self._analyze_conversational_aspects(test_case, response, context_str)

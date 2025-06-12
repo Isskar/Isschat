@@ -17,26 +17,6 @@ from langchain_core.utils.utils import convert_to_secret_str
 class LLMJudge:
     """LLM-based evaluation judge for Isschat responses"""
 
-    # Evaluation prompt for conversational tests only
-    CONVERSATIONAL_PROMPT = """You are an expert evaluator for conversational AI systems.
-
-CONVERSATION CONTEXT: {context}
-CURRENT QUESTION: {question}
-ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {expected}
-
-EVALUATION CRITERIA:
-- Does the response globally maintain conversation context?
-- Does it demonstrate conversational memory?
-- Is the response coherent with the conversation flow?
-
-Respond with a JSON object containing:
-- "score": float between 0.0 and 1.0
-- "reasoning": brief explanation of the score
-- "passes_criteria": boolean indicating if it meets expectations
-
-EVALUATION:"""
-
     def __init__(self, config: Any):
         """Initialize LLM judge with configuration"""
         self.config = config
@@ -52,6 +32,7 @@ EVALUATION:"""
 
         # Configure logging to suppress httpx INFO logs
         import logging
+
         logging.getLogger("httpx").setLevel(logging.WARNING)
 
         # Initialize LLM
