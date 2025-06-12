@@ -72,6 +72,10 @@ class FAISSVectorStore(BaseVectorStore):
         except Exception as e:
             raise VectorStoreError(f"Similarity search failed: {str(e)}")
 
+    def search_documents(self, query: str, k: int = 5) -> List[Document]:
+        """Alias for similarity_search to match test expectations."""
+        return self.similarity_search(query, k)
+
     def delete_documents(self, document_ids: List[str]) -> None:
         """Delete documents from the vector store."""
         # FAISS doesn't support deletion directly
@@ -84,11 +88,19 @@ class FAISSVectorStore(BaseVectorStore):
             return {"status": "not_initialized", "document_count": 0}
 
         try:
-            # Get basic stats
+            # Get document count from FAISS index
+            document_count = 0
+            if hasattr(self._store, "index") and hasattr(self._store.index, "ntotal"):
+                document_count = self._store.index.ntotal
+
+            # Get embeddings model info
+            embeddings_info = EmbeddingsManager.get_model_info()
+
             return {
                 "status": "initialized",
                 "store_type": "FAISS",
-                "embeddings_model": self.config.embeddings_model,
+                "document_count": document_count,
+                "embeddings_model": embeddings_info.get("model_name", "unknown"),
                 "persist_directory": str(self.persist_directory),
             }
         except Exception as e:

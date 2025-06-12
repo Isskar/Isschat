@@ -58,7 +58,18 @@ class DocumentChunker:
         current_chunk = ""
 
         for part in parts:
-            if len(current_chunk) + len(part) + len(self.separator) <= self.chunk_size:
+            # If the part itself is larger than chunk_size, split it further
+            if len(part) > self.chunk_size:
+                # Add current chunk if it exists
+                if current_chunk:
+                    chunks.append(self._create_chunk(document, current_chunk, len(chunks)))
+                    current_chunk = ""
+
+                # Split the large part into smaller chunks
+                large_part_chunks = self._split_large_text(part)
+                for large_chunk in large_part_chunks:
+                    chunks.append(self._create_chunk(document, large_chunk, len(chunks)))
+            elif len(current_chunk) + len(part) + len(self.separator) <= self.chunk_size:
                 if current_chunk:
                     current_chunk += self.separator + part
                 else:
@@ -71,6 +82,41 @@ class DocumentChunker:
         # Add the last chunk
         if current_chunk:
             chunks.append(self._create_chunk(document, current_chunk, len(chunks)))
+
+        return chunks
+
+    def _split_large_text(self, text: str) -> List[str]:
+        """
+        Split text that is larger than chunk_size into smaller pieces.
+
+        Args:
+            text: Text to split
+
+        Returns:
+            List[str]: List of text chunks
+        """
+        chunks = []
+        start = 0
+
+        while start < len(text):
+            end = start + self.chunk_size
+
+            # If this is not the last chunk, try to find a good break point
+            if end < len(text):
+                # Look for space or punctuation to break on
+                break_point = end
+                for i in range(end - 1, max(start + self.chunk_size // 2, start), -1):
+                    if text[i] in " \n\t.,;!?":
+                        break_point = i + 1
+                        break
+                end = break_point
+
+            chunk = text[start:end].strip()
+            if chunk:
+                chunks.append(chunk)
+
+            # Apply overlap for next chunk
+            start = max(start + 1, end - self.chunk_overlap)
 
         return chunks
 

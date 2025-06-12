@@ -66,6 +66,7 @@ class ResponseFormatter:
             # Add document title with clickable link if URL is available
             metadata = doc.get("metadata", {})
             title = metadata.get("title", metadata.get("source", f"Document {i + 1}"))
+            source = metadata.get("source", "")
             url = metadata.get("url", "")
 
             if url and url != "#":
@@ -73,6 +74,10 @@ class ResponseFormatter:
                 source_line += f"**[{title}]({url})**"
             else:
                 source_line += f"**{title}**"
+
+            # Add source information if available and different from title
+            if source and source != title:
+                source_line += f" ({source})"
 
             # Add confidence score if available
             if confidence_scores and i < len(confidence_scores):

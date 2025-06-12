@@ -14,6 +14,7 @@ class EmbeddingsManager:
 
     _instance: Optional[HuggingFaceEmbeddings] = None
     _config_hash: Optional[str] = None
+    _current_config = None
 
     @classmethod
     def get_embeddings(cls, config=None) -> HuggingFaceEmbeddings:
@@ -46,6 +47,7 @@ class EmbeddingsManager:
                     },
                 )
                 cls._config_hash = config_hash
+                cls._current_config = config
                 print(f"✅ Embeddings loaded: {config.embeddings_model} on {config.embeddings_device}")
 
             except Exception as e:
@@ -58,19 +60,19 @@ class EmbeddingsManager:
         """Reset embeddings instance - useful for tests"""
         cls._instance = None
         cls._config_hash = None
+        cls._current_config = None
 
     @classmethod
     def get_model_info(cls) -> dict:
         """Get information about the current embeddings model"""
-        if cls._instance is None:
+        if cls._instance is None or cls._current_config is None:
             return {"status": "not_initialized"}
 
-        config = get_config()
         return {
             "status": "initialized",
-            "model_name": config.embeddings_model,
-            "device": config.embeddings_device,
-            "batch_size": config.embeddings_batch_size,
-            "normalize": config.embeddings_normalize,
+            "model_name": cls._current_config.embeddings_model,
+            "device": cls._current_config.embeddings_device,
+            "batch_size": cls._current_config.embeddings_batch_size,
+            "normalize": cls._current_config.embeddings_normalize,
             "config_hash": cls._config_hash,
         }
