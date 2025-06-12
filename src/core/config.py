@@ -214,10 +214,10 @@ class ContinuousIntegrationConfigProvider(ConfigProvider):
         db_path = os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db"))
 
         config_dict = {
-            "confluence_private_api_key": "",
-            "confluence_space_key": "",
-            "confluence_space_name": "",
-            "confluence_email_address": "",
+            "confluence_private_api_key": "ci-dummy-key",
+            "confluence_space_key": "ci-dummy-space",
+            "confluence_space_name": "ci-dummy-space-name",
+            "confluence_email_address": "ci-dummy@example.com",
             "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", ""),
             "db_path": db_path,
             "persist_directory": persist_dir,
