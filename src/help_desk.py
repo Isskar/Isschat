@@ -7,8 +7,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
 from pathlib import Path
 
-import load_db
-from config import get_config
+
+from src import load_db
+from config_import import get_config
 
 
 class HelpDesk:

@@ -6,8 +6,8 @@ from pathlib import Path
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Import configuration manager
-from config import get_config
+# Import configuration manager from root (avoiding rag_evaluation.config conflict)
+from config_import import get_config
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
