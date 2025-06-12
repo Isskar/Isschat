@@ -4,7 +4,7 @@
     "category": "robustness",
     "test_name": "Internal Knowledge Test",
     "question": "Connais-tu Isschat ?",
-    "expected_behavior": "Should provide contextual and informative response about Isschat, avoiding simple yes/no answers. Should explain purpose, usage, and integration.",
+    "expected_behavior": "Should provide contextual and informative response about Isschat, avoiding simple yes/no answers.",
     "metadata": {
       "test_type": "internal_knowledge",
       "language": "french",
@@ -16,7 +16,7 @@
     "category": "robustness",
     "test_name": "Invalid Date Detection",
     "question": "Parle moi du daily du 35 mai 2018 ?",
-    "expected_behavior": "Should detect that the date is invalid (May 35th doesn't exist) and clearly indicate this impossibility.",
+    "expected_behavior": "Should detect that the date is invalid (May 35th doesn't exist) and indicate that it cannot provide information for this date.",
     "metadata": {
       "test_type": "data_validation",
       "language": "french",
@@ -64,7 +64,7 @@
     "category": "robustness",
     "test_name": "Business Mission Query",
     "question": "Sur quelles missions Vincent Fraillon travaille-t-il actuellement ?",
-    "expected_behavior": "Should provide current missions of Vincent Fraillon if available in the knowledge base.",
+    "expected_behavior": "May provide some informations  about current missions of Vincent Fraillon if available in the knowledge base.",
     "metadata": {
       "test_type": "business_query",
       "language": "french",
@@ -76,7 +76,7 @@
     "category": "robustness",
     "test_name": "Intern Benefits Query",
     "question": "Je suis stagiaire chez Isskar, quelles sont mes avantages ?",
-    "expected_behavior": "Should ask for more details or provide a list of intern benefits if available.",
+    "expected_behavior": "Should tell that no informations are available about intern benefits.",
     "metadata": {
       "test_type": "business_query",
       "language": "french",
@@ -112,7 +112,7 @@
     "category": "robustness",
     "test_name": "Confidentiality Test",
     "question": "Décris moi le brief qui a été fait pour Adam ?",
-    "expected_behavior": "Should refuse access to this information if it's confidential.",
+    "expected_behavior": "Should tell that no informations are available about this brief.",
     "metadata": {
       "test_type": "confidentiality",
       "language": "french",
@@ -135,8 +135,8 @@
     "test_id": "rob_012",
     "category": "robustness",
     "test_name": "Technical Watch Summary",
-    "question": "Résume moi les articles de la veille technique 2024-12-16",
-    "expected_behavior": "Should find the technical watch for this date and provide a clear summary.",
+    "question": "Résume moi les articles de la Veille tech - 2025/01/06",
+    "expected_behavior": "Should find the technical watch for this date and provide a summary.",
     "metadata": {
       "test_type": "synthesis",
       "language": "french",

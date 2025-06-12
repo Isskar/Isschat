@@ -1,0 +1,528 @@
+{
+  "timestamp": "2025-06-12T11:59:47.117890",
+  "config": {
+    "ci_mode": false,
+    "categories_run": [
+      "robustness",
+      "conversational"
+    ],
+    "thresholds": {
+      "robustness": 0.7,
+      "conversational": 0.7,
+      "overall": 0.7
+    }
+  },
+  "overall_stats": {
+    "total_tests": 22,
+    "total_passed": 0,
+    "total_failed": 0,
+    "total_errors": 22,
+    "category_results": {
+      "robustness": {
+        "category": "robustness",
+        "total_tests": 13,
+        "passed": 0,
+        "failed": 0,
+        "errors": 13,
+        "pass_rate": 0.0,
+        "average_score": 0.0,
+        "average_response_time": 0.0
+      },
+      "conversational": {
+        "category": "conversational",
+        "total_tests": 9,
+        "passed": 0,
+        "failed": 0,
+        "errors": 9,
+        "pass_rate": 0.0,
+        "average_score": 0.0,
+        "average_response_time": 0.0
+      }
+    },
+    "overall_pass_rate": 0.0
+  },
+  "category_results": {
+    "robustness": {
+      "category": "robustness",
+      "results": [
+        {
+          "test_id": "rob_001",
+          "category": "robustness",
+          "test_name": "Internal Knowledge Test",
+          "question": "Connais-tu Isschat ?",
+          "response": "",
+          "expected_behavior": "Should provide contextual and informative response about Isschat, avoiding simple yes/no answers.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:58:26.741280",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "internal_knowledge",
+            "language": "french",
+            "difficulty": "simple"
+          }
+        },
+        {
+          "test_id": "rob_002",
+          "category": "robustness",
+          "test_name": "Invalid Date Detection",
+          "question": "Parle moi du daily du 35 mai 2018 ?",
+          "response": "",
+          "expected_behavior": "Should detect that the date is invalid (May 35th doesn't exist) and indicate that it cannot provide information for this date.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:58:30.889700",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "data_validation",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_003",
+          "category": "robustness",
+          "test_name": "Fictional Person Test",
+          "question": "Connais tu Emin Lambropoulos ?",
+          "response": "",
+          "expected_behavior": "Should indicate not knowing this fictional person. May mention knowing Nicolas Lambropoulos and Emin Calyaka if they exist in the knowledge base.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:58:33.236215",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "fictional_entity",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_004",
+          "category": "robustness",
+          "test_name": "Real Person Test",
+          "question": "Connais tu Johan Jublanc ?",
+          "response": "",
+          "expected_behavior": "Should provide information about Johan Jublanc's contributions available on Confluence, or indicate if no information is available.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:58:38.968306",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "real_entity",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_005",
+          "category": "robustness",
+          "test_name": "Out of Context Test",
+          "question": "A quoi sert l'eau ?",
+          "response": "",
+          "expected_behavior": "Should redirect to enterprise context or indicate that this is outside Isschat's scope.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:58:48.273096",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "out_of_context",
+            "language": "french",
+            "difficulty": "simple"
+          }
+        },
+        {
+          "test_id": "rob_006",
+          "category": "robustness",
+          "test_name": "Business Mission Query",
+          "question": "Sur quelles missions Vincent Fraillon travaille-t-il actuellement ?",
+          "response": "",
+          "expected_behavior": "May provide some informations  about current missions of Vincent Fraillon if available in the knowledge base.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:58:52.743008",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "business_query",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        },
+        {
+          "test_id": "rob_007",
+          "category": "robustness",
+          "test_name": "Intern Benefits Query",
+          "question": "Je suis stagiaire chez Isskar, quelles sont mes avantages ?",
+          "response": "",
+          "expected_behavior": "Should tell that no informations are available about intern benefits.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:58:55.869235",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "business_query",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_008",
+          "category": "robustness",
+          "test_name": "Company Relationship Query",
+          "question": "Quel est le lien entre Isskar et le nœud Gordien ?",
+          "response": "",
+          "expected_behavior": "Should find the page about the Gordian node and explain the relationship.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:58:59.501045",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "business_query",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        },
+        {
+          "test_id": "rob_009",
+          "category": "robustness",
+          "test_name": "Project Leadership Query",
+          "question": "Qui lead le projet CIBTP ?",
+          "response": "",
+          "expected_behavior": "Should identify and name the person responsible for the CIBTP project.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:01.559523",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "business_query",
+            "language": "french",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_010",
+          "category": "robustness",
+          "test_name": "Confidentiality Test",
+          "question": "Décris moi le brief qui a été fait pour Adam ?",
+          "response": "",
+          "expected_behavior": "Should tell that no informations are available about this brief.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:06.220301",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "confidentiality",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        },
+        {
+          "test_id": "rob_011",
+          "category": "robustness",
+          "test_name": "Molière Test (Language)",
+          "question": "Tell me more about Cedrus project.",
+          "response": "",
+          "expected_behavior": "Should always respond in French, even when the question is in English.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:10.046627",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "language_consistency",
+            "language": "english",
+            "difficulty": "medium"
+          }
+        },
+        {
+          "test_id": "rob_012",
+          "category": "robustness",
+          "test_name": "Technical Watch Summary",
+          "question": "Résume moi les articles de la Veille tech - 2025/01/06",
+          "response": "",
+          "expected_behavior": "Should find the technical watch for this date and provide a summary.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:13.583536",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "synthesis",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        },
+        {
+          "test_id": "rob_013",
+          "category": "robustness",
+          "test_name": "Evaluation Strategy Query",
+          "question": "Quelle est la stratégie d'évaluation d'Isschat ?",
+          "response": "",
+          "expected_behavior": "Should find documentation related to Isschat evaluation and provide a synthesis.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:17.912135",
+          "error_message": "'LLMJudge' object has no attribute '_evaluate_with_prompt'",
+          "sources": [],
+          "metadata": {
+            "test_type": "synthesis",
+            "language": "french",
+            "difficulty": "complex"
+          }
+        }
+      ],
+      "summary": {
+        "category": "robustness",
+        "total_tests": 13,
+        "passed": 0,
+        "failed": 0,
+        "errors": 13,
+        "pass_rate": 0.0,
+        "average_score": 0.0,
+        "average_response_time": 0.0
+      }
+    },
+    "conversational": {
+      "category": "conversational",
+      "results": [
+        {
+          "test_id": "conv_001",
+          "category": "conversational",
+          "test_name": "Context Continuity Test - Part 1",
+          "question": "Cite moi un des collaborateurs d'Isschat",
+          "response": "",
+          "expected_behavior": "Should name a known collaborator from Isschat.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:21.231196",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "context_setup",
+            "language": "french",
+            "difficulty": "simple",
+            "sequence_part": 1
+          }
+        },
+        {
+          "test_id": "conv_002",
+          "category": "conversational",
+          "test_name": "Context Continuity Test - Part 2",
+          "question": "Cite moi l'autre",
+          "response": "",
+          "expected_behavior": "Should maintain context from previous question (Cite moi un des collaborateurs d'Isschat) and cite another collaborator.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:24.186795",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "context_continuity",
+            "language": "french",
+            "difficulty": "complex",
+            "sequence_part": 2,
+            "depends_on": "conv_001"
+          }
+        },
+        {
+          "test_id": "conv_003",
+          "category": "conversational",
+          "test_name": "Multi-turn Project Discussion",
+          "question": "Parle moi du projet Cedrus",
+          "response": "",
+          "expected_behavior": "Should provide information about the Cedrus project if available.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:26.647904",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "project_inquiry",
+            "language": "french",
+            "difficulty": "medium",
+            "sequence_part": 1
+          }
+        },
+        {
+          "test_id": "conv_004",
+          "category": "conversational",
+          "test_name": "Follow-up Project Question",
+          "question": "Qui travaille dessus ?",
+          "response": "",
+          "expected_behavior": "Should understand 'dessus' refers to the Cedrus project from previous question and provide team information.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:30.118736",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "context_reference",
+            "language": "french",
+            "difficulty": "complex",
+            "sequence_part": 2,
+            "depends_on": "conv_003"
+          }
+        },
+        {
+          "test_id": "conv_005",
+          "category": "conversational",
+          "test_name": "Technical Discussion Setup",
+          "question": "Quelles sont les technologies utilisées dans nos projets ?",
+          "response": "",
+          "expected_behavior": "Should provide an overview of technologies used in company projects.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:34.344012",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "technical_overview",
+            "language": "french",
+            "difficulty": "medium",
+            "sequence_part": 1
+          }
+        },
+        {
+          "test_id": "conv_006",
+          "category": "conversational",
+          "test_name": "Specific Technology Follow-up",
+          "question": "Peux-tu me donner plus de détails sur la première que tu as mentionnée ?",
+          "response": "",
+          "expected_behavior": "Should reference the first technology mentioned in the previous response and provide more details.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:38.127931",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "specific_reference",
+            "language": "french",
+            "difficulty": "complex",
+            "sequence_part": 2,
+            "depends_on": "conv_005"
+          }
+        },
+        {
+          "test_id": "conv_007",
+          "category": "conversational",
+          "test_name": "Memory Consistency Test",
+          "question": "De quoi avons-nous parlé au début de notre conversation ?",
+          "response": "",
+          "expected_behavior": "Should be able to reference earlier parts of the conversation and summarize the topics discussed.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:40.654940",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "memory_recall",
+            "language": "french",
+            "difficulty": "complex",
+            "sequence_part": 3
+          }
+        },
+        {
+          "test_id": "conv_008",
+          "category": "conversational",
+          "test_name": "Clarification Request",
+          "question": "Peux-tu clarifier ce que tu viens de dire ?",
+          "response": "",
+          "expected_behavior": "Should reference the immediately previous response and provide clarification or more detail.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:42.900177",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "clarification",
+            "language": "french",
+            "difficulty": "medium",
+            "sequence_part": 2
+          }
+        },
+        {
+          "test_id": "conv_009",
+          "category": "conversational",
+          "test_name": "Topic Transition Test",
+          "question": "Revenons au sujet des collaborateurs",
+          "response": "",
+          "expected_behavior": "Should recognize the request to return to a previous topic and provide relevant information about collaborators.",
+          "status": "error",
+          "score": 0.0,
+          "evaluation_details": {},
+          "response_time": 0.0,
+          "timestamp": "2025-06-12T11:59:47.117551",
+          "error_message": "'LLMJudge' object has no attribute 'evaluate_conversational'",
+          "sources": [],
+          "metadata": {
+            "test_type": "topic_transition",
+            "language": "french",
+            "difficulty": "complex",
+            "sequence_part": 3
+          }
+        }
+      ],
+      "summary": {
+        "category": "conversational",
+        "total_tests": 9,
+        "passed": 0,
+        "failed": 0,
+        "errors": 9,
+        "pass_rate": 0.0,
+        "average_score": 0.0,
+        "average_response_time": 0.0
+      }
+    }
+  }
+}

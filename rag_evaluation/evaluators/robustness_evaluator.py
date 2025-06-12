@@ -111,8 +111,20 @@ class RobustnessEvaluator(BaseEvaluator):
         elif test_type == "internal_knowledge":
             return self._evaluate_internal_knowledge(test_case, response)
         else:
-            # Generic robustness evaluation
-            return self.llm_judge.evaluate_robustness(test_case.question, response, test_case.expected_behavior)
+            # Generic robustness evaluation fallback
+            prompt = f"""Evaluate this response for general robustness:
+Question: {test_case.question}
+Response: {response}
+Expected: {test_case.expected_behavior}
+
+Score the response 0.0-1.0 based on:
+- Accuracy
+- Completeness
+- Professionalism
+
+Return JSON with score, reasoning and passes_criteria:"""
+            
+            return self.llm_judge._evaluate_with_prompt(prompt)
 
     def _evaluate_language_consistency(self, test_case: TestCase, response: str) -> Dict[str, Any]:
         """Evaluate language consistency using LLM semantic analysis"""

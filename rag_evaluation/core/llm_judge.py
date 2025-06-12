@@ -17,26 +17,7 @@ from langchain_core.utils.utils import convert_to_secret_str
 class LLMJudge:
     """LLM-based evaluation judge for Isschat responses"""
 
-    # Evaluation prompts for different test types
-    ROBUSTNESS_PROMPT = """You are an expert evaluator for an enterprise chatbot named Isschat.
-
-QUESTION ASKED: {question}
-ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {expected}
-
-EVALUATION CRITERIA:
-- Does the response globally match the expected behavior?
-- Is the response globally appropriate for an enterprise context?
-- Does it handle edge cases correctly?
-- Is the language appropriate (French responses for French questions)?
-
-Respond with a JSON object containing:
-- "score": float between 0.0 and 1.0
-- "reasoning": brief explanation of the score
-- "passes_criteria": boolean indicating if it meets expectations
-
-EVALUATION:"""
-
+    # Evaluation prompt for conversational tests only
     CONVERSATIONAL_PROMPT = """You are an expert evaluator for conversational AI systems.
 
 CONVERSATION CONTEXT: {context}
@@ -56,10 +37,6 @@ Respond with a JSON object containing:
 
 EVALUATION:"""
 
-    PERFORMANCE_PROMPT = ""
-
-    FEEDBACK_PROMPT = ""
-
     def __init__(self, config: Any):
         """Initialize LLM judge with configuration"""
         self.config = config
@@ -73,6 +50,10 @@ EVALUATION:"""
         except Exception as e:
             raise ValueError(f"Failed to get API key: {e}")
 
+        # Configure logging to suppress httpx INFO logs
+        import logging
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+
         # Initialize LLM
         self.llm = ChatOpenAI(
             model_name=config.judge_model,
@@ -81,11 +62,6 @@ EVALUATION:"""
             openai_api_key=api_key,
             openai_api_base="https://openrouter.ai/api/v1",
         )
-
-    def evaluate_robustness(self, question: str, response: str, expected: str) -> Dict[str, Any]:
-        """Evaluate robustness test response"""
-        prompt = self.ROBUSTNESS_PROMPT.format(question=question, response=response, expected=expected)
-        return self._evaluate_with_prompt(prompt)
 
     def evaluate_conversational(self, question: str, response: str, expected: str, context: str = "") -> Dict[str, Any]:
         """Evaluate conversational test response"""
