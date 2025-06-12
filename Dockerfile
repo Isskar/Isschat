@@ -10,8 +10,8 @@ RUN ["uv", "sync"]
 
 COPY src /app/src
 COPY .streamlit /app/.streamlit
-COPY config.py README.md /app/
+COPY README.md /app/
 
 EXPOSE 8501
 
-CMD ["uv", "run", "streamlit", "run", "src/isschat_webapp.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["uv", "run", "streamlit", "run", "src/web_app/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
