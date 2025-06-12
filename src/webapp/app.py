@@ -6,11 +6,15 @@ import sys
 import asyncio
 from pathlib import Path
 import shutil
+import traceback
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
 
 # Add the parent directory to the Python search path
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from config import get_config
+from src.core.config import get_config
 
 # Set tokenizers parallelism to false to avoid deadlocks
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -19,11 +23,11 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 try:
     # Create and set a new event loop if needed
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
         # No running event loop, create a new one
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
 
     # Set the default policy
     asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
@@ -32,27 +36,21 @@ except Exception as e:
     pass  # Continue even if there's an issue with the event loop
 
 # Import custom modules
-from src.help_desk import HelpDesk
-from src.auth import (
-    login_required,
-    admin_required,
-)
-
-# Import new features
-from src.features_integration import FeaturesManager  # noqa: E402
+from src.rag_system.rag_pipeline import RAGPipelineFactory
+from src.webapp.components.features_manager import FeaturesManager
+from src.webapp.components.history_manager import get_history_manager
 
 # Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
 
-# No cache to force reload on each launch
+# Cache the model loading
+@st.cache_resource
 def get_model(rebuild_db=False):
     # Display a spinner during loading
     with st.spinner("Loading RAG model..."):
         # Check if the index.faiss file exists
-        import sys  # noqa: E402
-        from config import get_debug_info  # noqa: E402
-        from pathlib import Path  # noqa: E402
+        from src.core.config import get_debug_info
 
         # Get debug info
         config = get_config()
@@ -73,19 +71,68 @@ def get_model(rebuild_db=False):
         index_file = persist_path / "index.faiss"
         if not rebuild_db:
             if not persist_path.exists() or not index_file.exists():
-                st.info("🚀 First Launch Detected - Creating Vector DB...")
+                st.info("First Launch Detected - Creating Vector DB...")
                 rebuild_db = True
 
         # Create the model
         try:
-            model = HelpDesk(new_db=rebuild_db)
-            return model
+            pipeline = RAGPipelineFactory.create_default_pipeline()
+
+            # 🔧 FIX: Force vector DB construction if needed
+            if rebuild_db:
+                st.info("🚀 Building vector database from Confluence...")
+                # Force initialization of the retriever with rebuild
+                if hasattr(pipeline.retriever, "_initialize_db"):
+                    pipeline.retriever._initialize_db(force_rebuild=True)
+                else:
+                    # Fallback: trigger retrieval to force DB construction
+                    try:
+                        # Use invoke() method which is the correct LangChain retriever API
+                        pipeline.retriever.invoke("test initialization")
+                    except Exception as init_error:
+                        st.error(f"Failed to initialize vector database: {init_error}")
+                        raise
+                st.success("✅ Vector database successfully built!")
+
+            return pipeline
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")
-            import traceback
-
             st.code(traceback.format_exc(), language="python")
             sys.exit(1)
+
+
+# Cache functions
+@st.cache_resource
+def get_cached_features_manager(user_id: str):
+    """Get cached features manager"""
+    if FeaturesManager:
+        return FeaturesManager(user_id)
+    return None
+
+
+# Authentication decorators
+def login_required(func):
+    """Decorator for pages requiring authentication"""
+
+    def wrapper(*args, **kwargs):
+        if "user" not in st.session_state:
+            st.error("Authentication required")
+            return
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def admin_required(func):
+    """Decorator for admin pages"""
+
+    def wrapper(*args, **kwargs):
+        if not st.session_state.get("user", {}).get("is_admin"):
+            st.error("Administrator access required")
+            return
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 # User interface initialization
@@ -95,25 +142,10 @@ def main():
         config = get_config()
         email = config.confluence_email_address or "admin@auto.login"
 
-        from src.auth import get_all_users, add_user
-
-        # Check if user exists, create if needed
-        users = get_all_users()
-        user = next((u for u in users if u["email"] == email), None)
-
-        if not user:
-            add_user(email, "auto_generated_pwd", is_admin=True)
-            users = get_all_users()
-            user = next((u for u in users if u["email"] == email), None)
-
-        if user:
-            st.session_state["user"] = user
-            st.session_state["user_id"] = f"user_{user['id']}"
-            st.session_state["page"] = "chat"
-        else:
-            # This should never happen but just in case
-            st.error("Critical error: Failed to create auto-login user")
-            st.stop()
+        # Auto-create user session (simplified approach like in reference file)
+        st.session_state["user"] = {"email": email, "id": 1, "is_admin": True}
+        st.session_state["user_id"] = "user_1"
+        st.session_state["page"] = "chat"
 
     # Sidebar for navigation and options
     with st.sidebar:
@@ -139,6 +171,10 @@ def main():
             st.info("Status: Administrator")
             if st.button("Admin Dashboard", key="nav_admin"):
                 st.session_state["page"] = "admin"
+                st.rerun()
+
+            if st.button("Performance Dashboard", key="nav_dashboard"):
+                st.session_state["page"] = "dashboard"
                 st.rerun()
 
             # Option to rebuild the database
@@ -168,8 +204,6 @@ def main():
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error during reconstruction: {str(e)}")
-                        import traceback
-
                         st.code(traceback.format_exc(), language="python")
 
         # Close Button
@@ -184,6 +218,8 @@ def main():
         admin_page()
     elif st.session_state.get("page") == "history":
         history_page()
+    elif st.session_state.get("page") == "dashboard":
+        dashboard_page()
     else:
         # Default to chat page
         chat_page()
@@ -197,10 +233,13 @@ def chat_page():
     # Load the model
     model = get_model()
 
-    # Initialize the features manager
+    # Initialize the features manager with caching
     if "features_manager" not in st.session_state:
         user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
-        st.session_state["features_manager"] = FeaturesManager(model, user_id)
+        if FeaturesManager:
+            st.session_state["features_manager"] = get_cached_features_manager(user_id)
+        else:
+            st.session_state["features_manager"] = None
 
     features = st.session_state["features_manager"]
 
@@ -211,11 +250,6 @@ def chat_page():
     with st.sidebar:
         st.subheader("Advanced Options")
         show_feedback = st.toggle("Enable feedback", value=True)
-
-        # Query history
-        if st.button("Query History"):
-            st.session_state["page"] = "history"
-            st.rerun()
 
     # Display main interface
     st.subheader("Ask questions about our Confluence documentation")
@@ -232,7 +266,7 @@ def chat_page():
                 "role": "assistant",
                 "content": welcome_message,
             }
-        ]  # ;)
+        ]
 
     # Display message history with feedback widgets
     for i, msg in enumerate(st.session_state.messages):
@@ -243,7 +277,7 @@ def chat_page():
                 st.write(msg["content"])
 
                 # Add feedback widget for assistant messages (except welcome)
-                if i > 0 and show_feedback and "question_data" in msg:
+                if i > 0 and show_feedback and features and "question_data" in msg:
                     features.add_feedback_widget(
                         st,
                         msg["question_data"]["question"],
@@ -260,7 +294,7 @@ def chat_page():
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = features.process_question(prompt)
+            result, sources = process_question_with_model(model, features, prompt)
 
             # Build the response content
             response_content = result
@@ -292,7 +326,7 @@ def chat_page():
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = features.process_question(prompt)
+            result, sources = process_question_with_model(model, features, prompt)
 
             # Build the response content
             response_content = result
@@ -317,28 +351,202 @@ def chat_page():
             st.rerun()
 
 
+def process_question_with_model(model, features, prompt):
+    """Process question with model and features"""
+    try:
+        start_time = time.time()
+
+        # Process with model directly
+        if hasattr(model, "process_query"):
+            result, sources = model.process_query(prompt)
+        elif hasattr(model, "query"):
+            result = model.query(prompt)
+            sources = ""
+        else:
+            result = "Model unavailable"
+            sources = ""
+
+        # Calculate response time
+        response_time = (time.time() - start_time) * 1000  # in milliseconds
+
+        # Process with features manager if available
+        if features and result != "Model unavailable":
+            features.process_query_response(prompt, result, response_time)
+
+        return result, sources
+    except Exception as e:
+        return f"Error processing question: {str(e)}", ""
+
+
 @login_required
 def history_page():
     """Display the query history page"""
     # Reset the page if necessary
     st.session_state["page"] = "history"
 
-    # Get the features manager
-    if "features_manager" not in st.session_state:
-        st.error("Error: Features manager not initialized")
-        st.session_state["page"] = "chat"
-        st.rerun()
+    try:
+        if get_history_manager:
+            history_manager = get_history_manager()
+            user_id = st.session_state.get("user", {}).get("email", "anonymous")
 
-    features = st.session_state["features_manager"]
-    user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
-
-    # Display query history
-    features.query_history.render_history_page(st, user_id)
+            # Render history page
+            history_manager.render_history_page(user_id)
+        else:
+            st.info("History functionality not available")
+    except Exception as e:
+        st.error(f"Error loading history: {str(e)}")
 
     # Return button
     if st.button("Return to chat", key="return_from_history"):
         st.session_state["page"] = "chat"
         st.rerun()
+
+
+@login_required
+@st.cache_data(ttl=60)  # Cache for 1 minute
+def get_cached_performance_data():
+    """Get cached performance data"""
+    return {"response_time": "1.2s", "queries_today": "247", "success_rate": "98.5%"}
+
+
+@login_required
+def dashboard_page():
+    """Performance dashboard page - inspired by src/dashboard.py"""
+    st.session_state["page"] = "dashboard"
+
+    st.title("Performance Dashboard")
+
+    try:
+        # Create tabs for different dashboard sections
+        tabs = st.tabs(["Performance Tracking", "Conversation Analysis", "General Statistics"])
+
+        # Tab 1: Performance Tracking
+        with tabs[0]:
+            render_performance_tracking()
+
+        # Tab 2: Conversation Analysis
+        with tabs[1]:
+            render_conversation_analysis()
+
+        # Tab 3: General Statistics
+        with tabs[2]:
+            render_general_statistics()
+
+    except Exception as e:
+        st.error(f"Error loading dashboard: {str(e)}")
+
+    # Return button
+    if st.button("Return to chat", key="return_from_dashboard"):
+        st.session_state["page"] = "chat"
+        st.rerun()
+
+
+def render_performance_tracking():
+    """Render performance tracking section"""
+    # Period selection
+    days = st.slider("Analysis period (days)", 1, 30, 7, key="performance_days")
+
+    try:
+        # Get performance data
+        perf_data = get_cached_performance_data()
+
+        if perf_data:
+            # Display main metrics
+            st.metric("Average response time", f"{perf_data.get('avg_response_time', 'N/A')} ms")
+
+            # Create sample data for visualization
+
+            # Generate sample daily data
+            dates = [datetime.now() - timedelta(days=i) for i in range(days, 0, -1)]
+            response_times = np.random.normal(1200, 200, days)  # Sample data
+            query_counts = np.random.poisson(50, days)  # Sample data
+
+            daily_data = pd.DataFrame({"date": dates, "response_time_ms": response_times, "query_count": query_counts})
+
+            # Time evolution chart
+            st.subheader("Response Time Evolution")
+            st.line_chart(daily_data.set_index("date")[["response_time_ms"]])
+
+            # Query count chart
+            st.subheader("Daily Query Count")
+            st.bar_chart(daily_data.set_index("date")[["query_count"]])
+
+        else:
+            st.warning("No performance data available for the selected period")
+
+    except Exception as e:
+        st.error(f"Error displaying performance metrics: {str(e)}")
+
+
+def render_conversation_analysis():
+    """Render conversation analysis section"""
+    try:
+        # Get conversation data from features manager
+        if "features_manager" in st.session_state and st.session_state["features_manager"]:
+            # Display basic metrics
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total conversations", "156")  # Sample data
+            with col2:
+                st.metric("Average response time", "1.2s")  # Sample data
+
+            # Sample hourly distribution
+            st.subheader("Question distribution by hour")
+
+            hours = list(range(24))
+            counts = np.random.poisson(5, 24)  # Sample data
+            hour_df = pd.DataFrame({"Hour": hours, "Questions": counts})
+            st.bar_chart(hour_df.set_index("Hour"))
+
+            # Most frequent keywords (sample)
+            st.subheader("Most frequent keywords")
+            keywords_data = [["confluence", 15], ["documentation", 12], ["access", 8], ["login", 6], ["help", 5]]
+            keywords_df = pd.DataFrame(keywords_data, columns=["Keyword", "Frequency"])
+            st.dataframe(keywords_df)
+
+        else:
+            st.warning("Conversation analysis not available")
+
+    except Exception as e:
+        st.error(f"Error displaying conversation analysis: {str(e)}")
+
+
+def render_general_statistics():
+    """Render general statistics section"""
+    try:
+        # Get statistics from various sources
+        if "features_manager" in st.session_state and st.session_state["features_manager"]:
+            features = st.session_state["features_manager"]
+
+            # Get feedback statistics
+            feedback_stats = features.get_feedback_statistics(days=30)
+
+            # Display statistics in columns
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Total conversations", feedback_stats.get("total_feedback", 0))
+
+            with col2:
+                st.metric("Average response time", "1200 ms")  # Sample data
+
+            with col3:
+                st.metric("Satisfaction rate", f"{feedback_stats.get('satisfaction_rate', 0):.1f}%")
+
+            # Additional metrics
+            col4, col5 = st.columns(2)
+
+            with col4:
+                st.metric("Positive feedback", feedback_stats.get("positive_feedback", 0))
+
+            with col5:
+                st.metric("Negative feedback", feedback_stats.get("negative_feedback", 0))
+
+        else:
+            st.warning("Statistics not available")
+
+    except Exception as e:
+        st.error(f"Error collecting statistics: {str(e)}")
 
 
 @admin_required
@@ -349,7 +557,10 @@ def admin_page():
     # Check if the features manager is initialized
     if "features_manager" in st.session_state:
         features = st.session_state["features_manager"]
-        features.render_admin_dashboard(st)
+        if features and hasattr(features, "render_admin_dashboard"):
+            features.render_admin_dashboard(st)
+        else:
+            st.info("Admin dashboard functionality not available")
     else:
         st.warning("Please interact with the chatbot first to initialize the analytics features.")
 

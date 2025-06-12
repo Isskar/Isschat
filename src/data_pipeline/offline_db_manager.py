@@ -1,0 +1,161 @@
+"""
+Centralized vector database manager.
+Handles database existence, building, and loading.
+"""
+
+from pathlib import Path
+from src.core.config import get_config
+
+
+class OfflineDatabaseManager:
+    """Centralized vector database manager"""
+
+    def __init__(self, config=None):
+        """
+        Initialize database manager.
+
+        Args:
+            config: Optional configuration (uses get_config() by default)
+        """
+        self.config = config or get_config()
+        self.persist_path = Path(self.config.persist_directory)
+        self.index_file = self.persist_path / "index.faiss"
+
+    def database_exists(self) -> bool:
+        """
+        Check if the database exists.
+
+        Returns:
+            True if database exists, False otherwise
+        """
+        return self.persist_path.exists() and self.index_file.exists()
+
+    def build_database(self) -> bool:
+        """
+        Build the database using the new architecture.
+
+        Returns:
+            True if build succeeded, False otherwise
+        """
+        try:
+            # Import new architecture components
+            from src.data_pipeline.pipeline_manager import PipelineManager
+            from src.data_pipeline.extractors.confluence_extractor import ConfluenceExtractor
+            from src.data_pipeline.processors.document_filter import DocumentFilter
+            from src.data_pipeline.processors.chunker import DocumentChunker
+            from src.data_pipeline.processors.post_processor import PostProcessor
+            from src.data_pipeline.embeddings.huggingface_embedder import HuggingFaceEmbedder
+            from src.vector_store.faiss_store import FAISSVectorStore
+
+            print("🚀 Building vector database using centralized configuration...")
+
+            # Unified configuration from centralized config
+            config_dict = {
+                "persist_directory": self.config.persist_directory,
+                "confluence_url": self._get_confluence_url(),
+                "confluence_email": self.config.confluence_email_address,
+                "confluence_api_key": self.config.confluence_private_api_key,
+                "model_name": self.config.embeddings_model,
+                "device": self.config.embeddings_device,
+                "batch_size": self.config.embeddings_batch_size,
+            }
+
+            confluence_config = {
+                "confluence_url": self._get_confluence_url(),
+                "confluence_email_address": self.config.confluence_email_address,
+                "confluence_private_api_key": self.config.confluence_private_api_key,
+                "confluence_space_key": getattr(self.config, "confluence_space_key", ""),
+            }
+
+            # Initialize pipeline with centralized configuration
+            pipeline = PipelineManager(config_dict)
+            pipeline.set_extractor(ConfluenceExtractor(confluence_config))
+            pipeline.set_filter(DocumentFilter(config_dict))
+            pipeline.set_chunker(DocumentChunker(config_dict))
+            pipeline.set_post_processor(PostProcessor(config_dict))
+            pipeline.set_embedder(HuggingFaceEmbedder(config_dict))
+            pipeline.set_vector_store(FAISSVectorStore(config_dict))
+
+            # Run the pipeline
+            stats = pipeline.run_pipeline()
+            print(f"✅ Database built successfully: {stats['storage']['stored_documents']} documents stored")
+            return True
+
+        except Exception as e:
+            print(f"❌ Failed to build database: {str(e)}")
+            return False
+
+    def _get_confluence_url(self) -> str:
+        """
+        Helper to build Confluence URL.
+
+        Returns:
+            Complete Confluence URL
+        """
+        if self.config.confluence_space_name.startswith("http"):
+            return self.config.confluence_space_name
+        return f"https://{self.config.confluence_space_name}.atlassian.net"
+
+    def ensure_database(self, force_rebuild: bool = False) -> bool:
+        """
+        Ensure the database exists, build it if necessary.
+
+        Args:
+            force_rebuild: Force rebuild even if DB exists
+
+        Returns:
+            True if database is ready, False otherwise
+        """
+        if not force_rebuild and self.database_exists():
+            print("✅ Using existing vector database")
+            return True
+
+        print("🔄 Database not found or rebuild requested")
+        return self.build_database()
+
+    def load_vector_store(self):
+        """
+        Load existing vector store.
+
+        Returns:
+            Loaded vector store instance or None if failed
+        """
+        try:
+            from src.vector_store.faiss_store import FAISSVectorStore
+
+            config_dict = {
+                "persist_directory": self.config.persist_directory,
+                "confluence_url": self._get_confluence_url(),
+                "confluence_email": self.config.confluence_email_address,
+                "confluence_api_key": self.config.confluence_private_api_key,
+            }
+
+            vector_store = FAISSVectorStore(config_dict)
+            loaded_store = vector_store.load()
+
+            if loaded_store is None:
+                print("❌ Failed to load vector store: loaded_store is None")
+                return None
+
+            print("✅ Vector store loaded successfully")
+            return loaded_store
+
+        except Exception as e:
+            print(f"❌ Failed to load vector store: {str(e)}")
+            return None
+
+    def get_database_info(self) -> dict:
+        """
+        Get information about the database state.
+
+        Returns:
+            Dictionary with database information
+        """
+        return {
+            "exists": self.database_exists(),
+            "persist_directory": str(self.persist_path),
+            "index_file": str(self.index_file),
+            "index_file_exists": self.index_file.exists() if self.persist_path.exists() else False,
+            "embeddings_model": self.config.embeddings_model,
+            "search_config": {"k": self.config.search_k, "fetch_k": self.config.search_fetch_k},
+        }

@@ -41,8 +41,18 @@ dependencies = [
     "dotenv>=0.9.9",
     "azure-keyvault-secrets>=4.9.0",
     "azure-identity>=1.23.0",
+    "plotly>=6.1.2",
     "streamlit-feedback>=0.1.4",
+    "psutil>=7.0.0",
+    "einops>=0.8.1",
 ]
+
+cli = [
+    "click>=8.0.0"
+]
+
+[project.scripts]
+isschat-cli = "src.cli.main:main"
 
 [tool.ruff]
 line-length = 120

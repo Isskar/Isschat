@@ -23,6 +23,23 @@ class ConfigurationData:
     db_path: str
     persist_directory: str
 
+    # Embeddings configuration
+    embeddings_model: str = "sentence-transformers/all-MiniLM-L12-v2"
+    embeddings_device: str = "cpu"
+    embeddings_batch_size: int = 32
+    embeddings_normalize: bool = True
+    embeddings_trust_remote_code: bool = False
+
+    # Vector DB configuration
+    vector_db_type: str = "faiss"
+    search_k: int = 3
+    search_fetch_k: int = 5
+
+    # LLM Config
+    generator_model_name: str = "google/gemini-2.5-flash-preview-05-20"
+    generator_temperature: float = 0.1
+    generator_max_tokens: int = 512
+
     def validate(self) -> bool:
         """Validate that all required fields are present"""
         required_fields = [
@@ -88,11 +105,11 @@ class LocalConfigProvider(ConfigProvider):
             config_dict[field] = value
             logging.debug(f"LocalConfig - {field}: {value[:10] if value else 'EMPTY'}...")
 
-        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "db"))
+        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
 
         config_dict.update(
             {
-                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data/users.db")),
+                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db")),
                 "persist_directory": persist_dir,
             }
         )
@@ -172,11 +189,11 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
 
         # Add path configurations
         # Use /tmp for Azure environment to ensure write permissions
-        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "db"))
+        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
 
         config_dict.update(
             {
-                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data/users.db")),
+                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db")),
                 "persist_directory": persist_dir,
             }
         )
@@ -185,6 +202,31 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
 
     def get_provider_name(self) -> str:
         return f"Azure Key Vault ({self.key_vault_url})"
+
+
+class ContinuousIntegrationConfigProvider(ConfigProvider):
+    """Configuration provider for Continuous Integration environment"""
+
+    def load_config(self) -> ConfigurationData:
+        """Load configuration for CI environment"""
+        base_dir = os.getcwd()
+        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
+        db_path = os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db"))
+
+        config_dict = {
+            "confluence_private_api_key": "ci-dummy-key",
+            "confluence_space_key": "ci-dummy-space",
+            "confluence_space_name": "ci-dummy-space-name",
+            "confluence_email_address": "ci-dummy@example.com",
+            "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", ""),
+            "db_path": db_path,
+            "persist_directory": persist_dir,
+        }
+
+        return ConfigurationData(**config_dict)  # ty : ignore
+
+    def get_provider_name(self) -> str:
+        return "Continuous Integration (CI)"
 
 
 class ConfigurationManager:
@@ -226,7 +268,7 @@ class ConfigurationManager:
 
     def _initialize_ci_config(self) -> bool:  # FIXME : Add secrets when CD deployed
         """Initialize configuration for CI environment"""
-        provider = LocalConfigProvider()
+        provider = ContinuousIntegrationConfigProvider()
         return self.initialize(provider)
 
     def _initialize_production_config(self) -> bool:
