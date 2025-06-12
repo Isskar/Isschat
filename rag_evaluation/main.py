@@ -17,7 +17,6 @@ from rag_evaluation.config.evaluation_config import EvaluationConfig
 from rag_evaluation.core.base_evaluator import TestCase, TestCategory
 from rag_evaluation.evaluators.robustness_evaluator import RobustnessEvaluator
 from rag_evaluation.evaluators.conversational_evaluator import ConversationalEvaluator
-# from rag_evaluation.evaluators.performance_evaluator import PerformanceEvaluator
 
 
 class EvaluationManager:
@@ -144,7 +143,6 @@ class EvaluationManager:
                     if not self.config.ci_mode
                     else self.config.robustness_ci_threshold,
                     "conversational": self.config.conversational_threshold,
-                    "performance": self.config.performance_threshold,
                     "overall": self.config.overall_threshold,
                 },
             },
@@ -252,7 +250,7 @@ def main():
     parser.add_argument(
         "--categories",
         nargs="+",
-        choices=["robustness", "conversational", "performance", "feedback"],
+        choices=["robustness", "conversational"],
         help="Specific categories to evaluate",
     )
     parser.add_argument("--ci", action="store_true", help="Run in CI mode")

@@ -10,7 +10,5 @@ sys.path.append(str(Path(__file__).parent))
 
 from robustness_evaluator import RobustnessEvaluator
 from conversational_evaluator import ConversationalEvaluator
-from performance_evaluator import PerformanceEvaluator
-from feedback_evaluator import FeedbackEvaluator
 
-__all__ = ["RobustnessEvaluator", "ConversationalEvaluator", "PerformanceEvaluator", "FeedbackEvaluator"]
+__all__ = ["RobustnessEvaluator", "ConversationalEvaluator"]

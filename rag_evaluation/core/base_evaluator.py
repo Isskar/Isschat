@@ -14,8 +14,6 @@ class TestCategory(Enum):
 
     ROBUSTNESS = "robustness"
     CONVERSATIONAL = "conversational"
-    PERFORMANCE = "performance"
-    FEEDBACK = "feedback"
 
 
 class EvaluationStatus(Enum):
@@ -124,8 +122,7 @@ class TestCase:
     # Optional context for conversational tests
     conversation_context: List[Dict[str, str]] = field(default_factory=list)
 
-    # Optional performance expectations
-    expected_response_time: Optional[float] = None
+    # Optional complexity level
     complexity_level: str = "medium"  # simple, medium, complex
 
     def to_dict(self) -> Dict[str, Any]:
@@ -138,7 +135,6 @@ class TestCase:
             "expected_behavior": self.expected_behavior,
             "metadata": self.metadata,
             "conversation_context": self.conversation_context,
-            "expected_response_time": self.expected_response_time,
             "complexity_level": self.complexity_level,
         }
 
@@ -153,7 +149,6 @@ class TestCase:
             expected_behavior=data["expected_behavior"],
             metadata=data.get("metadata", {}),
             conversation_context=data.get("conversation_context", []),
-            expected_response_time=data.get("expected_response_time"),
             complexity_level=data.get("complexity_level", "medium"),
         )
 

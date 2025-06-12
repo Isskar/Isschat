@@ -15,7 +15,6 @@ class EvaluationConfig:
     robustness_threshold: float = 0.7
     robustness_ci_threshold: float = 0.3
     conversational_threshold: float = 0.7
-    performance_threshold: float = 0.7
     overall_threshold: float = 0.7
 
     # LLM Judge configuration
@@ -41,8 +40,6 @@ class EvaluationConfig:
     # Dataset paths
     robustness_dataset: str = "config/test_datasets/robustness_tests.json"
     conversational_dataset: str = "config/test_datasets/conversational_tests.json"
-    performance_dataset: str = "config/test_datasets/performance_tests.json"
-    feedback_dataset: str = "config/test_datasets/feedback_tests.json"
 
     # Evaluation categories
     test_categories: Dict[str, Dict] = field(
@@ -50,22 +47,12 @@ class EvaluationConfig:
             "robustness": {
                 "name": "Model Robustness Tests",
                 "description": "Tests for model knowledge, data validation, and context handling",
-                "weight": 0.25,
+                "weight": 0.5,
             },
             "conversational": {
                 "name": "Conversational History Tests",
                 "description": "Tests for context continuity and multi-turn conversations",
-                "weight": 0.25,
-            },
-            "performance": {
-                "name": "Performance Timing Tests",
-                "description": "Tests for response time and complexity handling",
-                "weight": 0.25,
-            },
-            "feedback": {
-                "name": "Feedback System Tests",
-                "description": "Tests for feedback processing and improvement mechanisms",
-                "weight": 0.25,
+                "weight": 0.5,
             },
         }
     )
@@ -82,7 +69,6 @@ class EvaluationConfig:
         for threshold in [
             self.robustness_threshold,
             self.conversational_threshold,
-            self.performance_threshold,
             self.overall_threshold,
         ]:
             if not 0.0 <= threshold <= 1.0:
@@ -93,8 +79,6 @@ class EvaluationConfig:
         dataset_map = {
             "robustness": self.robustness_dataset,
             "conversational": self.conversational_dataset,
-            "performance": self.performance_dataset,
-            "feedback": self.feedback_dataset,
         }
 
         if category not in dataset_map:
@@ -107,8 +91,6 @@ class EvaluationConfig:
         threshold_map = {
             "robustness": self.robustness_threshold,
             "conversational": self.conversational_threshold,
-            "performance": self.performance_threshold,
-            "feedback": self.overall_threshold,  # Use overall for feedback
         }
 
         return threshold_map.get(category, self.overall_threshold)
