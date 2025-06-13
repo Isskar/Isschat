@@ -6,7 +6,7 @@ Handles both local (.env) and Azure (Key Vault) configurations
 import os
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
@@ -22,6 +22,9 @@ class ConfigurationData:
     openrouter_api_key: str
     db_path: str
     persist_directory: str
+
+    # Azure Storage configuration
+    azure_storage_account: str = ""
 
     # Embeddings configuration
     embeddings_model: str = "sentence-transformers/all-MiniLM-L12-v2"
@@ -55,6 +58,194 @@ class ConfigurationData:
                 logging.error(f"Missing required configuration: {field}")
                 return False
         return True
+
+    def is_using_azure_storage(self) -> bool:
+        """Check if we should use Azure Storage based on environment"""
+        env = os.getenv("ENVIRONMENT", "").lower()
+        return env in ["production", "prod", "azure"] and bool(self.azure_storage_account)
+
+    def get_storage_adapter(self):
+        """Get the appropriate storage adapter (lazy initialization)"""
+        if not hasattr(self, "_storage_adapter"):
+            if self.is_using_azure_storage():
+                from src.storage.azure_storage_adapter import AzureStorageAdapter
+
+                self._storage_adapter = AzureStorageAdapter(self.azure_storage_account)
+            else:
+                self._storage_adapter = None
+        return self._storage_adapter
+
+    # === FILE OPERATION ABSTRACTIONS ===
+
+    def read_file(self, file_path: str) -> bytes:
+        """Read a file (local or Azure based on environment)"""
+        adapter = self.get_storage_adapter()
+        if adapter:
+            return adapter.read_file(file_path)
+        else:
+            with open(file_path, "rb") as f:
+                return f.read()
+
+    def write_file(self, file_path: str, data: bytes) -> bool:
+        """Write a file (local or Azure based on environment)"""
+        try:
+            adapter = self.get_storage_adapter()
+            if adapter:
+                return adapter.write_file(file_path, data)
+            else:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, "wb") as f:
+                    f.write(data)
+                return True
+        except Exception as e:
+            logging.error(f"Error writing file {file_path}: {e}")
+            return False
+
+    def file_exists(self, file_path: str) -> bool:
+        """Check if a file exists (local or Azure)"""
+        adapter = self.get_storage_adapter()
+        if adapter:
+            return adapter.file_exists(file_path)
+        else:
+            return os.path.exists(file_path)
+
+    def list_files(self, directory_path: str, pattern: str = "*") -> List[str]:
+        """List files in a directory (local or Azure)"""
+        adapter = self.get_storage_adapter()
+        if adapter:
+            return adapter.list_files(directory_path, pattern)
+        else:
+            from pathlib import Path
+
+            return [str(p) for p in Path(directory_path).glob(pattern)]
+
+    def delete_file(self, file_path: str) -> bool:
+        """Delete a file (local or Azure)"""
+        try:
+            adapter = self.get_storage_adapter()
+            if adapter:
+                return adapter.delete_file(file_path)
+            else:
+                os.remove(file_path)
+                return True
+        except Exception as e:
+            logging.error(f"Error deleting file {file_path}: {e}")
+            return False
+
+    # === SPECIALIZED DATA OPERATIONS ===
+
+    def save_json_data(self, file_path: str, data: dict) -> bool:
+        """Save JSON data"""
+        import json
+
+        json_data = json.dumps(data, indent=2, default=str).encode("utf-8")
+        return self.write_file(file_path, json_data)
+
+    def load_json_data(self, file_path: str) -> dict:
+        """Load JSON data"""
+        import json
+
+        if not self.file_exists(file_path):
+            return {}
+
+        try:
+            data = self.read_file(file_path)
+            return json.loads(data.decode("utf-8"))
+        except Exception as e:
+            logging.error(f"Error reading JSON {file_path}: {e}")
+            return {}
+
+    def append_jsonl_data(self, file_path: str, data: dict) -> bool:
+        """Append a line to a JSONL file"""
+        import json
+
+        line = json.dumps(data, default=str) + "\n"
+
+        adapter = self.get_storage_adapter()
+        if adapter:
+            # For Azure, read existing data, append, and write back
+            existing_data = b""
+            if self.file_exists(file_path):
+                existing_data = self.read_file(file_path)
+            new_data = existing_data + line.encode("utf-8")
+            return self.write_file(file_path, new_data)
+        else:
+            # Local: direct append
+            try:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, "a", encoding="utf-8") as f:
+                    f.write(line)
+                return True
+            except Exception as e:
+                logging.error(f"Error appending to JSONL {file_path}: {e}")
+                return False
+
+    # === PATH HELPERS ===
+
+    def get_vector_db_path(self) -> str:
+        """Get vector database path based on environment"""
+        if self.is_using_azure_storage():
+            env = os.getenv("ENVIRONMENT", "prod")
+            return f"vector-db/{env}"
+        else:
+            return self.persist_directory
+
+    def get_logs_path(self, log_type: str) -> str:
+        """Get logs path based on environment and log type"""
+        if self.is_using_azure_storage():
+            return f"logs/{log_type}"
+        else:
+            return os.path.join("data", "logs", log_type)
+
+    # === VECTOR DB VERSION MANAGEMENT ===
+
+    def get_vector_db_version_file(self) -> str:
+        """Get path to vector DB version file"""
+        vector_db_path = self.get_vector_db_path()
+        if self.is_using_azure_storage():
+            return f"{vector_db_path}/db_version.txt"
+        else:
+            return os.path.join(vector_db_path, "db_version.txt")
+
+    def get_current_db_version(self) -> str:
+        """Generate current DB version hash based on embeddings config"""
+        import hashlib
+
+        version_string = f"{self.embeddings_model}_{self.vector_db_type}_{self.search_k}"
+        return hashlib.md5(version_string.encode()).hexdigest()[:8]
+
+    def get_stored_db_version(self) -> str:
+        """Get stored DB version"""
+        version_file = self.get_vector_db_version_file()
+        try:
+            if self.file_exists(version_file):
+                version_data = self.read_file(version_file)
+                return version_data.decode("utf-8").strip()
+        except Exception:
+            pass
+        return ""
+
+    def save_db_version(self) -> bool:
+        """Save current DB version"""
+        version_file = self.get_vector_db_version_file()
+        current_version = self.get_current_db_version()
+        return self.write_file(version_file, current_version.encode("utf-8"))
+
+    def should_rebuild_vector_db(self) -> bool:
+        """Determine if vector DB should be rebuilt"""
+        current_version = self.get_current_db_version()
+        stored_version = self.get_stored_db_version()
+
+        if not stored_version:
+            logging.info("No DB version found, rebuild required")
+            return True
+
+        if stored_version != current_version:
+            logging.info(f"DB version changed ({stored_version} -> {current_version}), rebuild required")
+            return True
+
+        logging.info("DB version unchanged, using existing DB")
+        return False
 
 
 class ConfigProvider(ABC):
@@ -111,6 +302,7 @@ class LocalConfigProvider(ConfigProvider):
             {
                 "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db")),
                 "persist_directory": persist_dir,
+                "azure_storage_account": "",  # Empty for local environment
             }
         )
 
@@ -187,14 +379,24 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
         for field, secret_name in secret_mapping.items():
             config_dict[field] = self._get_secret(secret_name)
 
-        # Add path configurations
-        # Use /tmp for Azure environment to ensure write permissions
-        persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
+        # Get Azure storage account from Key Vault
+        storage_account = self._get_secret("azure-storage-account")
+
+        # In production with Key Vault, use Azure paths
+        if storage_account:
+            env = os.getenv("ENVIRONMENT", "prod")
+            persist_dir = f"vector-db/{env}"
+            db_path = "data/users.db"
+        else:
+            # Fallback to local paths if no storage account
+            persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
+            db_path = os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db"))
 
         config_dict.update(
             {
-                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db")),
+                "db_path": db_path,
                 "persist_directory": persist_dir,
+                "azure_storage_account": storage_account,
             }
         )
 
@@ -221,6 +423,7 @@ class ContinuousIntegrationConfigProvider(ConfigProvider):
             "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", ""),
             "db_path": db_path,
             "persist_directory": persist_dir,
+            "azure_storage_account": "",  # Empty for CI environment
         }
 
         return ConfigurationData(**config_dict)  # ty : ignore
