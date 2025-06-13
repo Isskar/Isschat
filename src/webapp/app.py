@@ -285,13 +285,16 @@ def chat_page():
 
     # Check if there's a question to reuse from history
     if "reuse_question" in st.session_state:
+        # Start timing from the moment question is reused
+        start_time = time.time()
+
         prompt = st.session_state.pop("reuse_question")
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = process_question_with_model(model, features, prompt)
+            result, sources = process_question_with_model(model, features, prompt, start_time)
 
             # Build the response content
             response_content = result
@@ -317,13 +320,16 @@ def chat_page():
 
     # Chat interface
     if prompt := st.chat_input("Ask your question here..."):
+        # Start timing from the moment user submits the question
+        start_time = time.time()
+
         # Add the question
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = process_question_with_model(model, features, prompt)
+            result, sources = process_question_with_model(model, features, prompt, start_time)
 
             # Build the response content
             response_content = result
@@ -348,10 +354,12 @@ def chat_page():
             st.rerun()
 
 
-def process_question_with_model(model, features, prompt):
+def process_question_with_model(model, features, prompt, start_time=None):
     """Process question with model and features"""
     try:
-        start_time = time.time()
+        # Use provided start_time or current time if not provided (for backward compatibility)
+        if start_time is None:
+            start_time = time.time()
 
         # Process with model directly
         if hasattr(model, "process_query"):
@@ -363,7 +371,7 @@ def process_question_with_model(model, features, prompt):
             result = "Model unavailable"
             sources = ""
 
-        # Calculate response time
+        # Calculate total response time from user input to completion
         response_time = (time.time() - start_time) * 1000  # in milliseconds
 
         # Process with features manager if available
