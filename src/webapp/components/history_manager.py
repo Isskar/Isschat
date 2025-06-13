@@ -53,10 +53,7 @@ class ConversationHistoryManager:
 
     def render_history_page(self, user_id: Optional[str] = None):
         """Render the conversation history page."""
-        st.markdown(
-            "<h1 style='text-align: left; margin-bottom: 2rem;'> Conversation History</h1>",
-            unsafe_allow_html=True,
-        )
+        st.title("Conversation History")
 
         # Sidebar for filters
         with st.sidebar:
@@ -94,15 +91,12 @@ class ConversationHistoryManager:
             return
 
         # Tabs for different views
-        tab1, tab2, tab3 = st.tabs(["Conversation List", "Statistics", "Search"])
+        tab1, tab2 = st.tabs(["Conversation List", "Search"])
 
         with tab1:
             self._render_conversations_list(conversations)
 
         with tab2:
-            self._render_statistics(conversations)
-
-        with tab3:
             self._render_search_interface(conversations)
 
     def _get_filtered_conversations(
