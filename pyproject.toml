@@ -41,6 +41,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "azure-keyvault-secrets>=4.9.0",
     "azure-identity>=1.23.0",
+    "azure-storage-blob>=12.19.0",
     "plotly>=6.1.2",
     "streamlit-feedback>=0.1.4",
     "psutil>=7.0.0",

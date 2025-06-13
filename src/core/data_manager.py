@@ -198,7 +198,11 @@ class DataManager:
         sources: Optional[List[Dict]] = None,
         metadata: Optional[Dict] = None,
     ) -> bool:
-        """Sauvegarde une conversation."""
+        """Save conversation using configuration abstraction"""
+        from src.core.config import get_config
+
+        config = get_config()
+
         entry = ConversationEntry(
             timestamp=datetime.now().isoformat(),
             user_id=user_id,
@@ -211,7 +215,16 @@ class DataManager:
             metadata=metadata,
         )
 
-        return self.conversation_store.save_entry(entry)
+        # Use configuration abstraction for saving
+        today = datetime.now().strftime("%Y-%m-%d")
+        conversation_path = f"{config.get_logs_path('conversations')}/conversations_{today}.jsonl"
+
+        success = config.append_jsonl_data(conversation_path, entry.__dict__)
+
+        # Also save to local store for backward compatibility
+        local_success = self.conversation_store.save_entry(entry)
+
+        return success and local_success
 
     def save_performance(
         self, operation: str, duration_ms: float, user_id: str, metadata: Optional[Dict] = None
@@ -230,7 +243,11 @@ class DataManager:
     def save_feedback(
         self, user_id: str, conversation_id: str, rating: int, comment: str = "", metadata: Optional[Dict] = None
     ) -> bool:
-        """Sauvegarde un feedback utilisateur."""
+        """Save user feedback using configuration abstraction"""
+        from src.core.config import get_config
+
+        config = get_config()
+
         entry = FeedbackEntry(
             timestamp=datetime.now().isoformat(),
             user_id=user_id,
@@ -240,7 +257,16 @@ class DataManager:
             metadata=metadata,
         )
 
-        return self.feedback_store.save_entry(entry)
+        # Use configuration abstraction for saving
+        today = datetime.now().strftime("%Y-%m-%d")
+        feedback_path = f"{config.get_logs_path('feedback')}/feedback_{today}.jsonl"
+
+        success = config.append_jsonl_data(feedback_path, entry.__dict__)
+
+        # Also save to local store for backward compatibility
+        local_success = self.feedback_store.save_entry(entry)
+
+        return success and local_success
 
     def get_conversation_history(self, user_id: Optional[str] = None, limit: int = 50) -> List[Dict]:
         """Récupère l'historique des conversations."""
