@@ -25,14 +25,17 @@ class PerformanceDashboard:
 
     def render_dashboard(self):
         """Main dashboard rendering with core metrics."""
-        st.markdown(
-            "<h1 style='text-align: center; color: #2E86AB; margin-bottom: 2rem;'>"
-            "🤖 Chatbot Performance Dashboard</h1>",
-            unsafe_allow_html=True,
-        )
+        st.title("Performance Dashboard")
+
+        # Force refresh button to clear cache
+        col1, col2 = st.columns([4, 1])
+        with col2:
+            if st.button("Refresh"):
+                st.cache_data.clear()
+                st.rerun()
 
         # Main dashboard tabs
-        tab1, tab2 = st.tabs(["💬 Conversation Analytics", "⚡ Performance Tracking"])
+        tab1, tab2, tab3 = st.tabs(["Conversations", "Performance", "Feedback"])
 
         with tab1:
             self._render_conversation_analytics()
@@ -40,9 +43,12 @@ class PerformanceDashboard:
         with tab2:
             self._render_performance_tracking()
 
+        with tab3:
+            self._render_feedback_analytics()
+
     def _render_conversation_analytics(self):
         """Render conversation analytics."""
-        st.markdown("### Conversation Analytics")
+        st.subheader("Conversation Analytics")
 
         conversations = self.data_manager.get_conversation_history(limit=200)
 
@@ -51,12 +57,15 @@ class PerformanceDashboard:
             return
 
         # Basic stats
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Total Conversations", len(conversations))
         with col2:
             avg_length = sum(len(c.get("answer", "")) for c in conversations) / len(conversations)
             st.metric("Avg Answer Length", f"{avg_length:.0f} chars")
+        with col3:
+            avg_time = sum(c.get("response_time_ms", 0) for c in conversations) / len(conversations)
+            st.metric("Avg Response Time", f"{avg_time:.0f}ms")
 
         # Volume chart
         self._render_conversation_volume(conversations)
@@ -66,7 +75,7 @@ class PerformanceDashboard:
 
     def _render_performance_tracking(self):
         """Render performance tracking."""
-        st.markdown("### Performance Tracking")
+        st.subheader("Performance Tracking")
 
         performance_data = self.data_manager.get_performance_metrics(limit=200)
 
@@ -135,6 +144,64 @@ class PerformanceDashboard:
             color_discrete_sequence=[self.colors["primary"]],
         )
         st.plotly_chart(fig, use_container_width=True)
+
+    def _render_feedback_analytics(self):
+        """Render feedback analytics section."""
+        st.subheader("Feedback Analysis")
+
+        # Get feedback data from the features manager feedback system
+        try:
+            from ..components.features_manager import FeedbackSystem
+
+            feedback_system = FeedbackSystem()
+            feedback_stats = feedback_system.get_feedback_statistics()
+
+            if feedback_stats.get("total_feedback", 0) == 0:
+                st.info("No feedback data available")
+                st.markdown("""
+                **Possible causes:**
+                - Users haven't provided feedback yet
+                - Feedback saving issues
+                - Cache preventing data reload
+                """)
+                return
+
+            # Display feedback metrics
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                st.metric("Total Feedback", feedback_stats["total_feedback"])
+            with col2:
+                st.metric("Positive Feedback", feedback_stats["positive_feedback"])
+            with col3:
+                st.metric("Negative Feedback", feedback_stats["negative_feedback"])
+            with col4:
+                st.metric("Satisfaction Rate", f"{feedback_stats['satisfaction_rate']:.1f}%")
+
+            # Feedback distribution chart
+            if feedback_stats["total_feedback"] > 0:
+                import plotly.graph_objects as go
+
+                fig = go.Figure(
+                    data=[
+                        go.Bar(
+                            x=["Positive", "Negative"],
+                            y=[feedback_stats["positive_feedback"], feedback_stats["negative_feedback"]],
+                            marker_color=[self.colors["success"], self.colors["warning"]],
+                        )
+                    ]
+                )
+                fig.update_layout(
+                    title="Feedback Distribution",
+                    xaxis_title="Feedback Type",
+                    yaxis_title="Count",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            st.error(f"Error loading feedback data: {e}")
 
 
 def render_performance_dashboard(data_manager):
