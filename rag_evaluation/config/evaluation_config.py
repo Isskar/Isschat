@@ -11,7 +11,7 @@ from typing import Dict, List
 class EvaluationConfig:
     """Configuration for evaluation system"""
 
-    # Success thresholds
+    # Success thresholds, might be modified 
     robustness_threshold: float = 0.7
     robustness_ci_threshold: float = 0.3
     conversational_threshold: float = 0.7
