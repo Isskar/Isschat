@@ -12,3 +12,11 @@ repos:
         name: ty check
         entry: ty check . --ignore unresolved-import
         language: python
+
+      - id: pytest
+        name: Run tests
+        entry: pytest
+        language: python
+        pass_filenames: false
+        always_run: true
+        args: ["-v", "--tb=short"]
