@@ -208,6 +208,7 @@ class FeedbackSystem:
                     conversation_id = f"conv_{abs(hash(question))}"
 
                     # Save feedback only via data_manager (JSONL format)
+                    # Note: user_id here is already the email from the widget call
                     data_manager.save_feedback(
                         user_id=user_id,
                         conversation_id=conversation_id,
@@ -220,7 +221,9 @@ class FeedbackSystem:
                             "sources": sources,
                         },
                     )
-                    print(f"Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}")
+                    print(
+                        f"Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
+                    )
                 except Exception as e:
                     print(f"Error saving feedback via data_manager: {e}")
 

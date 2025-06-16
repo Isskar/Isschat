@@ -232,7 +232,8 @@ def chat_page():
     model = get_model()
 
     # Initialize the features manager (no caching to ensure fresh data)
-    user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
+    # Use email as the primary user_id everywhere for consistency
+    user_id = st.session_state.get("user", {}).get("email", "anonymous")
     if FeaturesManager:
         st.session_state["features_manager"] = get_cached_features_manager(user_id)
     else:
@@ -378,25 +379,11 @@ def process_question_with_model(model, features, prompt, start_time=None):
         if features and result != "Model unavailable":
             features.process_query_response(prompt, result, response_time)
 
-        # Save conversation to data manager
-        try:
-            from src.core.data_manager import get_data_manager
-
-            data_manager = get_data_manager()
-            user_id = st.session_state.get("user", {}).get("email", "anonymous")
-
-            # Parse sources if they exist
-            sources_list = []
-            if sources and isinstance(sources, str):
-                # Try to extract source information from sources string
-                # This is a simple implementation - you might need to adjust based on your sources format
-                sources_list = [{"title": "Source", "url": "#"}]
-
-            data_manager.save_conversation(
-                user_id=user_id, question=prompt, answer=result, response_time_ms=response_time, sources=sources_list
-            )
-        except Exception as save_error:
-            print(f"Error saving conversation: {save_error}")
+        # NOTE: Conversation saving is now handled exclusively by features_manager
+        # to avoid duplicate entries. This was causing double saves with different user_ids:
+        # - features_manager used "user_1"
+        # - process_question_with_model used email
+        # Removed duplicate save logic here.
 
         return result, sources
     except Exception as e:
