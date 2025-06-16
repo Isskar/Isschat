@@ -85,7 +85,7 @@ class ConversationalEvaluator(BaseEvaluator):
                 context=context_str,
                 question=test_case.question,
                 response=response,
-                expected=test_case.expected_behavior
+                expected=test_case.expected_behavior,
             )
             evaluation = self.llm_judge._evaluate_with_prompt(prompt)
 

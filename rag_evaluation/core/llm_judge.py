@@ -103,9 +103,7 @@ class LLMJudge:
         """Fallback evaluation when JSON parsing fails - uses simplified LLM retry"""
         try:
             # Try a simplified prompt to get just a score
-            simple_prompt = f"""Rate this evaluation result from 0.0 to 1.0: "{result[:100]}"
-            
-            Respond with only a number between 0.0 and 1.0:"""
+            simple_prompt = f"""Rate this evaluation result from 0.0 to 1.0: "{result[:100]}" Respond with only a number between 0.0 and 1.0:"""  # noqa
 
             simple_result = self.llm.invoke(simple_prompt).content.strip()
 

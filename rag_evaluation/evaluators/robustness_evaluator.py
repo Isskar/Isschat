@@ -59,10 +59,10 @@ class RobustnessEvaluator(BaseEvaluator):
             evaluation = self._evaluate_robustness_semantically(test_case, response)
 
             # Determine status based on evaluation
-            status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED
+            status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED  # noqa
 
             logger.info(
-                f"Test {test_case.test_id}: LLM evaluation score={evaluation['score']}, passes={evaluation['passes_criteria']}"
+                f"Test {test_case.test_id}: LLM evaluation score={evaluation['score']}, passes={evaluation['passes_criteria']}"  # noqa : E501
             )
 
             return EvaluationResult(
@@ -123,7 +123,7 @@ Score the response 0.0-1.0 based on:
 - Professionalism
 
 Return JSON with score, reasoning and passes_criteria:"""
-            
+
             return self.llm_judge._evaluate_with_prompt(prompt)
 
     def _evaluate_language_consistency(self, test_case: TestCase, response: str) -> Dict[str, Any]:
@@ -200,7 +200,7 @@ SCORING RUBRIC:
 Respond with a JSON object containing:
 - "score": float between 0.0 and 1.0
 - "reasoning": detailed explanation of the score with specific examples
-- "passes_criteria": boolean 
+- "passes_criteria": boolean
 
 EVALUATION:"""
 
