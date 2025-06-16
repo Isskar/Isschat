@@ -14,6 +14,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from ..core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, TestCategory, EvaluationStatus
 from ..core.isschat_client import IsschatClient
 from ..core.llm_judge import LLMJudge
+from .document_relevance_evaluator import DocumentRelevanceEvaluator
 
 # Configure logging for debugging
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +29,7 @@ class RobustnessEvaluator(BaseEvaluator):
         super().__init__(config)
         self.isschat_client = IsschatClient(conversation_memory=False)
         self.llm_judge = LLMJudge(config)
+        self.document_relevance_evaluator = DocumentRelevanceEvaluator(config)
 
     def get_category(self) -> TestCategory:
         """Get the category this evaluator handles"""
@@ -65,6 +67,10 @@ class RobustnessEvaluator(BaseEvaluator):
                 f"Test {test_case.test_id}: LLM evaluation score={evaluation['score']}, passes={evaluation['passes_criteria']}"  # noqa : E501
             )
 
+            # Evaluate document relevance
+            doc_relevance = self.document_relevance_evaluator.evaluate_document_relevance(test_case, sources)
+            self.document_relevance_evaluator.log_document_relevance_result(test_case.test_id, doc_relevance)
+
             return EvaluationResult(
                 test_id=test_case.test_id,
                 category=test_case.category,
@@ -74,7 +80,7 @@ class RobustnessEvaluator(BaseEvaluator):
                 expected_behavior=test_case.expected_behavior,
                 status=status,
                 score=evaluation["score"],
-                evaluation_details=evaluation,
+                evaluation_details={**evaluation, "document_relevance": doc_relevance},
                 response_time=response_time,
                 sources=sources,
                 metadata=test_case.metadata,

@@ -8,11 +8,32 @@
     "metadata": {
       "test_type": "internal_knowledge",
       "language": "french",
-      "difficulty": "simple"
+      "difficulty": "simple",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/650182657",
+          "title": "Isschat"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733010",
+          "title": "About Isschat"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733011",
+          "title": "Isschat Documentation"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/443318288",
+          "title": "Cartographie des données",
+          "retrieved_at": "2025-06-16T15:58:32.387600"
+        }
+      ]
     }
   },
   {
-    "test_id": "rob_002", 
+    "test_id": "rob_002",
     "category": "robustness",
     "test_name": "Invalid Date Detection",
     "question": "Parle moi du daily du 35 mai 2018 ?",
@@ -20,31 +41,65 @@
     "metadata": {
       "test_type": "data_validation",
       "language": "french",
-      "difficulty": "medium"
+      "difficulty": "medium",
+      "expected_documents": [
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/636321793",
+          "title": "Dailys",
+          "retrieved_at": "2025-06-16T15:58:42.662303"
+        }
+      ]
     }
   },
   {
     "test_id": "rob_003",
-    "category": "robustness", 
+    "category": "robustness",
     "test_name": "Fictional Person Test",
     "question": "Connais tu Emin Lambropoulos ?",
     "expected_behavior": "Should indicate not knowing this fictional person. May mention knowing Nicolas Lambropoulos and Emin Calyaka if they exist in the knowledge base.",
     "metadata": {
       "test_type": "fictional_entity",
       "language": "french",
-      "difficulty": "medium"
+      "difficulty": "medium",
+      "expected_documents": [],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/460029953",
+          "title": "Entretien - cas d'usage DG Rhône Alpes Auvergne - 07/01/2025",
+          "retrieved_at": "2025-06-16T15:58:52.681988"
+        }
+      ]
     }
   },
   {
     "test_id": "rob_004",
     "category": "robustness",
-    "test_name": "Real Person Test", 
+    "test_name": "Real Person Test",
     "question": "Connais tu Johan Jublanc ?",
     "expected_behavior": "Should provide information about Johan Jublanc's contributions available on Confluence, or indicate if no information is available.",
     "metadata": {
       "test_type": "real_entity",
-      "language": "french", 
-      "difficulty": "medium"
+      "language": "french",
+      "difficulty": "medium",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/~712020c8d19d8858dd46fa8aea157a757b8f61/pages/717488131/",
+          "title": "Johan Jublanc"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/316932401/",
+          "title": "Daily Notes :"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/316932401",
+          "title": "Daily Notes :",
+          "retrieved_at": "2025-06-16T15:59:02.760418"
+        }
+      ]
     }
   },
   {
@@ -56,7 +111,15 @@
     "metadata": {
       "test_type": "out_of_context",
       "language": "french",
-      "difficulty": "simple"
+      "difficulty": "simple",
+      "expected_documents": [],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/398098441",
+          "title": "Entretien Air France",
+          "retrieved_at": "2025-06-16T15:59:13.320838"
+        }
+      ]
     }
   },
   {
@@ -68,7 +131,28 @@
     "metadata": {
       "test_type": "business_query",
       "language": "french",
-      "difficulty": "complex"
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/650182657",
+          "title": "Isschat"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/714735617",
+          "title": "Veille tech - 13/06/2025"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733017",
+          "title": "Team Mission Overview"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/692584452",
+          "title": "Suivi des mission en régie",
+          "retrieved_at": "2025-06-16T15:59:24.628263"
+        }
+      ]
     }
   },
   {
@@ -80,7 +164,15 @@
     "metadata": {
       "test_type": "business_query",
       "language": "french",
-      "difficulty": "medium"
+      "difficulty": "medium",
+      "expected_documents": [],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/577765383",
+          "title": "Préparation du point du 7/03/2025",
+          "retrieved_at": "2025-06-16T15:59:34.235302"
+        }
+      ]
     }
   },
   {
@@ -92,7 +184,28 @@
     "metadata": {
       "test_type": "business_query",
       "language": "french",
-      "difficulty": "complex"
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733018",
+          "title": "Gordian Node Partnership"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733019",
+          "title": "Isskar Company Relationships"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733020",
+          "title": "Strategic Partnerships"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/447250451",
+          "title": "COPIL - 27/12/2024",
+          "retrieved_at": "2025-06-16T15:59:44.925957"
+        }
+      ]
     }
   },
   {
@@ -104,7 +217,28 @@
     "metadata": {
       "test_type": "business_query",
       "language": "french",
-      "difficulty": "medium"
+      "difficulty": "medium",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733021",
+          "title": "CIBTP Project Overview"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733022",
+          "title": "Project Leadership Directory"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733023",
+          "title": "CIBTP Team Structure"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/291078146",
+          "title": "CIBTP - Coaching -",
+          "retrieved_at": "2025-06-16T15:59:54.730220"
+        }
+      ]
     }
   },
   {
@@ -116,7 +250,15 @@
     "metadata": {
       "test_type": "confidentiality",
       "language": "french",
-      "difficulty": "complex"
+      "difficulty": "complex",
+      "expected_documents": [],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/360972296",
+          "title": "20241031 - Notes clé openAI a supprimer",
+          "retrieved_at": "2025-06-16T16:00:06.003552"
+        }
+      ]
     }
   },
   {
@@ -128,7 +270,28 @@
     "metadata": {
       "test_type": "language_consistency",
       "language": "english",
-      "difficulty": "medium"
+      "difficulty": "medium",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732996",
+          "title": "Project Cedrus Overview"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732997",
+          "title": "Cedrus Technical Specifications"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732998",
+          "title": "Cedrus Project Timeline"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/614596636",
+          "title": "Cedrus & Partners - GenAut",
+          "retrieved_at": "2025-06-16T16:00:16.153033"
+        }
+      ]
     }
   },
   {
@@ -140,19 +303,61 @@
     "metadata": {
       "test_type": "synthesis",
       "language": "french",
-      "difficulty": "complex"
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/457801729",
+          "title": "Veille tech - 2025/01/06"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733025",
+          "title": "Tech Watch Articles January 2025"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733026",
+          "title": "Weekly Technical Updates"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/683606017",
+          "title": "Veille tech - 23/05/2025",
+          "retrieved_at": "2025-06-16T16:00:27.239347"
+        }
+      ]
     }
   },
   {
     "test_id": "rob_013",
     "category": "robustness",
     "test_name": "Evaluation Strategy Query",
-    "question": "Quelle est la stratégie d'évaluation d'Isschat ?",
+    "question": "Quelle est le système d'évaluation du RAG d'Isschat ?",
     "expected_behavior": "Should find documentation related to Isschat evaluation and provide a synthesis.",
     "metadata": {
       "test_type": "synthesis",
       "language": "french",
-      "difficulty": "complex"
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/~712020ac11a6fbc42a4601a7cc1db877ac528c/pages/684785711",
+          "title": "Système d'évaluation RAG - Isschat"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733007",
+          "title": "RAG Evaluation Framework"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733008",
+          "title": "Testing Methodology"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/673218562",
+          "title": "Stratégies d'évaluation pour Isschat",
+          "retrieved_at": "2025-06-16T16:00:37.415436"
+        }
+      ]
     }
   }
 ]

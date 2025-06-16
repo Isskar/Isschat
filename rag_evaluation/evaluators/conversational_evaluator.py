@@ -12,6 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from ..core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, TestCategory, EvaluationStatus
 from ..core.isschat_client import IsschatClient
 from ..core.llm_judge import LLMJudge
+from .document_relevance_evaluator import DocumentRelevanceEvaluator
 
 CONVERSATIONAL_PROMPT = """You are an expert evaluator for conversational AI systems.
 
@@ -41,6 +42,7 @@ class ConversationalEvaluator(BaseEvaluator):
         super().__init__(config)
         self.isschat_client = IsschatClient(conversation_memory=True)
         self.llm_judge = LLMJudge(config)
+        self.document_relevance_evaluator = DocumentRelevanceEvaluator(config)
         self.conversation_state = {}  # Track conversation state across tests
 
     def get_category(self) -> TestCategory:
@@ -89,11 +91,15 @@ class ConversationalEvaluator(BaseEvaluator):
             )
             evaluation = self.llm_judge._evaluate_with_prompt(prompt)
 
+            # Evaluate document relevance
+            doc_relevance = self.document_relevance_evaluator.evaluate_document_relevance(test_case, sources)
+            self.document_relevance_evaluator.log_document_relevance_result(test_case.test_id, doc_relevance)
+
             # Perform conversational-specific analysis
             conversational_analysis = self._analyze_conversational_aspects(test_case, response, context_str)
 
             # Combine evaluation details
-            evaluation_details = {**evaluation, **conversational_analysis}
+            evaluation_details = {**evaluation, **conversational_analysis, "document_relevance": doc_relevance}
 
             # Calculate final score incorporating conversational metrics
             final_score = self._calculate_conversational_score(evaluation["score"], conversational_analysis, test_case)

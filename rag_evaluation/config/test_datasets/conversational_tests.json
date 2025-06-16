@@ -10,164 +10,392 @@
       "test_type": "context_setup",
       "language": "french",
       "difficulty": "simple",
-      "sequence_part": 1
+      "sequence_part": 1,
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732993",
+          "title": "Team Members Directory"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732994",
+          "title": "Isschat Collaborators"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732995",
+          "title": "Company Organization Chart"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/650182657",
+          "title": "Isschat",
+          "retrieved_at": "2025-06-16T16:00:56.179569"
+        }
+      ]
     }
   },
   {
     "test_id": "conv_002",
-    "category": "conversational", 
+    "category": "conversational",
     "test_name": "Context Continuity Test - Part 2",
-    "question": "Cite moi l'autre",
-    "expected_behavior": "Should maintain context from previous question (Cite moi un des collaborateurs d'Isschat) and cite another collaborator.",
+    "question": "Peux-tu me donner plus d'informations sur cette personne ?",
+    "expected_behavior": "Should provide more information about the collaborator mentioned in the previous question, demonstrating context continuity.",
     "conversation_context": [
       {
-        "question": "Cite moi un des collaborateurs d'Isschat",
-        "response": "{{PREVIOUS_RESPONSE}}"
+        "role": "user",
+        "content": "Cite moi un des collaborateurs d'Isschat"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about a collaborator]"
       }
     ],
     "metadata": {
-      "test_type": "context_continuity",
+      "test_type": "context_continuation",
       "language": "french",
-      "difficulty": "complex",
+      "difficulty": "medium",
       "sequence_part": 2,
-      "depends_on": "conv_001"
+      "depends_on": "conv_001",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732993",
+          "title": "Team Members Directory"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732994",
+          "title": "Isschat Collaborators"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732995",
+          "title": "Company Organization Chart"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/443318288",
+          "title": "Cartographie des données",
+          "retrieved_at": "2025-06-16T16:01:05.170968"
+        }
+      ]
     }
   },
   {
     "test_id": "conv_003",
     "category": "conversational",
     "test_name": "Multi-turn Project Discussion",
-    "question": "Parle moi du projet Cedrus",
-    "expected_behavior": "Should provide information about the Cedrus project if available.",
+    "question": "Parle-moi du projet Cedrus",
+    "expected_behavior": "Should provide information about the Cedrus project from available documentation.",
     "conversation_context": [],
     "metadata": {
       "test_type": "project_inquiry",
       "language": "french",
       "difficulty": "medium",
-      "sequence_part": 1
+      "sequence_part": 1,
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732996",
+          "title": "Project Cedrus Overview"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732997",
+          "title": "Cedrus Technical Specifications"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732998",
+          "title": "Cedrus Project Timeline"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/614596636",
+          "title": "Cedrus & Partners - GenAut",
+          "retrieved_at": "2025-06-16T16:01:14.154492"
+        }
+      ]
     }
   },
   {
     "test_id": "conv_004",
     "category": "conversational",
     "test_name": "Follow-up Project Question",
-    "question": "Qui travaille dessus ?",
-    "expected_behavior": "Should understand 'dessus' refers to the Cedrus project from previous question and provide team information.",
+    "question": "Quelles sont les technologies utilisées dans ce projet ?",
+    "expected_behavior": "Should provide technical details about the Cedrus project, maintaining context from the previous question.",
     "conversation_context": [
       {
-        "question": "Parle moi du projet Cedrus",
-        "response": "{{PREVIOUS_RESPONSE}}"
+        "role": "user",
+        "content": "Parle-moi du projet Cedrus"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about Cedrus project]"
       }
     ],
     "metadata": {
-      "test_type": "context_reference",
-      "language": "french", 
+      "test_type": "context_continuation",
+      "language": "french",
       "difficulty": "complex",
       "sequence_part": 2,
-      "depends_on": "conv_003"
+      "depends_on": "conv_003",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732996",
+          "title": "Project Cedrus Overview"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732997",
+          "title": "Cedrus Technical Specifications"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732998",
+          "title": "Cedrus Project Timeline"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/631570434",
+          "title": "Veille tech - 11/04/2025",
+          "retrieved_at": "2025-06-16T16:01:22.834401"
+        }
+      ]
     }
   },
   {
     "test_id": "conv_005",
     "category": "conversational",
-    "test_name": "Technical Discussion Setup",
-    "question": "Quelles sont les technologies utilisées dans nos projets ?",
-    "expected_behavior": "Should provide an overview of technologies used in company projects.",
-    "conversation_context": [],
+    "test_name": "Context Switch Test",
+    "question": "Maintenant, parle-moi des daily meetings",
+    "expected_behavior": "Should switch context appropriately and provide information about daily meetings.",
+    "conversation_context": [
+      {
+        "role": "user",
+        "content": "Parle-moi du projet Cedrus"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about Cedrus project]"
+      },
+      {
+        "role": "user",
+        "content": "Quelles sont les technologies utilisées dans ce projet ?"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about Cedrus technologies]"
+      }
+    ],
     "metadata": {
-      "test_type": "technical_overview",
+      "test_type": "context_switch",
       "language": "french",
       "difficulty": "medium",
-      "sequence_part": 1
+      "sequence_part": 3,
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732999",
+          "title": "Daily Meeting Guidelines"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733000",
+          "title": "Team Communication Protocols"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733001",
+          "title": "Meeting Schedule"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/636321793",
+          "title": "Dailys",
+          "retrieved_at": "2025-06-16T16:01:33.333433"
+        }
+      ]
     }
   },
   {
     "test_id": "conv_006",
     "category": "conversational",
-    "test_name": "Specific Technology Follow-up",
-    "question": "Peux-tu me donner plus de détails sur la première que tu as mentionnée ?",
-    "expected_behavior": "Should reference the first technology mentioned in the previous response and provide more details.",
+    "test_name": "Memory Persistence Test",
+    "question": "Peux-tu me rappeler de quoi on parlait au début de notre conversation ?",
+    "expected_behavior": "Should demonstrate memory of earlier conversation topics (Cedrus project discussion).",
     "conversation_context": [
       {
-        "question": "Quelles sont les technologies utilisées dans nos projets ?",
-        "response": "{{PREVIOUS_RESPONSE}}"
+        "role": "user",
+        "content": "Parle-moi du projet Cedrus"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about Cedrus project]"
+      },
+      {
+        "role": "user",
+        "content": "Quelles sont les technologies utilisées dans ce projet ?"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about Cedrus technologies]"
+      },
+      {
+        "role": "user",
+        "content": "Maintenant, parle-moi des daily meetings"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about daily meetings]"
       }
     ],
     "metadata": {
-      "test_type": "specific_reference",
+      "test_type": "memory_persistence",
       "language": "french",
       "difficulty": "complex",
-      "sequence_part": 2,
-      "depends_on": "conv_005"
+      "sequence_part": 4,
+      "expected_documents": [],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/379027458",
+          "title": "Feedback",
+          "retrieved_at": "2025-06-16T16:01:43.308833"
+        }
+      ]
     }
   },
   {
     "test_id": "conv_007",
     "category": "conversational",
-    "test_name": "Memory Consistency Test",
-    "question": "De quoi avons-nous parlé au début de notre conversation ?",
-    "expected_behavior": "Should be able to reference earlier parts of the conversation and summarize the topics discussed.",
-    "conversation_context": [
-      {
-        "question": "Cite moi un des collaborateurs d'Isschat",
-        "response": "{{RESPONSE_1}}"
-      },
-      {
-        "question": "Cite moi l'autre", 
-        "response": "{{RESPONSE_2}}"
-      },
-      {
-        "question": "Parle moi du projet Cedrus",
-        "response": "{{RESPONSE_3}}"
-      }
-    ],
-    "metadata": {
-      "test_type": "memory_recall",
-      "language": "french",
-      "difficulty": "complex",
-      "sequence_part": 3
-    }
-  },
-  {
-    "test_id": "conv_008",
-    "category": "conversational",
     "test_name": "Clarification Request",
-    "question": "Peux-tu clarifier ce que tu viens de dire ?",
-    "expected_behavior": "Should reference the immediately previous response and provide clarification or more detail.",
+    "question": "Je n'ai pas bien compris la partie sur les technologies, peux-tu être plus précis ?",
+    "expected_behavior": "Should provide more detailed clarification about Cedrus project technologies, referencing previous context.",
     "conversation_context": [
       {
-        "question": "Quelle est la stratégie d'évaluation d'Isschat ?",
-        "response": "{{PREVIOUS_RESPONSE}}"
+        "role": "user",
+        "content": "Parle-moi du projet Cedrus"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about Cedrus project]"
+      },
+      {
+        "role": "user",
+        "content": "Quelles sont les technologies utilisées dans ce projet ?"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about Cedrus technologies]"
       }
     ],
     "metadata": {
       "test_type": "clarification",
       "language": "french",
-      "difficulty": "medium",
-      "sequence_part": 2
+      "difficulty": "complex",
+      "sequence_part": 5,
+      "depends_on": "conv_004",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732997",
+          "title": "Cedrus Technical Specifications"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733002",
+          "title": "Technology Stack Documentation"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733003",
+          "title": "Development Guidelines"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/457801729",
+          "title": "Veille tech - 2025/01/06",
+          "retrieved_at": "2025-06-16T16:01:52.255894"
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "conv_008",
+    "category": "conversational",
+    "test_name": "Complex Multi-Context Query",
+    "question": "En résumé, quels sont les points clés à retenir sur Cedrus et comment cela s'articule avec nos daily meetings ?",
+    "expected_behavior": "Should synthesize information from multiple conversation topics (Cedrus project and daily meetings).",
+    "conversation_context": [
+      {
+        "role": "user",
+        "content": "Parle-moi du projet Cedrus"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about Cedrus project]"
+      },
+      {
+        "role": "user",
+        "content": "Maintenant, parle-moi des daily meetings"
+      },
+      {
+        "role": "assistant",
+        "content": "[Previous response about daily meetings]"
+      }
+    ],
+    "metadata": {
+      "test_type": "synthesis",
+      "language": "french",
+      "difficulty": "complex",
+      "sequence_part": 6,
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732996",
+          "title": "Project Cedrus Overview"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732999",
+          "title": "Daily Meeting Guidelines"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733004",
+          "title": "Project Management Best Practices"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/614596636",
+          "title": "Cedrus & Partners - GenAut",
+          "retrieved_at": "2025-06-16T16:02:13.162570"
+        }
+      ]
     }
   },
   {
     "test_id": "conv_009",
     "category": "conversational",
-    "test_name": "Topic Transition Test",
-    "question": "Revenons au sujet des collaborateurs",
-    "expected_behavior": "Should recognize the request to return to a previous topic and provide relevant information about collaborators.",
-    "conversation_context": [
-      {
-        "question": "Cite moi un des collaborateurs d'Isschat",
-        "response": "{{RESPONSE_1}}"
-      },
-      {
-        "question": "Parle moi du projet Cedrus",
-        "response": "{{RESPONSE_2}}"
-      }
-    ],
+    "test_name": "Conversation Reset Test",
+    "question": "Bonjour, peux-tu me présenter Isschat ?",
+    "expected_behavior": "Should treat this as a fresh conversation start and provide a general introduction to Isschat.",
+    "conversation_context": [],
     "metadata": {
-      "test_type": "topic_transition",
+      "test_type": "conversation_reset",
       "language": "french",
-      "difficulty": "complex",
-      "sequence_part": 3
+      "difficulty": "simple",
+      "sequence_part": 1,
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733005",
+          "title": "Isschat Introduction"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733006",
+          "title": "Isschat Features Overview"
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733007",
+          "title": "Getting Started with Isschat"
+        }
+      ],
+      "retrieved_sources": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/594214917",
+          "title": "Emin Calyaka - 14/03/2025",
+          "retrieved_at": "2025-06-16T16:02:23.688179"
+        }
+      ]
     }
   }
 ]
