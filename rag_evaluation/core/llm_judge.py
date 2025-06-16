@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Add src to path to import config
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from config_import import get_config
+from src.core.config import get_config
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
 

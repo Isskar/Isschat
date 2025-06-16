@@ -9,9 +9,9 @@ from typing import Dict, Any
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, TestCategory, EvaluationStatus
-from core.isschat_client import IsschatClient
-from core.llm_judge import LLMJudge
+from ..core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, TestCategory, EvaluationStatus
+from ..core.isschat_client import IsschatClient
+from ..core.llm_judge import LLMJudge
 
 CONVERSATIONAL_PROMPT = """You are an expert evaluator for conversational AI systems.
 

@@ -11,9 +11,9 @@ from typing import Dict, Any
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, TestCategory, EvaluationStatus
-from core.isschat_client import IsschatClient
-from core.llm_judge import LLMJudge
+from ..core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, TestCategory, EvaluationStatus
+from ..core.isschat_client import IsschatClient
+from ..core.llm_judge import LLMJudge
 
 # Configure logging for debugging
 logging.basicConfig(level=logging.INFO)

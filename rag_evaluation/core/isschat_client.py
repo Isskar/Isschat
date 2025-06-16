@@ -7,10 +7,10 @@ import sys
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional
 
-# Add src to path to import HelpDesk
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+# Add src to path to import RAGPipeline
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from help_desk import HelpDesk
+from src.rag_system.rag_pipeline import RAGPipelineFactory
 
 
 class IsschatClient:
@@ -26,12 +26,20 @@ class IsschatClient:
         self.conversation_memory = conversation_memory
         self.conversation_history: List[Dict[str, str]] = []
 
-        # Initialize HelpDesk
+        # Initialize RAG Pipeline
         try:
-            self.help_desk = HelpDesk(new_db=False)
+            # Try to create pipeline, but handle configuration errors gracefully
+            self.rag_pipeline = RAGPipelineFactory.create_default_pipeline(force_rebuild=False)
             print("✅ Isschat client initialized successfully")
         except Exception as e:
-            print(f"❌ Failed to initialize Isschat client: {e}")
+            # If configuration fails, provide a more helpful error message
+            error_msg = str(e)
+            if "configuration" in error_msg.lower() or "environment" in error_msg.lower():
+                print(f"❌ Configuration error: {error_msg}")
+                print("💡 Make sure you have a .env file with required environment variables")
+                print("💡 Or run from the main project directory where configuration is available")
+            else:
+                print(f"❌ Failed to initialize Isschat client: {e}")
             raise
 
     def query(self, question: str, context: Optional[List[str]] = None) -> Tuple[str, float, List[str]]:
@@ -55,8 +63,8 @@ class IsschatClient:
                 # In a more advanced implementation, we could modify the prompt
                 pass
 
-            # Query the help desk
-            response, sources = self.help_desk.retrieval_qa_inference(question, verbose=False)
+            # Query the RAG pipeline
+            response, sources = self.rag_pipeline.process_query(question, verbose=False)
 
             response_time = time.time() - start_time
 
