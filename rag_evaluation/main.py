@@ -74,7 +74,7 @@ class EvaluationManager:
         summary = evaluator.get_summary_stats()
 
         print(
-            f"✅ Completed {category.value} evaluation: {summary.get('passed', 0)}/{summary.get('total_tests', 0)} passed"
+            f"✅ Completed {category.value} evaluation: {summary.get('passed', 0)}/{summary.get('total_tests', 0)} passed"  # noqa: E501
         )
 
         return {"category": category.value, "results": [r.to_dict() for r in results], "summary": summary}
@@ -269,7 +269,7 @@ def main():
         manager = EvaluationManager(config)
 
         # Run evaluation
-        results = manager.run_full_evaluation(args.categories)
+        results = manager.run_full_evaluation(args.categories)  # noqa
 
         # Save results
         output_path = Path(args.output) if args.output else None
