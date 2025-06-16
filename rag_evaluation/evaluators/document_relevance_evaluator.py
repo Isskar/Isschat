@@ -235,14 +235,15 @@ class DocumentRelevanceEvaluator(BaseEvaluator):
                     # Format retrieved sources as list of dictionaries with URL, title, and timestamp
                     formatted_sources = []
                     for source in retrieved_sources:
-                        parsed_source = self._parse_source_text(source)
-                        formatted_sources.append(
-                            {
-                                "url": parsed_source["url"],
-                                "title": parsed_source["title"],
-                                "retrieved_at": self._get_current_timestamp(),
-                            }
-                        )
+                        parsed_sources = self._parse_source_text(source)
+                        for parsed_source in parsed_sources:
+                            formatted_sources.append(
+                                {
+                                    "url": parsed_source["url"],
+                                    "title": parsed_source["title"],
+                                    "retrieved_at": self._get_current_timestamp(),
+                                }
+                            )
 
                     test["metadata"]["retrieved_sources"] = formatted_sources
                     updated = True
@@ -268,17 +269,19 @@ class DocumentRelevanceEvaluator(BaseEvaluator):
 
         return datetime.now().isoformat()
 
-    def _parse_source_text(self, source: str) -> Dict[str, str]:
+    def _parse_source_text(self, source: str) -> List[Dict[str, str]]:
         """
-        Parse source text to extract URL and title from Isschat's formatted response
+        Parse source text to extract URLs and titles from Isschat's formatted response
 
         Args:
             source: Source text from Isschat (may contain markdown links)
 
         Returns:
-            Dictionary with 'url' and 'title' keys
+            List of dictionaries with 'url' and 'title' keys
         """
         import re
+
+        sources = []
 
         # Pattern to match markdown links: [title](url)
         markdown_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
@@ -287,22 +290,26 @@ class DocumentRelevanceEvaluator(BaseEvaluator):
         matches = re.findall(markdown_pattern, source)
 
         if matches:
-            # Use the first markdown link found
-            title, url = matches[0]
-            return {"url": url.strip(), "title": title.strip()}
+            # Process all markdown links found
+            for title, url in matches:
+                sources.append({"url": url.strip(), "title": title.strip()})
+            return sources
 
         # Pattern to match plain URLs
         url_pattern = r"https?://[^\s\)]+"
         url_matches = re.findall(url_pattern, source)
 
         if url_matches:
-            # Use the first URL found
-            url = url_matches[0].strip()
-            title = self._extract_title_from_url(url)
-            return {"url": url, "title": title}
+            # Process all URLs found
+            for url in url_matches:
+                url = url.strip()
+                title = self._extract_title_from_url(url)
+                sources.append({"url": url, "title": title})
+            return sources
 
         # If no URLs found, treat the entire source as title and try to extract URL
-        return {"url": source.strip(), "title": self._extract_title_from_source_fallback(source)}
+        sources.append({"url": source.strip(), "title": self._extract_title_from_source_fallback(source)})
+        return sources
 
     def _extract_title_from_url(self, url: str) -> str:
         """

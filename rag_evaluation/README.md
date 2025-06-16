@@ -234,6 +234,14 @@ Edit the appropriate JSON file in `config/test_datasets/`:
 - Data validation (invalid date detection)
 - Confidentiality handling
 - Context appropriateness
+- Document relevance (matching expected documents with retrieved sources)
+
+#### Document Relevance Evaluation
+- **Expected Documents**: Defined in the test case metadata, these are the documents that should be retrieved for a given query.
+- **Retrieved Sources**: The actual sources retrieved by Isschat during evaluation, now capturing all sources referenced in the response.
+- **Matching Logic**: The system uses URL matching to determine if retrieved sources correspond to expected documents, with support for partial matches and Confluence-specific URL patterns.
+- **Scoring**: The score is based on the ratio of matched documents to expected documents. A test passes if at least one expected document is retrieved.
+- **Summary Display**: The evaluation summary now includes a detailed breakdown of document relevance results for each test, showing matched versus expected documents and listing all retrieved sources.
 
 ### Conversational Metrics
 - Context continuity accuracy

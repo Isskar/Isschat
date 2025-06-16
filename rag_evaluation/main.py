@@ -241,6 +241,34 @@ class EvaluationManager:
         threshold_status = "✅ PASSED" if meets_thresholds else "❌ FAILED"
         print(f"\n🎯 THRESHOLD CHECK: {threshold_status}")
 
+        # Add document relevance test results to the summary
+        print("\n📑 DOCUMENT RELEVANCE TEST RESULTS:")
+        print(f"{'-' * 60}")
+
+        # Iterate through all test results to find document relevance evaluations
+        for category, category_data in self.results.get("category_results", {}).items():
+            for result in category_data.get("results", []):
+                if "evaluation_details" in result and "document_relevance" in result["evaluation_details"]:
+                    doc_relevance = result["evaluation_details"]["document_relevance"]
+                    test_id = result["test_id"]
+                    test_name = result["test_name"]
+                    expected_count = doc_relevance.get("expected_count", 0)
+                    matched_count = doc_relevance.get("matched_count", 0)
+                    retrieved_count = doc_relevance.get("retrieved_count", 0)
+
+                    # Display document relevance results for this test
+                    status = "✅" if doc_relevance.get("passes_criteria", False) else "❌"
+                    print(
+                        f"{test_id} - {test_name}: {matched_count}/{expected_count} expected documents found {status}"
+                    )
+
+                    # Display retrieved sources if available
+                    if "retrieved_sources" in doc_relevance and doc_relevance["retrieved_sources"]:
+                        print(f"  Retrieved sources ({retrieved_count}):")
+                        for source in doc_relevance["retrieved_sources"]:
+                            print(f"  - {source}")
+                    print()
+
         print(f"{'=' * 60}")
 
 
