@@ -25,22 +25,26 @@ def test_faiss_store_add_documents(test_config, mock_embeddings):
 
 def test_faiss_store_search_documents(test_config, mock_embeddings):
     with patch("src.core.embeddings_manager.EmbeddingsManager.get_embeddings", return_value=mock_embeddings):
-        config = {"persist_directory": "/tmp/test_faiss"}
-        store = FAISSVectorStore(config)
+        # Patch the ensure_loaded method to prevent loading real DB
+        with patch.object(FAISSVectorStore, "ensure_loaded", return_value=True):
+            config = {"persist_directory": "/tmp/test_faiss"}
+            store = FAISSVectorStore(config)
 
-        mock_store = Mock()
-        mock_doc = Mock()
-        mock_doc.page_content = "Résultat de test"
-        mock_doc.metadata = {"title": "Test", "source": "test.md"}
-        mock_store.similarity_search.return_value = [mock_doc]
+            mock_store = Mock()
+            mock_doc = Mock()
+            mock_doc.page_content = "Résultat de test"
+            mock_doc.metadata = {"title": "Test", "source": "test.md"}
+            mock_store.similarity_search.return_value = [mock_doc]
 
-        store._store = mock_store
+            # Force the mock store and prevent real loading
+            store._store = mock_store
+            store._is_loaded = True
 
-        results = store.search_documents("question de test", k=1)
+            results = store.search_documents("question de test", k=1)
 
-        assert len(results) == 1
-        assert results[0].page_content == "Résultat de test"
-        assert results[0].metadata["title"] == "Test"
+            assert len(results) == 1
+            assert results[0].page_content == "Résultat de test"
+            assert results[0].metadata["title"] == "Test"
 
 
 def test_faiss_store_get_stats(test_config, mock_embeddings):

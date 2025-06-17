@@ -90,48 +90,21 @@ class FeedbackSystem:
 
     def _load_feedback_data(self):
         """Load feedback data from data_manager (JSONL format)"""
-        from datetime import datetime, timedelta
         import logging
 
         logger = logging.getLogger(__name__)
         all_feedback = []
 
         try:
-            from ...core.data_manager import DataManager
+            from src.core.data_manager import get_data_manager
 
-            data_manager = DataManager()
+            data_manager = get_data_manager()
 
-            # Calculate the last 30 days
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
+            # Use data_manager to get feedback data directly
+            logger.info("Loading feedbacks from data_manager")
+            all_feedback = data_manager.get_feedback_data(limit=1000)
 
-            logger.info(f"Loading feedbacks from {start_date.date()} to {end_date.date()}")
-
-            # Generate filenames for each day
-            current_date = start_date
-            files_found = 0
-            while current_date <= end_date:
-                date_str = current_date.strftime("%Y-%m-%d")
-                feedback_file_path = f"logs/feedback/feedback_{date_str}.json"
-
-                # Load the file if it exists using storage service
-                try:
-                    if self.storage_service.file_exists(feedback_file_path):
-                        files_found += 1
-                        logger.info(f"Feedback file found: {feedback_file_path}")
-                        daily_feedback = self.storage_service.load_json_data(feedback_file_path)
-                        if isinstance(daily_feedback, list):
-                            all_feedback.extend(daily_feedback)
-                            logger.info(f"Loaded {len(daily_feedback)} feedbacks from {feedback_file_path}")
-                    else:
-                        logger.debug(f"File not found: {feedback_file_path}")
-                except Exception as e:
-                    # Ignore corrupted or inaccessible files
-                    logger.error(f"Error loading {feedback_file_path}: {e}")
-
-                current_date += timedelta(days=1)
-
-            logger.info(f"Total: {files_found} files found, {len(all_feedback)} feedbacks loaded from data_manager")
+            logger.info(f"Total: {len(all_feedback)} feedbacks loaded from data_manager")
             return all_feedback
 
         except Exception as e:
@@ -188,7 +161,7 @@ class FeedbackSystem:
 
                 # Sauvegarder dans le data manager d'abord
                 try:
-                    from ...core.data_manager import get_data_manager
+                    from src.core.data_manager import get_data_manager
 
                     data_manager = get_data_manager()
 
@@ -311,7 +284,7 @@ class FeedbackSystem:
         """
         # Try data manager first
         try:
-            from ...core.data_manager import get_data_manager
+            from src.core.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             feedback_data = data_manager.get_feedback_data(limit=1000)
@@ -596,7 +569,7 @@ class FeaturesManager:
 
         # Save to data manager
         try:
-            from ...core.data_manager import get_data_manager
+            from src.core.data_manager import get_data_manager
 
             data_manager = get_data_manager()
 

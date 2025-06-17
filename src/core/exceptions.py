@@ -42,7 +42,7 @@ class VectorStoreError(RAGSystemError):
 class StorageAccessError(RAGSystemError):
     """Raised when storage access fails due to authentication or permission issues"""
 
-    def __init__(self, message: str, storage_type: str = None, original_error: Exception = None):
+    def __init__(self, message: str, storage_type: str | None = None, original_error: Exception | None = None):
         super().__init__(message)
         self.storage_type = storage_type
         self.original_error = original_error
