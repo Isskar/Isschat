@@ -17,12 +17,13 @@ from src.core.embeddings_manager import EmbeddingsManager
 class FAISSVectorStore(BaseVectorStore):
     """FAISS-based vector store implementation with centralized configuration."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], storage_service=None):
         """
-        Initialize FAISS vector store.
+        Initialize FAISS vector store with dependency injection.
 
         Args:
             config: Configuration dictionary containing persist_directory and other settings
+            storage_service: Optional storage service for file operations
         """
         from src.core.config import get_config
 
@@ -30,6 +31,9 @@ class FAISSVectorStore(BaseVectorStore):
         self.app_config = get_config()
         self.persist_directory = Path(self.app_config.persist_directory)
         self.persist_directory.mkdir(parents=True, exist_ok=True)
+
+        # Storage service for file operations (dependency injection)
+        self.storage_service = storage_service
 
         # Use centralized embeddings manager
         self.embeddings = EmbeddingsManager.get_embeddings()
@@ -39,132 +43,38 @@ class FAISSVectorStore(BaseVectorStore):
         print(f"✅ FAISSVectorStore initialized with persist_directory: {self.persist_directory}")
 
     def ensure_loaded(self) -> bool:
-        """Ensure the vector store is loaded only once and handle rebuilds"""
+        """Ensure the vector store is loaded only once"""
         if self._is_loaded:
             return True
 
         try:
-            # Check if rebuild is required
-            if self.app_config.should_rebuild_vector_db():
-                print("🔄 Vector DB rebuild required due to configuration changes")
-                return self._trigger_rebuild()
-
             # Try to load existing DB
             if self._try_load_existing():
                 self._is_loaded = True
                 print("✅ Vector DB loaded from existing storage")
                 return True
 
-            # No existing DB found, trigger rebuild
-            print("🆕 No existing vector DB found, rebuild required")
-            return self._trigger_rebuild()
+            # No existing DB found
+            print("🆕 No existing vector DB found")
+            return False
 
         except Exception as e:
             print(f"❌ Error ensuring vector DB is loaded: {e}")
             return False
 
     def _try_load_existing(self) -> bool:
-        """Try to load existing vector database"""
+        """Try to load existing vector database from local storage"""
         try:
-            if self.app_config.is_using_azure_storage():
-                return self._load_from_azure()
-            else:
-                return self._load_from_local()
+            index_file = self.persist_directory / "index.faiss"
+            if index_file.exists():
+                self._store = FAISS.load_local(
+                    str(self.persist_directory), self.embeddings, allow_dangerous_deserialization=True
+                )
+                return True
+            return False
         except Exception as e:
             print(f"⚠️ Could not load existing DB: {e}")
             return False
-
-    def _load_from_local(self) -> bool:
-        """Load vector DB from local storage"""
-        index_file = self.persist_directory / "index.faiss"
-        if index_file.exists():
-            self._store = FAISS.load_local(
-                str(self.persist_directory), self.embeddings, allow_dangerous_deserialization=True
-            )
-            return True
-        return False
-
-    def _load_from_azure(self) -> bool:
-        """Load vector DB from Azure storage"""
-        vector_db_path = self.app_config.get_vector_db_path()
-        index_file_path = f"{vector_db_path}/index.faiss"
-
-        if self.app_config.file_exists(index_file_path):
-            # Download necessary files
-            files_to_download = ["index.faiss", "index.pkl"]
-
-            for filename in files_to_download:
-                azure_file_path = f"{vector_db_path}/{filename}"
-                local_file_path = self.persist_directory / filename
-
-                if self.app_config.file_exists(azure_file_path):
-                    file_data = self.app_config.read_file(azure_file_path)
-                    with open(local_file_path, "wb") as f:
-                        f.write(file_data)
-
-            # Load from downloaded files
-            return self._load_from_local()
-
-        return False
-
-    def _trigger_rebuild(self) -> bool:
-        """Trigger vector database rebuild"""
-        print("🚧 Triggering vector database rebuild...")
-
-        # Clean up old DB
-        self._cleanup_old_db()
-
-        # Reset state
-        self._store = None
-        self._is_loaded = False
-
-        # Try to trigger automatic rebuild if pipeline manager is available
-        try:
-            from src.data_pipeline.pipeline_manager import PipelineManager
-
-            pipeline_manager = PipelineManager()
-
-            print("🔄 Starting automatic rebuild...")
-            success = pipeline_manager.run_full_pipeline()
-
-            if success:
-                # Mark DB as built with current version
-                self.app_config.save_db_version()
-                # Try to reload
-                if self._try_load_existing():
-                    self._is_loaded = True
-                    print("✅ Rebuild completed and DB reloaded")
-                    return True
-
-        except ImportError:
-            print("⚠️ PipelineManager not available, manual rebuild required")
-        except Exception as e:
-            print(f"❌ Error during automatic rebuild: {e}")
-
-        return False
-
-    def _cleanup_old_db(self):
-        """Clean up old vector database files"""
-        try:
-            if self.app_config.is_using_azure_storage():
-                # For Azure, delete files via abstraction
-                vector_db_path = self.app_config.get_vector_db_path()
-                files_to_delete = ["index.faiss", "index.pkl", "db_version.txt"]
-
-                for filename in files_to_delete:
-                    file_path = f"{vector_db_path}/{filename}"
-                    if self.app_config.file_exists(file_path):
-                        self.app_config.delete_file(file_path)
-            else:
-                # For local, delete files from directory
-                for file_path in self.persist_directory.glob("*"):
-                    if file_path.is_file():
-                        file_path.unlink()
-
-            print("🗑️ Old vector database cleaned up")
-
-        except Exception as e:
-            print(f"⚠️ Error during cleanup: {e}")
 
     def add_documents(self, documents: List[Document]) -> None:
         """Add documents to the vector store."""
@@ -295,43 +205,17 @@ class FAISSVectorStore(BaseVectorStore):
             raise VectorStoreError(f"Failed to save documents: {str(e)}")
 
     def persist(self) -> None:
-        """Persist the vector store to disk and Azure if configured"""
+        """Persist the vector store to disk"""
         if self._store is None:
             raise VectorStoreError("No store to persist")
 
         try:
-            # Always save locally first
+            # Save to local storage
             self._store.save_local(str(self.persist_directory))
-
-            # If using Azure storage, upload to Azure
-            if self.app_config.is_using_azure_storage():
-                self._upload_to_azure()
-
-            # Save DB version to mark as current
-            self.app_config.save_db_version()
+            print(f"✅ Vector database persisted to: {self.persist_directory}")
 
         except Exception as e:
             raise VectorStoreError(f"Failed to persist store: {str(e)}")
-
-    def _upload_to_azure(self):
-        """Upload vector database files to Azure storage"""
-        try:
-            vector_db_path = self.app_config.get_vector_db_path()
-
-            # Upload all files in the persist directory
-            for file_path in self.persist_directory.glob("*"):
-                if file_path.is_file():
-                    with open(file_path, "rb") as f:
-                        file_data = f.read()
-
-                    azure_file_path = f"{vector_db_path}/{file_path.name}"
-                    self.app_config.write_file(azure_file_path, file_data)
-
-            print(f"📤 Vector database uploaded to Azure: {vector_db_path}")
-
-        except Exception as e:
-            print(f"❌ Error uploading to Azure: {e}")
-            raise
 
     def load(self):
         """Load the vector store from disk and return self for chaining."""
