@@ -8,7 +8,6 @@ from pathlib import Path
 import shutil
 import traceback
 import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
 
 # Add the parent directory to the Python search path
@@ -101,10 +100,9 @@ def get_model(rebuild_db=False):
             sys.exit(1)
 
 
-# Cache functions
-@st.cache_resource
+# Cache functions - removed caching to ensure fresh data
 def get_cached_features_manager(user_id: str):
-    """Get cached features manager"""
+    """Get features manager (no longer cached to ensure fresh data)"""
     if FeaturesManager:
         return FeaturesManager(user_id)
     return None
@@ -233,13 +231,13 @@ def chat_page():
     # Load the model
     model = get_model()
 
-    # Initialize the features manager with caching
-    if "features_manager" not in st.session_state:
-        user_id = st.session_state.get("user_id", f"user_{st.session_state['user']['id']}")
-        if FeaturesManager:
-            st.session_state["features_manager"] = get_cached_features_manager(user_id)
-        else:
-            st.session_state["features_manager"] = None
+    # Initialize the features manager (no caching to ensure fresh data)
+    # Use email as the primary user_id everywhere for consistency
+    user_id = st.session_state.get("user", {}).get("email", "anonymous")
+    if FeaturesManager:
+        st.session_state["features_manager"] = get_cached_features_manager(user_id)
+    else:
+        st.session_state["features_manager"] = None
 
     features = st.session_state["features_manager"]
 
@@ -303,6 +301,9 @@ def chat_page():
 
     # Check if there's a question to reuse from history
     if "reuse_question" in st.session_state:
+        # Start timing from the moment question is reused
+        start_time = time.time()
+
         prompt = st.session_state.pop("reuse_question")
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
@@ -312,7 +313,7 @@ def chat_page():
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = process_question_with_model(model, features, prompt, chat_history)
+            result, sources = process_question_with_model(model, features, prompt, start_time, chat_history)
 
             # Build the response content
             response_content = result
@@ -338,6 +339,9 @@ def chat_page():
 
     # Chat interface
     if prompt := st.chat_input("Ask your question here..."):
+        # Start timing from the moment user submits the question
+        start_time = time.time()
+
         # Add the question
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
@@ -347,7 +351,7 @@ def chat_page():
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = process_question_with_model(model, features, prompt, chat_history)
+            result, sources = process_question_with_model(model, features, prompt, start_time, chat_history)
 
             # Build the response content
             response_content = result
@@ -372,10 +376,12 @@ def chat_page():
             st.rerun()
 
 
-def process_question_with_model(model, features, prompt, chat_history=None):
-    """Process question with model and features, passing chat history for context"""
+def process_question_with_model(model, features, prompt, start_time=None, chat_history=None):
+    """Process question with model and features"""
     try:
-        start_time = time.time()
+        # Use provided start_time or current time if not provided (for backward compatibility)
+        if start_time is None:
+            start_time = time.time()
 
         # Process with model directly
         if hasattr(model, "process_query"):
@@ -390,13 +396,12 @@ def process_question_with_model(model, features, prompt, chat_history=None):
             result = "Model unavailable"
             sources = ""
 
-        # Calculate response time
+        # Calculate total response time from user input to completion
         response_time = (time.time() - start_time) * 1000  # in milliseconds
 
         # Process with features manager if available
         if features and result != "Model unavailable":
             features.process_query_response(prompt, result, response_time)
-
         return result, sources
     except Exception as e:
         return f"Error processing question: {str(e)}", ""
@@ -427,37 +432,54 @@ def history_page():
 
 
 @login_required
-@st.cache_data(ttl=60)  # Cache for 1 minute
-def get_cached_performance_data():
-    """Get cached performance data"""
-    return {"response_time": "1.2s", "queries_today": "247", "success_rate": "98.5%"}
+def get_real_performance_data():
+    """Get real performance data from data manager"""
+    try:
+        from src.core.data_manager import get_data_manager
+
+        data_manager = get_data_manager()
+
+        # Get recent performance data
+        performance_data = data_manager.get_performance_metrics(limit=100)
+        conversations = data_manager.get_conversation_history(limit=100)
+
+        if not performance_data and not conversations:
+            return None
+
+        # Calculate real metrics
+        total_conversations = len(conversations)
+        avg_response_time = 0
+        if conversations:
+            avg_response_time = sum(c.get("response_time_ms", 0) for c in conversations) / len(conversations)
+
+        return {
+            "avg_response_time": avg_response_time,
+            "total_conversations": total_conversations,
+            "conversations_today": len(
+                [c for c in conversations if c.get("timestamp", "").startswith(datetime.now().strftime("%Y-%m-%d"))]
+            ),
+        }
+    except Exception as e:
+        print(f"Error getting performance data: {e}")
+        return None
 
 
 @login_required
 def dashboard_page():
-    """Performance dashboard page - inspired by src/dashboard.py"""
+    """Performance dashboard page using the new PerformanceDashboard component"""
     st.session_state["page"] = "dashboard"
 
-    st.title("Performance Dashboard")
-
     try:
-        # Create tabs for different dashboard sections
-        tabs = st.tabs(["Performance Tracking", "Conversation Analysis", "General Statistics"])
+        # Use the new PerformanceDashboard component
+        from src.core.data_manager import get_data_manager
+        from src.webapp.components.performance_dashboard import render_performance_dashboard
 
-        # Tab 1: Performance Tracking
-        with tabs[0]:
-            render_performance_tracking()
-
-        # Tab 2: Conversation Analysis
-        with tabs[1]:
-            render_conversation_analysis()
-
-        # Tab 3: General Statistics
-        with tabs[2]:
-            render_general_statistics()
+        data_manager = get_data_manager()
+        render_performance_dashboard(data_manager)
 
     except Exception as e:
         st.error(f"Error loading dashboard: {str(e)}")
+        st.code(str(e))
 
     # Return button
     if st.button("Return to chat", key="return_from_dashboard"):
@@ -471,29 +493,50 @@ def render_performance_tracking():
     days = st.slider("Analysis period (days)", 1, 30, 7, key="performance_days")
 
     try:
-        # Get performance data
-        perf_data = get_cached_performance_data()
+        # Get real performance data
+        perf_data = get_real_performance_data()
 
         if perf_data:
             # Display main metrics
-            st.metric("Average response time", f"{perf_data.get('avg_response_time', 'N/A')} ms")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Average Response Time", f"{perf_data.get('avg_response_time', 0):.0f} ms")
+            with col2:
+                st.metric("Total Conversations", perf_data.get("total_conversations", 0))
+            with col3:
+                st.metric("Conversations Today", perf_data.get("conversations_today", 0))
 
-            # Create sample data for visualization
+            # Get conversation data for charts
+            from src.core.data_manager import get_data_manager
 
-            # Generate sample daily data
-            dates = [datetime.now() - timedelta(days=i) for i in range(days, 0, -1)]
-            response_times = np.random.normal(1200, 200, days)  # Sample data
-            query_counts = np.random.poisson(50, days)  # Sample data
+            data_manager = get_data_manager()
+            conversations = data_manager.get_conversation_history(limit=200)
 
-            daily_data = pd.DataFrame({"date": dates, "response_time_ms": response_times, "query_count": query_counts})
+            if conversations:
+                # Convert to DataFrame for analysis
+                df = pd.DataFrame(conversations)
+                df["timestamp"] = pd.to_datetime(df["timestamp"])
+                df["date"] = df["timestamp"].dt.date
 
-            # Time evolution chart
-            st.subheader("Response Time Evolution")
-            st.line_chart(daily_data.set_index("date")[["response_time_ms"]])
+                # Filter by selected period
+                cutoff_date = datetime.now() - timedelta(days=days)
+                recent_df = df[df["timestamp"] >= cutoff_date]
 
-            # Query count chart
-            st.subheader("Daily Query Count")
-            st.bar_chart(daily_data.set_index("date")[["query_count"]])
+                if not recent_df.empty:
+                    # Daily conversation count
+                    daily_counts = recent_df.groupby("date").size().reset_index(name="count")
+                    st.subheader("Daily Conversation Volume")
+                    st.bar_chart(daily_counts.set_index("date")["count"])
+
+                    # Response time evolution
+                    if "response_time_ms" in recent_df.columns:
+                        daily_response_times = recent_df.groupby("date")["response_time_ms"].mean().reset_index()
+                        st.subheader("Average Response Time Evolution")
+                        st.line_chart(daily_response_times.set_index("date")["response_time_ms"])
+                else:
+                    st.info(f"No conversations found in the last {days} days")
+            else:
+                st.info("No conversation data available")
 
         else:
             st.warning("No performance data available for the selected period")
@@ -505,31 +548,47 @@ def render_performance_tracking():
 def render_conversation_analysis():
     """Render conversation analysis section"""
     try:
-        # Get conversation data from features manager
-        if "features_manager" in st.session_state and st.session_state["features_manager"]:
+        # Get real conversation data
+        from src.core.data_manager import get_data_manager
+
+        data_manager = get_data_manager()
+        conversations = data_manager.get_conversation_history(limit=200)
+
+        if conversations:
             # Display basic metrics
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total conversations", "156")  # Sample data
+                st.metric("Total Conversations", len(conversations))
             with col2:
-                st.metric("Average response time", "1.2s")  # Sample data
+                avg_response_time = sum(c.get("response_time_ms", 0) for c in conversations) / len(conversations)
+                st.metric("Average Response Time", f"{avg_response_time:.0f}ms")
+            with col3:
+                avg_length = sum(c.get("answer_length", 0) for c in conversations) / len(conversations)
+                st.metric("Average Answer Length", f"{avg_length:.0f} chars")
 
-            # Sample hourly distribution
-            st.subheader("Question distribution by hour")
+            # Convert to DataFrame for analysis
+            df = pd.DataFrame(conversations)
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            df["hour"] = df["timestamp"].dt.hour
 
-            hours = list(range(24))
-            counts = np.random.poisson(5, 24)  # Sample data
-            hour_df = pd.DataFrame({"Hour": hours, "Questions": counts})
-            st.bar_chart(hour_df.set_index("Hour"))
+            # Hourly distribution
+            st.subheader("Question Distribution by Hour")
+            hourly_counts = df.groupby("hour").size().reset_index(name="count")
 
-            # Most frequent keywords (sample)
-            st.subheader("Most frequent keywords")
-            keywords_data = [["confluence", 15], ["documentation", 12], ["access", 8], ["login", 6], ["help", 5]]
-            keywords_df = pd.DataFrame(keywords_data, columns=["Keyword", "Frequency"])
-            st.dataframe(keywords_df)
+            # Fill missing hours with 0
+            all_hours = pd.DataFrame({"hour": range(24)})
+            hourly_counts = all_hours.merge(hourly_counts, on="hour", how="left").fillna(0)
 
+            st.bar_chart(hourly_counts.set_index("hour")["count"])
+
+            # User activity if multiple users
+            unique_users = df["user_id"].nunique()
+            if unique_users > 1:
+                st.subheader("User Activity")
+                user_counts = df["user_id"].value_counts().head(10)
+                st.bar_chart(user_counts)
         else:
-            st.warning("Conversation analysis not available")
+            st.info("No conversation data available")
 
     except Exception as e:
         st.error(f"Error displaying conversation analysis: {str(e)}")
