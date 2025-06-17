@@ -9,7 +9,7 @@ import logging
 import time
 import json
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 
 class ConversationAnalyzer:
@@ -23,7 +23,7 @@ class ConversationAnalyzer:
         analysis = {
             "query_length": len(query),
             "response_length": len(response),
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now().isoformat(),
             "query_type": self._classify_query(query),
         }
         self.conversations.append(analysis)
@@ -62,68 +62,71 @@ class ConversationAnalyzer:
 class FeedbackSystem:
     """Feedback system with thumbs (👍/👎) using streamlit_feedback"""
 
-    def __init__(self, feedback_file: Optional[str] = None):
-        if feedback_file is None:
-            # Create a filename with current date
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            feedback_file = f"./data/logs/feedback/feedback_{date_str}.json"
-        self.feedback_file = feedback_file
-        self._ensure_feedback_file_exists()
-
-    def _ensure_feedback_file_exists(self):
-        """Ensure that the feedback file exists"""
-        os.makedirs(os.path.dirname(self.feedback_file), exist_ok=True)
-        if not os.path.exists(self.feedback_file):
-            with open(self.feedback_file, "w") as f:
-                json.dump([], f)
-
     def _load_feedback_data(self):
-        """Load feedback data from all files from the last 30 days"""
+        """Load feedback data from data_manager (JSONL format)"""
         from datetime import datetime, timedelta
         import logging
 
         logger = logging.getLogger(__name__)
         all_feedback = []
 
-        # Calculate the last 30 days
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
+        try:
+            from ...core.data_manager import DataManager
 
-        logger.info(f"Loading feedbacks from {start_date.date()} to {end_date.date()}")
+            data_manager = DataManager()
 
-        # Generate filenames for each day
-        current_date = start_date
-        files_found = 0
-        while current_date <= end_date:
-            date_str = current_date.strftime("%Y-%m-%d")
-            feedback_file_path = f"logs/feedback/feedback_{date_str}.json"
+            # Calculate the last 30 days
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=30)
 
-            # Load the file if it exists
-            try:
-                if os.path.exists(feedback_file_path):
-                    files_found += 1
-                    logger.info(f"Feedback file found: {feedback_file_path}")
-                    with open(feedback_file_path, "r") as f:
-                        daily_feedback = json.load(f)
-                        if isinstance(daily_feedback, list):
-                            all_feedback.extend(daily_feedback)
-                            logger.info(f"Loaded {len(daily_feedback)} feedbacks from {feedback_file_path}")
-                else:
-                    logger.debug(f"File not found: {feedback_file_path}")
-            except (json.JSONDecodeError, IOError) as e:
-                # Ignore corrupted or inaccessible files
-                logger.error(f"Error loading {feedback_file_path}: {e}")
-                continue
+            logger.info(f"Loading feedbacks from {start_date.date()} to {end_date.date()}")
 
-            current_date += timedelta(days=1)
+            current_date = start_date
+            files_found = 0
 
-        logger.info(f"Total: {files_found} files found, {len(all_feedback)} feedbacks loaded")
-        return all_feedback
+            while current_date <= end_date:
+                try:
+                    date_str = current_date.strftime("%Y%m%d")
+                    feedback_file = data_manager.feedback_dir / f"feedback_{date_str}.jsonl"
 
-    def _save_feedback_data(self, data):
-        """Save feedback data to file"""
-        with open(self.feedback_file, "w") as f:
-            json.dump(data, f, indent=2, default=str)
+                    if feedback_file.exists():
+                        files_found += 1
+                        logger.info(f"Feedback file found: {feedback_file}")
+
+                        with open(feedback_file, "r") as f:
+                            daily_count = 0
+                            for line in f:
+                                if line.strip():
+                                    entry = json.loads(line.strip())
+                                    # Convert to old format for compatibility
+                                    old_format_entry = {
+                                        "user_id": entry.get("user_id", ""),
+                                        "question": entry.get("metadata", {}).get("question", ""),
+                                        "answer": entry.get("metadata", {}).get("answer", ""),
+                                        "sources": entry.get("metadata", {}).get("sources", ""),
+                                        "feedback": entry.get("metadata", {}).get("original_feedback", {}),
+                                        "timestamp": entry.get("timestamp", ""),
+                                        "rating": entry.get("rating", 0),
+                                        "comment": entry.get("comment", ""),
+                                    }
+                                    all_feedback.append(old_format_entry)
+                                    daily_count += 1
+
+                        logger.info(f"Loaded {daily_count} feedbacks from {feedback_file}")
+                    else:
+                        logger.debug(f"File not found: {feedback_file}")
+
+                except Exception as e:
+                    logger.debug(f"Could not load feedback for {date_str}: {e}")
+
+                current_date += timedelta(days=1)
+
+            logger.info(f"Total: {files_found} files found, {len(all_feedback)} feedbacks loaded from data_manager")
+            return all_feedback
+
+        except Exception as e:
+            logger.error(f"Error loading feedback from data_manager: {e}")
+            return []
 
     def render_feedback_widget(
         self, user_id: str, question: str, answer: str, sources: str, key_suffix: str = ""
@@ -169,21 +172,46 @@ class FeedbackSystem:
                 # Marquer le feedback comme soumis
                 st.session_state[feedback_submitted_key] = True
 
-                # Sauvegarder dans le fichier de données
-                feedback_data = self._load_feedback_data()
-                feedback_entry = {
-                    "user_id": user_id,
-                    "question": question,
-                    "answer": answer,
-                    "sources": sources,
-                    "feedback": response,
-                    "timestamp": datetime.now().isoformat(),
-                }
-                feedback_data.append(feedback_entry)
-                self._save_feedback_data(feedback_data)
+                # Sauvegarder dans le data manager d'abord
+                try:
+                    from ...core.data_manager import get_data_manager
 
-                # Log pour debug
-                print(f"Feedback sauvegardé: {feedback_entry}")
+                    data_manager = get_data_manager()
+
+                    # Convert feedback score to rating format for data manager
+                    rating = 3  # neutral default
+                    comment = ""
+
+                    if isinstance(response, dict):
+                        score = response.get("score")
+                        if score == 1 or score == "👍":
+                            rating = 5
+                        elif score == 0 or score == "👎":
+                            rating = 1
+                        comment = response.get("text", "")
+
+                    # Generate conversation ID from question hash
+                    conversation_id = f"conv_{abs(hash(question))}"
+
+                    # Save feedback only via data_manager (JSONL format)
+                    # Note: user_id here is already the email from the widget call
+                    data_manager.save_feedback(
+                        user_id=user_id,
+                        conversation_id=conversation_id,
+                        rating=rating,
+                        comment=comment,
+                        metadata={
+                            "original_feedback": response,
+                            "question": question,
+                            "answer": answer,
+                            "sources": sources,
+                        },
+                    )
+                    print(
+                        f"Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
+                    )
+                except Exception as e:
+                    print(f"Error saving feedback via data_manager: {e}")
 
                 # Forcer un rerun pour mettre à jour l'interface
                 st.rerun()
@@ -192,95 +220,45 @@ class FeedbackSystem:
                 print(f"Erreur lors de la sauvegarde du feedback: {e}")
                 st.error(f"Erreur lors de la sauvegarde: {e}")
 
-        # CSS targeted to make feedback widget background transparent
+        # Minimal CSS for feedback widget only - don't affect other buttons
         st.markdown(
             """
         <style>
-        /* Target all feedback widget containers */
-        div[data-testid="stVerticalBlock"] div[style*="background"] {
+        /* Only target feedback widget containers */
+        .streamlit-feedback {
             background: transparent !important;
-            background-color: transparent !important;
             border: none !important;
             box-shadow: none !important;
         }
 
-        /* Target specifically black backgrounds in feedback widget */
-        div[style*="rgb(0, 0, 0)"],
-        div[style*="background-color: black"],
-        div[style*="background-color: #000"],
-        div[style*="background-color: #000000"] {
-            background: transparent !important;
-            background-color: transparent !important;
-        }
-
-        /* Target main streamlit-feedback container */
-        .streamlit-feedback,
-        .streamlit-feedback > div,
-        .streamlit-feedback div {
-            background: transparent !important;
-            background-color: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-
-        /* Force transparency on all dark background elements */
-        [style*="background-color: rgb(0, 0, 0)"],
-        [style*="background: rgb(0, 0, 0)"] {
-            background: transparent !important;
-            background-color: transparent !important;
-        }
-
-        /* Style pour le titre du feedback */
+        /* Feedback title styling */
         .feedback-title {
-            color: #888;
-            font-size: 0.8rem;
-            font-weight: 400;
-            margin: 0.5rem 0 0.3rem 0;
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: normal;
+            margin: 1rem 0 0.5rem 0;
             padding-top: 0.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid #eee;
         }
 
-        /* Boutons du feedback - VISIBLES avec style */
-        button[kind="secondary"] {
-            background: rgba(46, 134, 171, 0.1) !important;
-            background-color: rgba(46, 134, 171, 0.1) !important;
-            color: #2E86AB !important;
-            border: 1px solid rgba(46, 134, 171, 0.3) !important;
-            border-radius: 6px !important;
-            padding: 0.4rem 0.8rem !important;
-            margin: 0.2rem !important;
-            font-size: 0.85rem !important;
-            font-weight: 500 !important;
-            transition: all 0.2s ease !important;
+        /* Only target feedback buttons specifically - not all buttons */
+        .streamlit-feedback button[title*="👍"],
+        .streamlit-feedback button[title*="👎"] {
+            background: #f8f9fa !important;
+            color: #495057 !important;
+            border: 1px solid #dee2e6 !important;
+            border-radius: 4px !important;
+            padding: 0.5rem !important;
+            margin: 0.25rem !important;
+            font-size: 1.1rem !important;
+            min-width: 45px !important;
+            min-height: 40px !important;
         }
 
-        button[kind="secondary"]:hover {
-            background: rgba(46, 134, 171, 0.2) !important;
-            background-color: rgba(46, 134, 171, 0.2) !important;
-            color: #FFFFFF !important;
-            border-color: #2E86AB !important;
-            transform: translateY(-1px) !important;
-        }
-
-        /* Boutons avec emojis (👍👎) */
-        button[title*="👍"], button[title*="👎"] {
-            background: rgba(46, 134, 171, 0.1) !important;
-            background-color: rgba(46, 134, 171, 0.1) !important;
-            color: #2E86AB !important;
-            border: 1px solid rgba(46, 134, 171, 0.3) !important;
-            border-radius: 6px !important;
-            padding: 0.4rem 0.8rem !important;
-            margin: 0.2rem !important;
-            font-size: 1rem !important;
-            min-width: 50px !important;
-            min-height: 35px !important;
-        }
-
-        button[title*="👍"]:hover, button[title*="👎"]:hover {
-            background: rgba(46, 134, 171, 0.2) !important;
-            background-color: rgba(46, 134, 171, 0.2) !important;
-            border-color: #2E86AB !important;
-            transform: translateY(-1px) !important;
+        .streamlit-feedback button[title*="👍"]:hover,
+        .streamlit-feedback button[title*="👎"]:hover {
+            background: #e9ecef !important;
+            border-color: #adb5bd !important;
         }
         </style>
         """,
@@ -309,20 +287,43 @@ class FeedbackSystem:
 
     def get_feedback_statistics(self, days: int = 30) -> Dict:
         """
-        Obtenir les statistiques de feedback pour les N derniers jours
+        Get feedback statistics using both data manager and file system
 
         Args:
-            days: Nombre de jours à analyser (par défaut 30, mais _load_feedback_data charge déjà les 30 derniers jours)
+            days: Number of days to analyze
 
         Returns:
-            Dictionnaire avec les statistiques
+            Dictionary with statistics
         """
-        feedback_data = self._load_feedback_data()
+        # Try data manager first
+        try:
+            from ...core.data_manager import get_data_manager
 
+            data_manager = get_data_manager()
+            feedback_data = data_manager.get_feedback_data(limit=1000)
+
+            if feedback_data:
+                return self._process_feedback_data(feedback_data, days)
+        except Exception as e:
+            print(f"Data manager feedback failed: {e}")
+
+        # Fallback to file system
+        try:
+            feedback_data = self._load_feedback_data()
+            if feedback_data:
+                return self._process_feedback_data(feedback_data, days)
+        except Exception as e:
+            print(f"File system feedback failed: {e}")
+
+        # Return empty stats if both methods fail
+        return {"total_feedback": 0, "positive_feedback": 0, "negative_feedback": 0, "satisfaction_rate": 0.0}
+
+    def _process_feedback_data(self, feedback_data: List[Dict], days: int = 30) -> Dict:
+        """Process feedback data and return statistics."""
         if not feedback_data:
             return {"total_feedback": 0, "positive_feedback": 0, "negative_feedback": 0, "satisfaction_rate": 0.0}
 
-        # Si on veut moins de 30 jours, filtrer par date
+        # Filter by date if needed
         if days < 30:
             from datetime import datetime, timedelta
 
@@ -335,10 +336,57 @@ class FeedbackSystem:
                     if entry_date >= cutoff_date:
                         recent_feedback.append(entry)
                 except (KeyError, ValueError):
-                    # Include entries without valid timestamp
                     recent_feedback.append(entry)
         else:
-            # Use all data already filtered by _load_feedback_data
+            recent_feedback = feedback_data
+
+        total = len(recent_feedback)
+        positive = 0
+        negative = 0
+
+        for entry in recent_feedback:
+            # Handle both old format (feedback.score) and new format (rating)
+            rating = entry.get("rating", 0)
+            feedback_obj = entry.get("feedback", {})
+            score = feedback_obj.get("score") if feedback_obj else None
+
+            # Handle different rating formats
+            if rating >= 4 or score == 1 or score == "👍":
+                positive += 1
+            elif rating <= 2 or score == 0 or score == "👎":
+                negative += 1
+
+        satisfaction_rate = (positive / total * 100) if total > 0 else 0.0
+
+        return {
+            "total_feedback": total,
+            "positive_feedback": positive,
+            "negative_feedback": negative,
+            "satisfaction_rate": satisfaction_rate,
+        }
+
+    def _get_feedback_statistics_fallback(self, days: int = 30) -> Dict:
+        """Fallback method using old file loading"""
+        feedback_data = self._load_feedback_data()
+
+        if not feedback_data:
+            return {"total_feedback": 0, "positive_feedback": 0, "negative_feedback": 0, "satisfaction_rate": 0.0}
+
+        # Filter by date if needed
+        if days < 30:
+            from datetime import datetime, timedelta
+
+            cutoff_date = datetime.now() - timedelta(days=days)
+
+            recent_feedback = []
+            for entry in feedback_data:
+                try:
+                    entry_date = datetime.fromisoformat(entry["timestamp"])
+                    if entry_date >= cutoff_date:
+                        recent_feedback.append(entry)
+                except (KeyError, ValueError):
+                    recent_feedback.append(entry)
+        else:
             recent_feedback = feedback_data
 
         total = len(recent_feedback)
@@ -512,7 +560,7 @@ class FeaturesManager:
     def process_query_response(self, query: str, response: str, response_time: float) -> str:
         """Process a query-response pair through all features."""
         # Analyze conversation
-        # analysis = self.analyzer.analyze_conversation(query, response)
+        analysis = self.analyzer.analyze_conversation(query, response)
 
         # Track response
         response_id = self.response_tracker.track_response(query, response, response_time)
@@ -522,6 +570,33 @@ class FeaturesManager:
 
         # Add to history
         self.query_history.add_query(query, response, self.user_id)
+
+        # Save to data manager
+        try:
+            from ...core.data_manager import get_data_manager
+
+            data_manager = get_data_manager()
+
+            # Save conversation
+            data_manager.save_conversation(
+                user_id=self.user_id,
+                question=query,
+                answer=response,
+                response_time_ms=response_time,
+                sources=None,  # Could be enhanced to include sources
+                metadata={"analysis": analysis},
+            )
+
+            # Save performance metric
+            data_manager.save_performance(
+                operation="query_processing",
+                duration_ms=response_time,
+                user_id=self.user_id,
+                metadata={"query_length": len(query), "response_length": len(response)},
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error saving to data manager: {e}")
 
         # Log the interaction
         self.logger.info(
