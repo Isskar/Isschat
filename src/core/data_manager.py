@@ -18,6 +18,7 @@ class ConversationEntry:
 
     timestamp: str
     user_id: str
+    conversation_id: str
     question: str
     answer: str
     answer_length: int
@@ -192,6 +193,7 @@ class DataManager:
     def save_conversation(
         self,
         user_id: str,
+        conversation_id: str,
         question: str,
         answer: str,
         response_time_ms: float,
@@ -202,6 +204,7 @@ class DataManager:
         entry = ConversationEntry(
             timestamp=datetime.now().isoformat(),
             user_id=user_id,
+            conversation_id=conversation_id,
             question=question,
             answer=answer,
             answer_length=len(answer),
@@ -242,12 +245,52 @@ class DataManager:
 
         return self.feedback_store.save_entry(entry)
 
-    def get_conversation_history(self, user_id: Optional[str] = None, limit: int = 50) -> List[Dict]:
-        """Récupère l'historique des conversations."""
+    def get_conversation_history(
+        self, user_id: Optional[str] = None, conversation_id: Optional[str] = None, limit: int = 50
+    ) -> List[Dict]:
+        """Récupère l'historique des conversations, éventuellement filtré par user_id ou conversation_id."""
+        all_entries = []
+
+        # List all conversation files (e.g., conversations_20231026.jsonl)
+        conversation_files = sorted(self.conversations_dir.glob("conversations_*.jsonl"))
+
+        for file_path in conversation_files:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    for i, line in enumerate(f):
+                        if line.strip():
+                            try:
+                                entry = json.loads(line.strip())
+                                all_entries.append(entry)
+                            except json.JSONDecodeError as e:
+                                logging.error(f"Error decoding JSON from {file_path}, line {i + 1}: {e}")
+            except Exception as e:
+                logging.error(f"Error reading conversation file {file_path}: {e}")
+
+        # Filter by user_id if provided
         if user_id:
-            return self.conversation_store.get_entries_by_user(user_id, limit)
-        else:
-            return self.conversation_store.load_entries(limit)
+            filtered_entries = []
+            for entry in all_entries:
+                if entry.get("user_id") == user_id:
+                    filtered_entries.append(entry)
+            all_entries = filtered_entries
+
+        # Filter by conversation_id if provided
+        if conversation_id:
+            filtered_entries = []
+            for entry in all_entries:
+                if entry.get("conversation_id") == conversation_id:
+                    filtered_entries.append(entry)
+            all_entries = filtered_entries
+
+        # Sort by timestamp (most recent first)
+        all_entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+
+        # Apply limit
+        if limit is not None and limit > 0:
+            all_entries = all_entries[:limit]
+
+        return all_entries
 
     def get_performance_metrics(self, user_id: Optional[str] = None, limit: int = 100) -> List[Dict]:
         """Récupère les métriques de performance."""

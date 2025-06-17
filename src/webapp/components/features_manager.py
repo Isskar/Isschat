@@ -10,6 +10,7 @@ import time
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
+from pathlib import Path
 
 
 class ConversationAnalyzer:
@@ -60,217 +61,83 @@ class ConversationAnalyzer:
 
 
 class FeedbackSystem:
-    """Feedback system with thumbs (👍/👎) using streamlit_feedback"""
+    """Handles user feedback collection and storage."""
+
+    def __init__(self):
+        self.feedback_file = "./logs/feedback/feedback_log.jsonl"  # Not used directly, but kept for reference
+        os.makedirs(Path(self.feedback_file).parent, exist_ok=True)
 
     def _load_feedback_data(self):
-        """Load feedback data from data_manager (JSONL format)"""
-        from datetime import datetime, timedelta
-        import logging
-
-        logger = logging.getLogger(__name__)
-        all_feedback = []
-
-        try:
-            from ...core.data_manager import DataManager
-
-            data_manager = DataManager()
-
-            # Calculate the last 30 days
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
-
-            logger.info(f"Loading feedbacks from {start_date.date()} to {end_date.date()}")
-
-            current_date = start_date
-            files_found = 0
-
-            while current_date <= end_date:
-                try:
-                    date_str = current_date.strftime("%Y%m%d")
-                    feedback_file = data_manager.feedback_dir / f"feedback_{date_str}.jsonl"
-
-                    if feedback_file.exists():
-                        files_found += 1
-                        logger.info(f"Feedback file found: {feedback_file}")
-
-                        with open(feedback_file, "r") as f:
-                            daily_count = 0
-                            for line in f:
-                                if line.strip():
-                                    entry = json.loads(line.strip())
-                                    # Convert to old format for compatibility
-                                    old_format_entry = {
-                                        "user_id": entry.get("user_id", ""),
-                                        "question": entry.get("metadata", {}).get("question", ""),
-                                        "answer": entry.get("metadata", {}).get("answer", ""),
-                                        "sources": entry.get("metadata", {}).get("sources", ""),
-                                        "feedback": entry.get("metadata", {}).get("original_feedback", {}),
-                                        "timestamp": entry.get("timestamp", ""),
-                                        "rating": entry.get("rating", 0),
-                                        "comment": entry.get("comment", ""),
-                                    }
-                                    all_feedback.append(old_format_entry)
-                                    daily_count += 1
-
-                        logger.info(f"Loaded {daily_count} feedbacks from {feedback_file}")
-                    else:
-                        logger.debug(f"File not found: {feedback_file}")
-
-                except Exception as e:
-                    logger.debug(f"Could not load feedback for {date_str}: {e}")
-
-                current_date += timedelta(days=1)
-
-            logger.info(f"Total: {files_found} files found, {len(all_feedback)} feedbacks loaded from data_manager")
-            return all_feedback
-
-        except Exception as e:
-            logger.error(f"Error loading feedback from data_manager: {e}")
-            return []
+        """Load feedback data from the JSONL file. (Legacy fallback)"""
+        feedback_data = []
+        if os.path.exists(self.feedback_file):
+            with open(self.feedback_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        feedback_data.append(json.loads(line.strip()))
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Error decoding JSON from feedback file: {e} in line: {line.strip()}")
+        return feedback_data
 
     def render_feedback_widget(
-        self, user_id: str, question: str, answer: str, sources: str, key_suffix: str = ""
+        self, user_id: str, question: str, answer: str, sources: str, conversation_id: str, key_suffix: str = ""
     ) -> Optional[Dict]:
         """
-        Display feedback widget with thumbs to avoid rerun issues
+        Renders a Streamlit feedback widget for user responses.
 
         Args:
-            user_id: User ID
-            question: Question asked
-            answer: Answer given
-            sources: Sources used
-            key_suffix: Suffix for unique widget key
+            user_id: The ID of the user providing feedback.
+            question: The original question.
+            answer: Answer given.
+            sources: Sources used.
+            conversation_id: Conversation ID.
+            key_suffix: Suffix for unique widget key.
 
         Returns:
-            Dictionary with feedback data if submitted
+            Dict: Feedback response if provided, otherwise None.
         """
+        content_hash = abs(hash(question + answer))
 
-        # Create a unique key based on content (more stable)
-        content_hash = abs(hash(f"{question}_{answer}_{key_suffix}"))
-        feedback_key = f"feedback_{content_hash}"
-
-        # Persistent states for this specific feedback
-        feedback_submitted_key = f"feedback_submitted_{feedback_key}"
-
-        # Initialize submission state
-        if feedback_submitted_key not in st.session_state:
-            st.session_state[feedback_submitted_key] = False
-
-        # Display already submitted feedback if available
-        if st.session_state[feedback_submitted_key]:
-            return None
-
-        # Simplified callback to handle submitted feedback
         def feedback_callback(response):
-            """
-            Callback to handle submitted feedback
-
-            Args:
-                response: Response from feedback widget
-            """
+            print(f"Feedback received: {response}")
             try:
-                # Marquer le feedback comme soumis
-                st.session_state[feedback_submitted_key] = True
+                from ...core.data_manager import get_data_manager
 
-                # Sauvegarder dans le data manager d'abord
-                try:
-                    from ...core.data_manager import get_data_manager
+                data_manager = get_data_manager()
 
-                    data_manager = get_data_manager()
+                rating = 3  # neutral default
+                comment = ""
 
-                    # Convert feedback score to rating format for data manager
-                    rating = 3  # neutral default
-                    comment = ""
+                if isinstance(response, dict):
+                    score = response.get("score")
+                    if score == 1 or score == "👍":
+                        rating = 5
+                    elif score == 0 or score == "👎":
+                        rating = 1
+                    comment = response.get("text", "")
 
-                    if isinstance(response, dict):
-                        score = response.get("score")
-                        if score == 1 or score == "👍":
-                            rating = 5
-                        elif score == 0 or score == "👎":
-                            rating = 1
-                        comment = response.get("text", "")
-
-                    # Generate conversation ID from question hash
-                    conversation_id = f"conv_{abs(hash(question))}"
-
-                    # Save feedback only via data_manager (JSONL format)
-                    # Note: user_id here is already the email from the widget call
-                    data_manager.save_feedback(
-                        user_id=user_id,
-                        conversation_id=conversation_id,
-                        rating=rating,
-                        comment=comment,
-                        metadata={
-                            "original_feedback": response,
-                            "question": question,
-                            "answer": answer,
-                            "sources": sources,
-                        },
-                    )
-                    print(
-                        f"Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
-                    )
-                except Exception as e:
-                    print(f"Error saving feedback via data_manager: {e}")
-
-                # Forcer un rerun pour mettre à jour l'interface
-                st.rerun()
-
+                # Save feedback via data_manager (JSONL format)
+                data_manager.save_feedback(
+                    user_id=user_id,
+                    conversation_id=conversation_id,  # Pass conversation_id
+                    rating=rating,
+                    comment=comment,
+                    metadata={
+                        "original_feedback": response,
+                        "question": question,
+                        "answer": answer,
+                        "sources": sources,
+                    },
+                )
+                print(
+                    f"Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
+                )
             except Exception as e:
-                print(f"Erreur lors de la sauvegarde du feedback: {e}")
-                st.error(f"Erreur lors de la sauvegarde: {e}")
+                print(f"Error saving feedback via data_manager: {e}")
 
-        # Minimal CSS for feedback widget only - don't affect other buttons
-        st.markdown(
-            """
-        <style>
-        /* Only target feedback widget containers */
-        .streamlit-feedback {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
+            # Force a rerun to update the interface
+            st.rerun()
 
-        /* Feedback title styling */
-        .feedback-title {
-            color: #666;
-            font-size: 0.9rem;
-            font-weight: normal;
-            margin: 1rem 0 0.5rem 0;
-            padding-top: 0.5rem;
-            border-top: 1px solid #eee;
-        }
-
-        /* Only target feedback buttons specifically - not all buttons */
-        .streamlit-feedback button[title*="👍"],
-        .streamlit-feedback button[title*="👎"] {
-            background: #f8f9fa !important;
-            color: #495057 !important;
-            border: 1px solid #dee2e6 !important;
-            border-radius: 4px !important;
-            padding: 0.5rem !important;
-            margin: 0.25rem !important;
-            font-size: 1.1rem !important;
-            min-width: 45px !important;
-            min-height: 40px !important;
-        }
-
-        .streamlit-feedback button[title*="👍"]:hover,
-        .streamlit-feedback button[title*="👎"]:hover {
-            background: #e9ecef !important;
-            border-color: #adb5bd !important;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-
-        # Titre simple et intégré
-        st.markdown(
-            '<div class="feedback-title">💬 Cette réponse vous a-t-elle été utile ?</div>', unsafe_allow_html=True
-        )
-
-        # Afficher le widget de feedback si pas encore soumis
         try:
             feedback_response = streamlit_feedback(
                 feedback_type="thumbs",
@@ -557,7 +424,7 @@ class FeaturesManager:
         if "features_data" not in st.session_state:
             st.session_state.features_data = {"conversations": [], "responses": [], "performance": [], "history": []}
 
-    def process_query_response(self, query: str, response: str, response_time: float) -> str:
+    def process_query_response(self, query: str, response: str, response_time: float, conversation_id: str) -> str:
         """Process a query-response pair through all features."""
         # Analyze conversation
         analysis = self.analyzer.analyze_conversation(query, response)
@@ -580,6 +447,7 @@ class FeaturesManager:
             # Save conversation
             data_manager.save_conversation(
                 user_id=self.user_id,
+                conversation_id=conversation_id,
                 question=query,
                 answer=response,
                 response_time_ms=response_time,
@@ -621,18 +489,40 @@ class FeaturesManager:
             "user_history": self.query_history.get_user_history(self.user_id, 5),
         }
 
-    def render_feedback_widget(self, question: str, answer: str, sources: str = "", key_suffix: str = ""):
+    def render_feedback_widget(
+        self, question: str, answer: str, sources: str = "", conversation_id: str = "", key_suffix: str = ""
+    ):
         """Render feedback widget with thumbs (👍/👎) for a response."""
+        # If conversation_id is not provided, use the hash of the question (legacy behavior)
+        if not conversation_id:
+            conversation_id = f"conv_{abs(hash(question))}"
+
         return self.feedback_system.render_feedback_widget(
-            user_id=self.user_id, question=question, answer=answer, sources=sources, key_suffix=key_suffix
+            user_id=self.user_id,
+            question=question,
+            answer=answer,
+            sources=sources,
+            conversation_id=conversation_id,
+            key_suffix=key_suffix,
         )
 
     def get_feedback_statistics(self, days: int = 30) -> Dict[str, Any]:
         """Get feedback statistics from the thumbs feedback system."""
         return self.feedback_system.get_feedback_statistics(days)
 
-    def add_feedback_widget(self, st, question: str, answer: str, sources: str, key_suffix: str = ""):
+    def add_feedback_widget(
+        self, st, question: str, answer: str, sources: str, conversation_id: Optional[str] = None, key_suffix: str = ""
+    ):
         """Compatible method with old version to add a feedback widget"""
+        # If conversation_id is not provided, use the hash of the question (legacy behavior)
+        if conversation_id is None:
+            conversation_id = f"conv_{abs(hash(question))}"
+
         return self.feedback_system.render_feedback_widget(
-            user_id=self.user_id, question=question, answer=answer, sources=sources, key_suffix=key_suffix
+            user_id=self.user_id,
+            question=question,
+            answer=answer,
+            sources=sources,
+            conversation_id=conversation_id,
+            key_suffix=key_suffix,
         )

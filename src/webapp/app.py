@@ -9,6 +9,7 @@ import shutil
 import traceback
 import pandas as pd
 from datetime import datetime, timedelta
+import uuid
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -159,6 +160,12 @@ def main():
             st.session_state["page"] = "chat"
             st.rerun()
 
+        # New Chat button should be placed here, under 'Chat' button
+        if st.session_state.get("page") == "chat" and st.button("New Chat", key="new_chat_button_sidebar"):
+            st.session_state["messages"] = []  # Clear messages
+            st.session_state["current_conversation_id"] = str(uuid.uuid4())  # Generate new conversation ID
+            st.rerun()
+
         if st.button("History", key="nav_history"):
             st.session_state["page"] = "history"
             st.rerun()
@@ -249,6 +256,25 @@ def chat_page():
         st.subheader("Advanced Options")
         show_feedback = st.toggle("Enable feedback", value=True)
 
+        # New Chat button
+        if st.button("New Chat", key="new_chat_button"):
+            st.session_state["messages"] = []  # Clear messages
+            st.session_state["current_conversation_id"] = str(uuid.uuid4())  # Generate new conversation ID
+            st.rerun()
+
+    # Initialize current_conversation_id if not present or messages are empty (new chat)
+    if "current_conversation_id" not in st.session_state or not st.session_state.get("messages"):
+        if (
+            st.session_state.get("messages")
+            and len(st.session_state["messages"]) == 1
+            and st.session_state["messages"][0]["role"] == "assistant"
+        ):
+            # If only welcome message is present, it's effectively a new chat
+            pass  # Do not generate a new ID if it's just the welcome message
+        else:
+            st.session_state["current_conversation_id"] = str(uuid.uuid4())
+            st.session_state["messages"] = []  # Ensure messages are cleared for a truly new chat
+
     # Display main interface
     st.subheader("Ask questions about our Confluence documentation")
 
@@ -257,28 +283,35 @@ def chat_page():
     first_name = user_email.split("@")[0].split(".")[0].capitalize()
     welcome_message = f"Bonjour {first_name} ! Comment puis-je vous aider aujourd'hui ?"
 
-    # Initialize message history
-    if "messages" not in st.session_state:
+    # Initialize message history with welcome message if empty
+    if not st.session_state["messages"]:
         st.session_state["messages"] = [
             {
                 "role": "assistant",
                 "content": welcome_message,
+                "conversation_id": st.session_state["current_conversation_id"],
             }
         ]
 
     # Helper to format chat history for prompt
-    def format_chat_history(messages, max_turns=10):
-        # Exclude the welcome message (first assistant message)
+    def format_chat_history(conversation_id: str, max_turns=10):
+        from src.core.data_manager import get_data_manager
+
+        data_manager = get_data_manager()
+        # Fetch entries for the current conversation_id
+        conversation_entries = data_manager.get_conversation_history(
+            conversation_id=conversation_id, limit=max_turns * 2
+        )
+
+        # Sort by timestamp to ensure correct order
+        conversation_entries.sort(key=lambda x: x.get("timestamp", ""))
+
         history = []
-        for msg in messages[1:][-max_turns * 2 :]:  # Only last N turns
-            if msg["role"] == "user":
-                history.append(f"User: {msg['content']}")
-            elif msg["role"] == "assistant":
-                # Avoid including the welcome message again
-                if "question_data" in msg:
-                    history.append(f"Assistant: {msg['question_data']['answer']}")
-                else:
-                    history.append(f"Assistant: {msg['content']}")
+        for entry in conversation_entries:
+            if entry.get("question"):
+                history.append(f"User: {entry['question']}")
+            if entry.get("answer"):
+                history.append(f"Assistant: {entry['answer']}")
         return "\n".join(history)
 
     # Display message history with feedback widgets
@@ -296,6 +329,7 @@ def chat_page():
                         msg["question_data"]["question"],
                         msg["question_data"]["answer"],
                         msg["question_data"]["sources"],
+                        conversation_id=msg.get("conversation_id"),  # Pass conversation_id
                         key_suffix=f"history_{i}",
                     )
 
@@ -305,15 +339,50 @@ def chat_page():
         start_time = time.time()
 
         prompt = st.session_state.pop("reuse_question")
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        # The conversation_id will be set by the history page when reusing a conversation
+        # If it's a new session, ensure current_conversation_id is set
+        if "current_conversation_id" not in st.session_state or st.session_state.get("reuse_conversation_id"):
+            st.session_state["current_conversation_id"] = st.session_state.pop(
+                "reuse_conversation_id", str(uuid.uuid4())
+            )
+            st.session_state["messages"] = []  # Clear messages if we are resuming an old conversation
+            # Load existing messages for the resumed conversation
+            from src.core.data_manager import get_data_manager
+
+            data_manager = get_data_manager()
+            existing_messages = data_manager.get_conversation_history(
+                conversation_id=st.session_state["current_conversation_id"]
+            )
+            for entry in existing_messages:
+                st.session_state.messages.append(
+                    {"role": "user", "content": entry["question"], "conversation_id": entry["conversation_id"]}
+                )
+                st.session_state.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": entry["answer"],
+                        "question_data": {
+                            "question": entry["question"],
+                            "answer": entry["answer"],
+                            "sources": entry.get("sources"),
+                        },
+                        "conversation_id": entry["conversation_id"],
+                    }
+                )
+
+        st.session_state.messages.append(
+            {"role": "user", "content": prompt, "conversation_id": st.session_state["current_conversation_id"]}
+        )
         st.chat_message("user").write(prompt)
 
-        # Prepare chat history for context
-        chat_history = format_chat_history(st.session_state.messages)
+        # Prepare chat history for context from the data manager
+        chat_history = format_chat_history(st.session_state["current_conversation_id"])
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = process_question_with_model(model, features, prompt, start_time, chat_history)
+            result, sources = process_question_with_model(
+                model, features, prompt, start_time, chat_history, st.session_state["current_conversation_id"]
+            )
 
             # Build the response content
             response_content = result
@@ -331,6 +400,7 @@ def chat_page():
                     "role": "assistant",
                     "content": response_content,
                     "question_data": {"question": prompt, "answer": result, "sources": sources},
+                    "conversation_id": st.session_state["current_conversation_id"],
                 }
             )
 
@@ -343,15 +413,19 @@ def chat_page():
         start_time = time.time()
 
         # Add the question
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.session_state.messages.append(
+            {"role": "user", "content": prompt, "conversation_id": st.session_state["current_conversation_id"]}
+        )
         st.chat_message("user").write(prompt)
 
-        # Prepare chat history for context
-        chat_history = format_chat_history(st.session_state.messages)
+        # Prepare chat history for context from the data manager
+        chat_history = format_chat_history(st.session_state["current_conversation_id"])
 
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = process_question_with_model(model, features, prompt, start_time, chat_history)
+            result, sources = process_question_with_model(
+                model, features, prompt, start_time, chat_history, st.session_state["current_conversation_id"]
+            )
 
             # Build the response content
             response_content = result
@@ -369,6 +443,7 @@ def chat_page():
                     "role": "assistant",
                     "content": response_content,
                     "question_data": {"question": prompt, "answer": result, "sources": sources},
+                    "conversation_id": st.session_state["current_conversation_id"],
                 }
             )
 
@@ -376,7 +451,14 @@ def chat_page():
             st.rerun()
 
 
-def process_question_with_model(model, features, prompt, start_time=None, chat_history=None):
+def process_question_with_model(
+    model,
+    features,
+    prompt,
+    start_time=None,
+    chat_history=None,
+    conversation_id: str = None,  # ty : ignore
+):
     """Process question with model and features"""
     try:
         # Use provided start_time or current time if not provided (for backward compatibility)
@@ -401,7 +483,7 @@ def process_question_with_model(model, features, prompt, start_time=None, chat_h
 
         # Process with features manager if available
         if features and result != "Model unavailable":
-            features.process_query_response(prompt, result, response_time)
+            features.process_query_response(prompt, result, response_time, conversation_id)
         return result, sources
     except Exception as e:
         return f"Error processing question: {str(e)}", ""
