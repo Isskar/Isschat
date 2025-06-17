@@ -78,3 +78,29 @@ class StorageInterface(ABC):
             List of file paths
         """
         pass
+
+    @abstractmethod
+    def create_directory(self, directory_path: str) -> bool:
+        """
+        Create a directory in storage
+
+        Args:
+            directory_path: Path to the directory to create
+
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+
+    @abstractmethod
+    def directory_exists(self, directory_path: str) -> bool:
+        """
+        Check if a directory exists in storage
+
+        Args:
+            directory_path: Path to check
+
+        Returns:
+            True if directory exists, False otherwise
+        """
+        pass
