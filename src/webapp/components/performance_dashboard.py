@@ -20,10 +20,11 @@ class PerformanceDashboard:
 
     def __init__(self, data_manager, storage_service=None):
         self.data_manager = data_manager
-        
+
         # Get storage service from config if not provided
         if storage_service is None:
             from src.core.config import _ensure_config_initialized
+
             config_manager = _ensure_config_initialized()
             self.storage_service = config_manager.get_storage_service()
         else:

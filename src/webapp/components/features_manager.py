@@ -4,10 +4,8 @@ Features manager for advanced chatbot functionality.
 
 import streamlit as st
 from streamlit_feedback import streamlit_feedback
-import os
 import logging
 import time
-import json
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -66,11 +64,12 @@ class FeedbackSystem:
         # Get storage service from config if not provided
         if storage_service is None:
             from src.core.config import _ensure_config_initialized
+
             config_manager = _ensure_config_initialized()
             self.storage_service = config_manager.get_storage_service()
         else:
             self.storage_service = storage_service
-            
+
         if feedback_file is None:
             # Create a filename with current date
             date_str = datetime.now().strftime("%Y-%m-%d")
@@ -82,9 +81,9 @@ class FeedbackSystem:
         """Ensure that the feedback file exists using storage service"""
         # Create directory using storage service
         directory_path = "/".join(self.feedback_file.split("/")[:-1])
-        if directory_path and hasattr(self.storage_service._storage, 'create_directory'):
+        if directory_path and hasattr(self.storage_service._storage, "create_directory"):
             self.storage_service._storage.create_directory(directory_path)
-        
+
         # Create empty file if it doesn't exist
         if not self.storage_service.file_exists(self.feedback_file):
             self.storage_service.save_json_data(self.feedback_file, [])
@@ -492,6 +491,7 @@ class FeaturesManager:
         # Get storage service from config if not provided
         if storage_service is None:
             from src.core.config import _ensure_config_initialized
+
             config_manager = _ensure_config_initialized()
             self.storage_service = config_manager.get_storage_service()
         else:
@@ -500,7 +500,7 @@ class FeaturesManager:
         # Create necessary directories using storage service
         directories = ["logs", "logs/feedback", "data", "cache"]
         for directory in directories:
-            if hasattr(self.storage_service._storage, 'create_directory'):
+            if hasattr(self.storage_service._storage, "create_directory"):
                 self.storage_service._storage.create_directory(directory)
 
         # Configure logging

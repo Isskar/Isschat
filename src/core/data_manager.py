@@ -76,7 +76,7 @@ class JSONLDataStore(BaseDataStore):
     def __init__(self, storage_service, file_path: str, entry_class: type):
         """
         Initialize JSONL data store with storage service
-        
+
         Args:
             storage_service: StorageService instance for file operations
             file_path: Path to the JSONL file (relative to storage base)
@@ -93,7 +93,7 @@ class JSONLDataStore(BaseDataStore):
         directory_path = "/".join(self.file_path.split("/")[:-1])
         if directory_path:
             # Use storage service to create directory if it has the method
-            if hasattr(self.storage_service._storage, 'create_directory'):
+            if hasattr(self.storage_service._storage, "create_directory"):
                 self.storage_service._storage.create_directory(directory_path)
 
     def save_entry(self, entry: Any) -> bool:
@@ -104,7 +104,7 @@ class JSONLDataStore(BaseDataStore):
                 entry_dict = entry
             else:
                 entry_dict = asdict(entry)
-            
+
             # Use storage service to append JSONL data
             return self.storage_service.append_jsonl_data(self.file_path, entry_dict)
         except Exception as e:
@@ -114,7 +114,7 @@ class JSONLDataStore(BaseDataStore):
     def load_entries(self, limit: Optional[int] = None) -> List[Any]:
         """Load entries from JSONL file using storage service."""
         entries = []
-        
+
         # Check if file exists using storage service
         if not self.storage_service.file_exists(self.file_path):
             return entries
@@ -124,9 +124,9 @@ class JSONLDataStore(BaseDataStore):
             content = self.storage_service.load_text_file(self.file_path)
             if not content:
                 return entries
-            
+
             # Parse JSONL content
-            for line in content.split('\n'):
+            for line in content.split("\n"):
                 if line.strip():
                     try:
                         data = json.loads(line.strip())
@@ -177,6 +177,7 @@ class DataManager:
         # Get storage service from config if not provided
         if storage_service is None:
             from src.core.config import _ensure_config_initialized
+
             config_manager = _ensure_config_initialized()
             self.storage_service = config_manager.get_storage_service()
         else:
@@ -209,7 +210,7 @@ class DataManager:
 
         # Use storage service to create directories
         for directory in directories:
-            if hasattr(self.storage_service._storage, 'create_directory'):
+            if hasattr(self.storage_service._storage, "create_directory"):
                 self.storage_service._storage.create_directory(directory)
 
     def _init_stores(self):
