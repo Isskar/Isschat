@@ -18,8 +18,16 @@ logger = logging.getLogger(__name__)
 class PerformanceDashboard:
     """Advanced performance dashboard for chatbot monitoring and analytics."""
 
-    def __init__(self, data_manager):
+    def __init__(self, data_manager, storage_service=None):
         self.data_manager = data_manager
+        
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
         self.colors = {
             "primary": "#2E86AB",
             "secondary": "#A23B72",
@@ -325,23 +333,30 @@ class PerformanceDashboard:
         return sum(p.get("duration_ms", 0) for p in performance_data) / len(performance_data)
 
     def _calculate_user_satisfaction(self, conversations: List[Dict]) -> float | str:
-        """Calculate user satisfaction score from feedback logs."""
-        import json
-        import glob
+        """Calculate user satisfaction score from feedback logs using storage service."""
+        from datetime import datetime, timedelta
 
-        # Charger les feedbacks depuis les logs
-        feedback_pattern = "logs/feedback/feedback_*.json"
-        feedback_files = glob.glob(feedback_pattern)
-
+        # Load feedback data from the last 30 days using storage service
         all_feedback = []
-        for file_path in feedback_files:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+
+        # Generate filenames for each day
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y-%m-%d")
+            feedback_file_path = f"logs/feedback/feedback_{date_str}.json"
+
+            # Load the file if it exists using storage service
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    feedback_data = json.load(f)
+                if self.storage_service.file_exists(feedback_file_path):
+                    feedback_data = self.storage_service.load_json_data(feedback_file_path)
                     if isinstance(feedback_data, list):
                         all_feedback.extend(feedback_data)
-            except (FileNotFoundError, json.JSONDecodeError):
-                continue
+            except Exception:
+                continue  # Skip corrupted or inaccessible files
+
+            current_date += timedelta(days=1)
 
         if not all_feedback:
             return "N/A"  # No feedback available
@@ -671,25 +686,32 @@ class PerformanceDashboard:
                 st.metric("P99", f"{p99:.0f}ms")
 
     def _render_feedback_analysis(self, conversations: List[Dict]):
-        """Render feedback analysis from logs."""
-        import json
-        import glob
+        """Render feedback analysis from logs using storage service."""
+        from datetime import datetime, timedelta
 
         st.markdown("#### 📝 User Feedback Analysis")
 
-        # Charger les feedbacks depuis les logs
-        feedback_pattern = "logs/feedback/feedback_*.json"
-        feedback_files = glob.glob(feedback_pattern)
-
+        # Load feedback data from the last 30 days using storage service
         all_feedback = []
-        for file_path in feedback_files:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+
+        # Generate filenames for each day
+        current_date = start_date
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y-%m-%d")
+            feedback_file_path = f"logs/feedback/feedback_{date_str}.json"
+
+            # Load the file if it exists using storage service
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    feedback_data = json.load(f)
+                if self.storage_service.file_exists(feedback_file_path):
+                    feedback_data = self.storage_service.load_json_data(feedback_file_path)
                     if isinstance(feedback_data, list):
                         all_feedback.extend(feedback_data)
-            except (FileNotFoundError, json.JSONDecodeError):
-                continue
+            except Exception:
+                continue  # Skip corrupted or inaccessible files
+
+            current_date += timedelta(days=1)
 
         if all_feedback:
             # Analyser les scores de feedback (0/1)

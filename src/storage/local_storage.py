@@ -88,3 +88,19 @@ class LocalStorage(StorageInterface):
         except Exception as e:
             logging.error(f"Error listing files in {full_path}: {e}")
             return []
+
+    def create_directory(self, directory_path: str) -> bool:
+        """Create a directory in local storage"""
+        full_path = self._get_full_path(directory_path)
+        try:
+            full_path.mkdir(parents=True, exist_ok=True)
+            logging.debug(f"Successfully created directory: {full_path}")
+            return True
+        except Exception as e:
+            logging.error(f"Error creating directory {full_path}: {e}")
+            return False
+
+    def directory_exists(self, directory_path: str) -> bool:
+        """Check if a directory exists in local storage"""
+        full_path = self._get_full_path(directory_path)
+        return full_path.exists() and full_path.is_dir()

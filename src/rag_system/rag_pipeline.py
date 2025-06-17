@@ -8,7 +8,7 @@ from typing import Dict, Any, Tuple, Optional
 from src.core.config import get_config
 from src.data_pipeline.offline_db_manager import OfflineDatabaseManager
 from src.core.embeddings_manager import EmbeddingsManager
-from src.core.exceptions import ConfigurationError
+from src.core.exceptions import ConfigurationError, StorageAccessError
 from src.rag_system.query_processor import QueryProcessor
 
 
@@ -34,27 +34,41 @@ class RAGPipeline:
         # 1. Ensure database exists
         print("🔍 Checking vector database...")
         self.db_manager = OfflineDatabaseManager(self.config)
+        try:
+            # Check if database exists - this will raise StorageAccessError if storage is inaccessible
+            if not self.db_manager.database_exists() and not force_rebuild:
+                print("⚠️  Vector database not found. Building database...")
+                force_rebuild = True
 
-        # Check if database exists
-        if not self.db_manager.database_exists() and not force_rebuild:
-            print("⚠️  Vector database not found. Building database...")
-            force_rebuild = True
-
-        if not self.db_manager.ensure_database(force_rebuild):
-            raise ConfigurationError("Failed to initialize vector database")
+            if not self.db_manager.ensure_database(force_rebuild):
+                raise ConfigurationError("Failed to initialize vector database")
+                
+        except StorageAccessError as e:
+            # If we can't access storage, we can't proceed
+            raise ConfigurationError(
+                f"Cannot access storage for vector database: {e}. "
+                f"Please check your storage configuration and credentials."
+            ) from e
 
         # 2. Load vector store
         print("📚 Loading vector store...")
-        self.vector_store = self.db_manager.load_vector_store()
-        if not self.vector_store:
-            # If loading fails, try to rebuild database
-            print("⚠️  Failed to load vector store. Attempting to rebuild...")
-            if self.db_manager.build_database():
-                self.vector_store = self.db_manager.load_vector_store()
-                if not self.vector_store:
-                    raise ConfigurationError("Failed to load vector store after rebuild")
-            else:
-                raise ConfigurationError("Failed to build and load vector store")
+        try:
+            self.vector_store = self.db_manager.load_vector_store()
+            if not self.vector_store:
+                # If loading fails, try to rebuild database
+                print("⚠️  Failed to load vector store. Attempting to rebuild...")
+                if self.db_manager.build_database():
+                    self.vector_store = self.db_manager.load_vector_store()
+                    if not self.vector_store:
+                        raise ConfigurationError("Failed to load vector store after rebuild")
+                else:
+                    raise ConfigurationError("Failed to build and load vector store")
+        except StorageAccessError as e:
+            # If we can't access storage, we can't proceed
+            raise ConfigurationError(
+                f"Cannot access storage for vector database: {e}. "
+                f"Please check your storage configuration and credentials."
+            ) from e
 
         # 3. Create retriever with centralized configuration
         search_kwargs = {"k": self.config.search_k, "fetch_k": self.config.search_fetch_k}

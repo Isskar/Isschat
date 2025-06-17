@@ -62,20 +62,32 @@ class ConversationAnalyzer:
 class FeedbackSystem:
     """Feedback system with thumbs (👍/👎) using streamlit_feedback"""
 
-    def __init__(self, feedback_file: Optional[str] = None):
+    def __init__(self, storage_service=None, feedback_file: Optional[str] = None):
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
+            
         if feedback_file is None:
             # Create a filename with current date
             date_str = datetime.now().strftime("%Y-%m-%d")
-            feedback_file = f"./data/logs/feedback/feedback_{date_str}.json"
+            feedback_file = f"logs/feedback/feedback_{date_str}.json"
         self.feedback_file = feedback_file
         self._ensure_feedback_file_exists()
 
     def _ensure_feedback_file_exists(self):
-        """Ensure that the feedback file exists"""
-        os.makedirs(os.path.dirname(self.feedback_file), exist_ok=True)
-        if not os.path.exists(self.feedback_file):
-            with open(self.feedback_file, "w") as f:
-                json.dump([], f)
+        """Ensure that the feedback file exists using storage service"""
+        # Create directory using storage service
+        directory_path = "/".join(self.feedback_file.split("/")[:-1])
+        if directory_path and hasattr(self.storage_service._storage, 'create_directory'):
+            self.storage_service._storage.create_directory(directory_path)
+        
+        # Create empty file if it doesn't exist
+        if not self.storage_service.file_exists(self.feedback_file):
+            self.storage_service.save_json_data(self.feedback_file, [])
 
     def _load_feedback_data(self):
         """Load feedback data from all files from the last 30 days"""
@@ -98,19 +110,18 @@ class FeedbackSystem:
             date_str = current_date.strftime("%Y-%m-%d")
             feedback_file_path = f"logs/feedback/feedback_{date_str}.json"
 
-            # Load the file if it exists
+            # Load the file if it exists using storage service
             try:
-                if os.path.exists(feedback_file_path):
+                if self.storage_service.file_exists(feedback_file_path):
                     files_found += 1
                     logger.info(f"Feedback file found: {feedback_file_path}")
-                    with open(feedback_file_path, "r") as f:
-                        daily_feedback = json.load(f)
-                        if isinstance(daily_feedback, list):
-                            all_feedback.extend(daily_feedback)
-                            logger.info(f"Loaded {len(daily_feedback)} feedbacks from {feedback_file_path}")
+                    daily_feedback = self.storage_service.load_json_data(feedback_file_path)
+                    if isinstance(daily_feedback, list):
+                        all_feedback.extend(daily_feedback)
+                        logger.info(f"Loaded {len(daily_feedback)} feedbacks from {feedback_file_path}")
                 else:
                     logger.debug(f"File not found: {feedback_file_path}")
-            except (json.JSONDecodeError, IOError) as e:
+            except Exception as e:
                 # Ignore corrupted or inaccessible files
                 logger.error(f"Error loading {feedback_file_path}: {e}")
                 continue
@@ -121,9 +132,8 @@ class FeedbackSystem:
         return all_feedback
 
     def _save_feedback_data(self, data):
-        """Save feedback data to file"""
-        with open(self.feedback_file, "w") as f:
-            json.dump(data, f, indent=2, default=str)
+        """Save feedback data to file using storage service"""
+        self.storage_service.save_json_data(self.feedback_file, data)
 
     def render_feedback_widget(
         self, user_id: str, question: str, answer: str, sources: str, key_suffix: str = ""
@@ -475,15 +485,23 @@ class QueryHistory:
 class FeaturesManager:
     """Central manager for all advanced chatbot features."""
 
-    def __init__(self, user_id: str = "anonymous"):
+    def __init__(self, user_id: str = "anonymous", storage_service=None):
         """Initialize and integrate all features."""
         self.user_id = user_id
 
-        # Create necessary folders if they don't exist
-        os.makedirs("./logs", exist_ok=True)
-        os.makedirs("./logs/feedback", exist_ok=True)
-        os.makedirs("./data", exist_ok=True)
-        os.makedirs("./cache", exist_ok=True)
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
+
+        # Create necessary directories using storage service
+        directories = ["logs", "logs/feedback", "data", "cache"]
+        for directory in directories:
+            if hasattr(self.storage_service._storage, 'create_directory'):
+                self.storage_service._storage.create_directory(directory)
 
         # Configure logging
         logging.basicConfig(
@@ -498,12 +516,12 @@ class FeaturesManager:
         self.logger = logging.getLogger("features_manager")
         self.logger.info(f"Initializing features manager for user {user_id}")
 
-        # Initialize feature components
+        # Initialize feature components with storage service
         self.analyzer = ConversationAnalyzer()
         self.response_tracker = ResponseTracker()
         self.performance_tracker = PerformanceTracker()
         self.query_history = QueryHistory()
-        self.feedback_system = FeedbackSystem()  # Nouveau système de feedback avec pouces
+        self.feedback_system = FeedbackSystem(storage_service=self.storage_service)
 
         # Initialize session state for features
         if "features_data" not in st.session_state:

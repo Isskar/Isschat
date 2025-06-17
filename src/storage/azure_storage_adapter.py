@@ -3,6 +3,7 @@ Azure Blob Storage implementation
 """
 
 import logging
+import os
 from typing import List
 from azure.storage.blob import BlobServiceClient
 from azure.identity import DefaultAzureCredential
@@ -21,10 +22,17 @@ class AzureStorage(StorageInterface):
             storage_account_name: Name of the Azure Storage account
         """
         self.storage_account_name = storage_account_name
-        self.container_name = "isschat-data"
+        self.container_name = "isschatblobfiles"
 
         # Use managed identity for authentication in production
-        credential = DefaultAzureCredential()
+        # Configure tenant to avoid authentication errors
+        tenant_id = os.getenv("AZURE_TENANT_ID")
+        if tenant_id:
+            credential = DefaultAzureCredential(
+                additionally_allowed_tenants=[tenant_id]
+            )
+        else:
+            credential = DefaultAzureCredential()
         account_url = f"https://{storage_account_name}.blob.core.windows.net"
 
         self.blob_service_client = BlobServiceClient(account_url=account_url, credential=credential)
@@ -141,4 +149,38 @@ class AzureStorage(StorageInterface):
             return True
         except Exception as e:
             logging.error(f"Error deleting file from Azure {file_path}: {e}")
+            return False
+
+    def create_directory(self, directory_path: str) -> bool:
+        """
+        Create a directory in Azure Blob Storage (no-op since Azure uses flat structure)
+
+        Args:
+            directory_path: Path to the directory to create
+
+        Returns:
+            True (always successful for Azure)
+        """
+        # Azure Blob Storage uses flat structure, directories are virtual
+        # No need to create directories explicitly
+        logging.debug(f"Directory creation requested for Azure: {directory_path} (no-op)")
+        return True
+
+    def directory_exists(self, directory_path: str) -> bool:
+        """
+        Check if a directory exists in Azure Blob Storage
+
+        Args:
+            directory_path: Path to check
+
+        Returns:
+            True if any blobs exist with this prefix, False otherwise
+        """
+        try:
+            container_client = self.blob_service_client.get_container_client(self.container_name)
+            # Check if any blobs exist with this prefix
+            blobs = container_client.list_blobs(name_starts_with=directory_path, max_results=1)
+            return any(True for _ in blobs)
+        except Exception as e:
+            logging.error(f"Error checking directory existence in Azure {directory_path}: {e}")
             return False
