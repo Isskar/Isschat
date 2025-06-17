@@ -1,6 +1,5 @@
 """
-Azure Blob Storage adapter for file operations
-Handles both vector database and logs storage with managed identity authentication
+Azure Blob Storage implementation
 """
 
 import logging
@@ -8,9 +7,11 @@ from typing import List
 from azure.storage.blob import BlobServiceClient
 from azure.identity import DefaultAzureCredential
 
+from .storage_interface import StorageInterface
 
-class AzureStorageAdapter:
-    """Azure Blob Storage adapter with managed identity authentication"""
+
+class AzureStorage(StorageInterface):
+    """Azure Blob Storage implementation with managed identity authentication"""
 
     def __init__(self, storage_account_name: str):
         """
@@ -140,69 +141,4 @@ class AzureStorageAdapter:
             return True
         except Exception as e:
             logging.error(f"Error deleting file from Azure {file_path}: {e}")
-            return False
-
-    def copy_directory_to_azure(self, local_directory: str, azure_directory: str) -> bool:
-        """
-        Copy an entire local directory to Azure Blob Storage
-
-        Args:
-            local_directory: Local directory path
-            azure_directory: Azure directory path
-
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            import os
-
-            for root, dirs, files in os.walk(local_directory):
-                for file in files:
-                    local_file_path = os.path.join(root, file)
-                    relative_path = os.path.relpath(local_file_path, local_directory)
-                    azure_file_path = f"{azure_directory}/{relative_path}".replace("\\", "/")
-
-                    with open(local_file_path, "rb") as f:
-                        file_data = f.read()
-
-                    if not self.write_file(azure_file_path, file_data):
-                        return False
-
-            logging.info(f"Successfully copied directory to Azure: {local_directory} -> {azure_directory}")
-            return True
-        except Exception as e:
-            logging.error(f"Error copying directory to Azure: {e}")
-            return False
-
-    def copy_directory_from_azure(self, azure_directory: str, local_directory: str) -> bool:
-        """
-        Copy an entire directory from Azure Blob Storage to local
-
-        Args:
-            azure_directory: Azure directory path
-            local_directory: Local directory path
-
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            import os
-
-            files = self.list_files(azure_directory)
-
-            for azure_file_path in files:
-                file_data = self.read_file(azure_file_path)
-                relative_path = azure_file_path.replace(azure_directory, "").lstrip("/")
-                local_file_path = os.path.join(local_directory, relative_path)
-
-                # Create local directory if needed
-                os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
-
-                with open(local_file_path, "wb") as f:
-                    f.write(file_data)
-
-            logging.info(f"Successfully copied directory from Azure: {azure_directory} -> {local_directory}")
-            return True
-        except Exception as e:
-            logging.error(f"Error copying directory from Azure: {e}")
             return False

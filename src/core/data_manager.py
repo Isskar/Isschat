@@ -198,10 +198,12 @@ class DataManager:
         sources: Optional[List[Dict]] = None,
         metadata: Optional[Dict] = None,
     ) -> bool:
-        """Save conversation using configuration abstraction"""
-        from src.core.config import get_config
+        """Save conversation using storage service"""
+        from src.core.config import get_config, _ensure_config_initialized
 
         config = get_config()
+        config_manager = _ensure_config_initialized()
+        storage_service = config_manager.get_storage_service()
 
         entry = ConversationEntry(
             timestamp=datetime.now().isoformat(),
@@ -215,11 +217,11 @@ class DataManager:
             metadata=metadata,
         )
 
-        # Use configuration abstraction for saving
+        # Use storage service for saving
         today = datetime.now().strftime("%Y-%m-%d")
         conversation_path = f"{config.get_logs_path('conversations')}/conversations_{today}.jsonl"
 
-        success = config.append_jsonl_data(conversation_path, entry.__dict__)
+        success = storage_service.append_jsonl_data(conversation_path, entry.__dict__)
 
         # Also save to local store for backward compatibility
         local_success = self.conversation_store.save_entry(entry)
@@ -243,10 +245,12 @@ class DataManager:
     def save_feedback(
         self, user_id: str, conversation_id: str, rating: int, comment: str = "", metadata: Optional[Dict] = None
     ) -> bool:
-        """Save user feedback using configuration abstraction"""
-        from src.core.config import get_config
+        """Save user feedback using storage service"""
+        from src.core.config import get_config, _ensure_config_initialized
 
         config = get_config()
+        config_manager = _ensure_config_initialized()
+        storage_service = config_manager.get_storage_service()
 
         entry = FeedbackEntry(
             timestamp=datetime.now().isoformat(),
@@ -257,11 +261,11 @@ class DataManager:
             metadata=metadata,
         )
 
-        # Use configuration abstraction for saving
+        # Use storage service for saving
         today = datetime.now().strftime("%Y-%m-%d")
         feedback_path = f"{config.get_logs_path('feedback')}/feedback_{today}.jsonl"
 
-        success = config.append_jsonl_data(feedback_path, entry.__dict__)
+        success = storage_service.append_jsonl_data(feedback_path, entry.__dict__)
 
         # Also save to local store for backward compatibility
         local_success = self.feedback_store.save_entry(entry)

@@ -135,45 +135,19 @@ Isschat/
 
 ## Azure Production Deployment
 
-For production deployment on Azure with Blob Storage integration, configure the following environment variables:
-
-### Required Environment Variables
+For production deployment with Azure Blob Storage, set these environment variables:
 
 ```bash
-# Environment Configuration
-ENVIRONMENT=production  # or 'prod' or 'azure'
-
-# Azure Storage Account (from environment variable)
+# Required for Azure Blob Storage
+USE_AZURE_STORAGE=true
 AZURE_STORAGE_ACCOUNT=your_storage_account_name
 
-# Azure Key Vault URL
+# Existing Azure configuration
 KEY_VAULT_URL=https://your-keyvault.vault.azure.net/
+ENVIRONMENT=production
 ```
 
-### Azure Key Vault Secrets
-
-Store the following secrets in your Azure Key Vault:
-
-- `azure-storage-account`: Your Azure Storage account name
-- `confluence-private-api-key`: Confluence API key
-- `confluence-space-key`: Confluence space key
-- `confluence-space-name`: Confluence space URL
-- `confluence-email-address`: Your email address
-- `openrouter-api-key`: OpenRouter API key
-
-### Azure Resources Required
-
-1. **Azure Storage Account**: For vector database and logs storage
-2. **Azure Key Vault**: For secure configuration management
-3. **Managed Identity**: For authentication (automatically configured in Azure App Service)
-
-### Features in Production
-
-- **Automatic Storage**: Vector database and logs are automatically stored in Azure Blob Storage
-- **Single Load**: Vector database is loaded only once and cached locally for performance
-- **Auto Rebuild**: Vector database is automatically rebuilt when embeddings configuration changes
-- **Secure Configuration**: All sensitive data stored in Azure Key Vault
-- **Environment Detection**: Automatically switches between local and Azure storage based on environment
+**Local Development**: Leave `USE_AZURE_STORAGE` unset or `false` to use local file storage.
 
 ## License
 
