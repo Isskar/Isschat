@@ -42,7 +42,7 @@ class RAGPipeline:
 
             if not self.db_manager.ensure_database(force_rebuild):
                 raise ConfigurationError("Failed to initialize vector database")
-                
+
         except StorageAccessError as e:
             # If we can't access storage, we can't proceed
             raise ConfigurationError(

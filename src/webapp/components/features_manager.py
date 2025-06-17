@@ -4,10 +4,8 @@ Features manager for advanced chatbot functionality.
 
 import streamlit as st
 from streamlit_feedback import streamlit_feedback
-import os
 import logging
 import time
-import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 

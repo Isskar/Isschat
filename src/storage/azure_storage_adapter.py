@@ -28,9 +28,7 @@ class AzureStorage(StorageInterface):
         # Configure tenant to avoid authentication errors
         tenant_id = os.getenv("AZURE_TENANT_ID")
         if tenant_id:
-            credential = DefaultAzureCredential(
-                additionally_allowed_tenants=[tenant_id]
-            )
+            credential = DefaultAzureCredential(additionally_allowed_tenants=[tenant_id])
         else:
             credential = DefaultAzureCredential()
         account_url = f"https://{storage_account_name}.blob.core.windows.net"
