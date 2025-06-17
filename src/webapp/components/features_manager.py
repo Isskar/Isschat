@@ -62,16 +62,6 @@ class ConversationAnalyzer:
 class FeedbackSystem:
     """Feedback system with thumbs (👍/👎) using streamlit_feedback"""
 
-    def __init__(self, feedback_file: Optional[str] = None):
-        if feedback_file is None:
-            # Use the persist directory from config
-            # Feedback is now handled exclusively by data_manager (JSONL format)
-            pass
-
-    def _ensure_feedback_file_exists(self):
-        """Deprecated: Feedback is now handled by data_manager"""
-        pass
-
     def _load_feedback_data(self):
         """Load feedback data from data_manager (JSONL format)"""
         from datetime import datetime, timedelta
@@ -137,10 +127,6 @@ class FeedbackSystem:
         except Exception as e:
             logger.error(f"Error loading feedback from data_manager: {e}")
             return []
-
-    def _save_feedback_data(self, data):
-        """Deprecated: Feedback is now saved via data_manager"""
-        pass
 
     def render_feedback_widget(
         self, user_id: str, question: str, answer: str, sources: str, key_suffix: str = ""

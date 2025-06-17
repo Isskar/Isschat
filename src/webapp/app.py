@@ -378,13 +378,6 @@ def process_question_with_model(model, features, prompt, start_time=None):
         # Process with features manager if available
         if features and result != "Model unavailable":
             features.process_query_response(prompt, result, response_time)
-
-        # NOTE: Conversation saving is now handled exclusively by features_manager
-        # to avoid duplicate entries. This was causing double saves with different user_ids:
-        # - features_manager used "user_1"
-        # - process_question_with_model used email
-        # Removed duplicate save logic here.
-
         return result, sources
     except Exception as e:
         return f"Error processing question: {str(e)}", ""
