@@ -268,6 +268,21 @@ def chat_page():
             }
         ]
 
+    # Helper to format chat history for prompt
+    def format_chat_history(messages, max_turns=10):
+        # Exclude the welcome message (first assistant message)
+        history = []
+        for msg in messages[1:][-max_turns * 2 :]:  # Only last N turns
+            if msg["role"] == "user":
+                history.append(f"User: {msg['content']}")
+            elif msg["role"] == "assistant":
+                # Avoid including the welcome message again
+                if "question_data" in msg:
+                    history.append(f"Assistant: {msg['question_data']['answer']}")
+                else:
+                    history.append(f"Assistant: {msg['content']}")
+        return "\n".join(history)
+
     # Display message history with feedback widgets
     for i, msg in enumerate(st.session_state.messages):
         if msg["role"] == "user":
@@ -292,9 +307,12 @@ def chat_page():
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
 
+        # Prepare chat history for context
+        chat_history = format_chat_history(st.session_state.messages)
+
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = process_question_with_model(model, features, prompt)
+            result, sources = process_question_with_model(model, features, prompt, chat_history)
 
             # Build the response content
             response_content = result
@@ -324,9 +342,12 @@ def chat_page():
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
 
+        # Prepare chat history for context
+        chat_history = format_chat_history(st.session_state.messages)
+
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
-            result, sources = process_question_with_model(model, features, prompt)
+            result, sources = process_question_with_model(model, features, prompt, chat_history)
 
             # Build the response content
             response_content = result
@@ -351,14 +372,17 @@ def chat_page():
             st.rerun()
 
 
-def process_question_with_model(model, features, prompt):
-    """Process question with model and features"""
+def process_question_with_model(model, features, prompt, chat_history=None):
+    """Process question with model and features, passing chat history for context"""
     try:
         start_time = time.time()
 
         # Process with model directly
         if hasattr(model, "process_query"):
-            result, sources = model.process_query(prompt)
+            if chat_history is not None:
+                result, sources = model.process_query(prompt, history=chat_history)
+            else:
+                result, sources = model.process_query(prompt)
         elif hasattr(model, "query"):
             result = model.query(prompt)
             sources = ""
