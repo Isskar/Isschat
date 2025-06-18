@@ -8,6 +8,6 @@ from pathlib import Path
 # Add current directory to path
 sys.path.append(str(Path(__file__).parent))
 
-from evaluation_config import EvaluationConfig
+from evaluation_config import EvaluationConfig  # ty : ignore
 
 __all__ = ["EvaluationConfig"]

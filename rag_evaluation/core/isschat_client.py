@@ -104,14 +104,6 @@ class IsschatClient:
         Returns:
             Tuple of (response, response_time, sources)
         """
-        # For conversational tests, we might want to modify the question
-        # to include context or use a different approach
-
-        # Simple approach: just query normally for now
-        # In a more advanced implementation, we could:
-        # 1. Modify the prompt to include conversation history
-        # 2. Use a different retrieval strategy
-        # 3. Maintain state in the help_desk instance
 
         return self.query(question)
 
