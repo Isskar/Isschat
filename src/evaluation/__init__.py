@@ -1,3 +1,0 @@
-"""
-Evaluation system package.
-"""

@@ -11,11 +11,9 @@ from typing import Dict, Any
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from ..core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, TestCategory, EvaluationStatus
-from ..core.isschat_client import IsschatClient
-from ..core.llm_judge import LLMJudge
+from rag_evaluation.core.base_evaluator import TestCase, EvaluationStatus
+from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator, EvaluationResult
 
-# Configure logging for debugging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -29,9 +27,9 @@ class RobustnessEvaluator(BaseEvaluator):
         self.isschat_client = IsschatClient(conversation_memory=False)
         self.llm_judge = LLMJudge(config)
 
-    def get_category(self) -> TestCategory:
+    def get_category(self) -> str:
         """Get the category this evaluator handles"""
-        return TestCategory.ROBUSTNESS
+        return "robustness"
 
     def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
         """Evaluate a single robustness test case"""
@@ -61,9 +59,14 @@ class RobustnessEvaluator(BaseEvaluator):
             # Determine status based on evaluation
             status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED  # noqa
 
+            # Get test type for better logging
+            test_type = test_case.metadata.get("test_type", "generic")
+            reasoning = evaluation.get("reasoning", "No reasoning provided")
+
             logger.info(
-                f"Test {test_case.test_id}: LLM evaluation score={evaluation['score']}, passes={evaluation['passes_criteria']}"  # noqa : E501
+                f"Test {test_case.test_id} ({test_type}): LLM evaluation score={evaluation['score']}, passes={evaluation['passes_criteria']}"  # noqa : E501
             )
+            logger.info(f"LLM Judge Comment: {reasoning}")
 
             return EvaluationResult(
                 test_id=test_case.test_id,
@@ -323,5 +326,4 @@ Respond with a JSON object containing:
 - "passes_criteria": boolean
 
 EVALUATION:"""
-
         return self.llm_judge._evaluate_with_prompt(prompt)

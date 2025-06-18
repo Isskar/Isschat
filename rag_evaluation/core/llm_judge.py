@@ -2,12 +2,7 @@
 LLM-based judge for evaluating Isschat responses
 """
 
-import sys
-from pathlib import Path
 from typing import Dict, Any
-
-# Add src to path to import config
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.core.config import get_config
 from langchain_openai import ChatOpenAI
@@ -120,7 +115,7 @@ class LLMJudge:
 
         except Exception:
             # Ultimate fallback - neutral score
-            score = 0.5
+            score = 0.0
 
         passes = score >= 0.5
 

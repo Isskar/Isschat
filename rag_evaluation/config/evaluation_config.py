@@ -2,20 +2,18 @@
 Configuration settings for Isschat evaluation system
 """
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Any
 
 
 @dataclass
 class EvaluationConfig:
     """Configuration for evaluation system"""
 
-    # Success thresholds, might be modified
-    robustness_threshold: float = 0.7
-    robustness_ci_threshold: float = 0.3
-    conversational_threshold: float = 0.7
-    overall_threshold: float = 0.7
+    # CI threshold (only used in CI mode)
+    ci_threshold: float = 0.7
 
     # LLM Judge configuration
     judge_model: str = "anthropic/claude-sonnet-4"
@@ -24,38 +22,13 @@ class EvaluationConfig:
 
     # Report configuration
     output_dir: Path = field(default_factory=lambda: Path("evaluation_results"))
-    generate_html: bool = True
-    generate_json: bool = True
-    save_detailed_logs: bool = True
 
     # CI configuration
     ci_mode: bool = False
     fail_on_threshold: bool = True
-    ci_test_categories: List[str] = field(default_factory=lambda: ["robustness"])
 
-    # Rate limiting
-    request_delay: float = 1.0
-    max_retries: int = 3
-
-    # Dataset paths
-    robustness_dataset: str = "config/test_datasets/robustness_tests.json"
-    conversational_dataset: str = "config/test_datasets/conversational_tests.json"
-
-    # Evaluation categories
-    test_categories: Dict[str, Dict] = field(
-        default_factory=lambda: {
-            "robustness": {
-                "name": "Model Robustness Tests",
-                "description": "Tests for model knowledge, data validation, and context handling",
-                "weight": 0.5,
-            },
-            "conversational": {
-                "name": "Conversational History Tests",
-                "description": "Tests for context continuity and multi-turn conversations",
-                "weight": 0.5,
-            },
-        }
-    )
+    # Evaluators configuration (loaded dynamically)
+    _evaluators_config: Dict[str, Any] = field(default_factory=dict, init=False)
 
     def __post_init__(self):
         """Post-initialization validation"""
@@ -65,37 +38,46 @@ class EvaluationConfig:
         # Ensure output directory exists
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Load evaluators configuration
+        self._load_evaluators_config()
+
         # Validate thresholds
-        for threshold in [
-            self.robustness_threshold,
-            self.conversational_threshold,
-            self.overall_threshold,
-        ]:
-            if not 0.0 <= threshold <= 1.0:
-                raise ValueError(f"Threshold must be between 0.0 and 1.0, got {threshold}")
+        if not 0.0 <= self.ci_threshold <= 1.0:
+            raise ValueError(f"CI threshold must be between 0.0 and 1.0, got {self.ci_threshold}")
+
+    def _load_evaluators_config(self):
+        """Load evaluators configuration from JSON file"""
+        config_path = Path(__file__).parent / "evaluators.json"
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                self._evaluators_config = json.load(f)
+        except FileNotFoundError:
+            print(f"Warning: Evaluators config file not found at {config_path}")
+            self._evaluators_config = {}
+        except json.JSONDecodeError as e:
+            print(f"Warning: Invalid JSON in evaluators config: {e}")
+            self._evaluators_config = {}
+
+    def get_evaluator_config(self, category: str) -> Dict[str, Any]:
+        """Get configuration for a specific evaluator"""
+        return self._evaluators_config.get(category, {})
+
+    def get_all_categories(self) -> List[str]:
+        """Get all available evaluator categories"""
+        return [cat for cat, config in self._evaluators_config.items() if config.get("enabled", True)]
+
+    def get_ci_categories(self) -> List[str]:
+        """Get categories that should run in CI mode (all enabled categories)"""
+        return self.get_all_categories()
 
     def get_dataset_path(self, category: str) -> Path:
         """Get full path for dataset file"""
-        dataset_map = {
-            "robustness": self.robustness_dataset,
-            "conversational": self.conversational_dataset,
-        }
+        evaluator_config = self.get_evaluator_config(category)
+        if not evaluator_config or "dataset" not in evaluator_config:
+            raise ValueError(f"No dataset configured for category: {category}")
 
-        if category not in dataset_map:
-            raise ValueError(f"Unknown category: {category}")
+        return Path(__file__).parent.parent / evaluator_config["dataset"]
 
-        return Path(__file__).parent.parent / dataset_map[category]
-
-    def get_threshold(self, category: str) -> float:
-        """Get threshold for specific category"""
-        threshold_map = {
-            "robustness": self.robustness_threshold,
-            "conversational": self.conversational_threshold,
-        }
-
-        result = threshold_map.get(category, self.overall_threshold)
-        return result if result is not None else self.overall_threshold
-
-    def is_ci_category(self, category: str) -> bool:
-        """Check if category should run in CI mode"""
-        return category in self.ci_test_categories
+    def get_ci_threshold(self) -> float:
+        """Get CI threshold (only used in CI mode)"""
+        return self.ci_threshold

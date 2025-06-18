@@ -5,18 +5,17 @@ Main entry point for Isschat Evaluation System
 
 import json
 import sys
+import os
 import argparse
+import importlib
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-# Add current directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
+from config.evaluation_config import EvaluationConfig
+from core.base_evaluator import TestCase
 
-from rag_evaluation.config.evaluation_config import EvaluationConfig
-from rag_evaluation.core.base_evaluator import TestCase, TestCategory
-from rag_evaluation.evaluators.robustness_evaluator import RobustnessEvaluator
-from rag_evaluation.evaluators.conversational_evaluator import ConversationalEvaluator
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 class EvaluationManager:
@@ -25,19 +24,35 @@ class EvaluationManager:
     def __init__(self, config: EvaluationConfig):
         """Initialize evaluation manager"""
         self.config = config
-        self.evaluators = {
-            TestCategory.ROBUSTNESS: RobustnessEvaluator(config),
-            TestCategory.CONVERSATIONAL: ConversationalEvaluator(config),
-        }
+        self.evaluators = {}
         self.results = {}
+        self._load_evaluators()
 
-    def load_test_cases(self, category: TestCategory) -> List[TestCase]:
+    def _load_evaluators(self):
+        """Dynamically load evaluators based on configuration"""
+        for category in self.config.get_all_categories():
+            evaluator_config = self.config.get_evaluator_config(category)
+
+            try:
+                # Import the module
+                module = importlib.import_module(evaluator_config["module"])
+
+                # Get the class
+                evaluator_class = getattr(module, evaluator_config["class_name"])
+
+                # Create instance
+                self.evaluators[category] = evaluator_class(self.config)
+
+            except Exception as e:
+                print(f"Warning: Could not load evaluator {category}: {e}")
+
+    def load_test_cases(self, category: str) -> List[TestCase]:
         """Load test cases for a specific category"""
         try:
-            dataset_path = self.config.get_dataset_path(category.value)
+            dataset_path = self.config.get_dataset_path(category)
 
             if not dataset_path.exists():
-                print(f"⚠️  Dataset file not found: {dataset_path}")
+                print(f"⚠️ Dataset file not found: {dataset_path}")
                 return []
 
             with open(dataset_path, "r", encoding="utf-8") as f:
@@ -48,21 +63,21 @@ class EvaluationManager:
                 test_case = TestCase.from_dict(item)
                 test_cases.append(test_case)
 
-            print(f"✅ Loaded {len(test_cases)} test cases for {category.value}")
+            print(f"✅ Loaded {len(test_cases)} test cases for {category}")
             return test_cases
 
         except Exception as e:
-            print(f"❌ Error loading test cases for {category.value}: {e}")
+            print(f"❌ Error loading test cases for {category}: {e}")
             return []
 
-    def run_category_evaluation(self, category: TestCategory) -> Dict[str, Any]:
+    def run_category_evaluation(self, category: str) -> Dict[str, Any]:
         """Run evaluation for a specific category"""
-        print(f"\n🔍 Starting {category.value} evaluation...")
+        print(f"\nStarting {category} evaluation...")
 
         # Load test cases
         test_cases = self.load_test_cases(category)
         if not test_cases:
-            return {"category": category.value, "results": [], "summary": {}}
+            return {"category": category, "results": [], "summary": {}}
 
         # Get evaluator
         evaluator = self.evaluators[category]
@@ -74,26 +89,29 @@ class EvaluationManager:
         summary = evaluator.get_summary_stats()
 
         print(
-            f"✅ Completed {category.value} evaluation: {summary.get('passed', 0)}/{summary.get('total_tests', 0)} passed"  # noqa: E501
+            f"✅ Completed {category} evaluation: {summary.get('passed', 0)}/{summary.get('total_tests', 0)} passed"  # noqa: E501
         )
 
-        return {"category": category.value, "results": [r.to_dict() for r in results], "summary": summary}
+        return {"category": category, "results": [r.to_dict() for r in results], "summary": summary}
 
     def run_full_evaluation(self, categories: Optional[List[str]] = None) -> Dict[str, Any]:
         """Run full evaluation across all or specified categories"""
-        print("🚀 Starting Isschat Evaluation System")
+        print("Starting Isschat Evaluation System")
         print("=" * 60)
 
         # Determine which categories to run
+        available_categories = self.config.get_all_categories()
+
         if categories:
-            selected_categories = [TestCategory(cat) for cat in categories if cat in [c.value for c in TestCategory]]
+            selected_categories = [cat for cat in categories if cat in available_categories]
         else:
-            selected_categories = list(TestCategory)
+            selected_categories = available_categories
 
         # Filter for CI mode if enabled
         if self.config.ci_mode:
-            selected_categories = [cat for cat in selected_categories if self.config.is_ci_category(cat.value)]
-            print(f"🔧 CI Mode: Running only {[cat.value for cat in selected_categories]}")
+            ci_categories = self.config.get_ci_categories()
+            selected_categories = [cat for cat in selected_categories if cat in ci_categories]
+            print(f"🔧 CI Mode: Running only {selected_categories}")
 
         evaluation_results = {}
         overall_stats = {
@@ -108,7 +126,7 @@ class EvaluationManager:
         for category in selected_categories:
             try:
                 category_result = self.run_category_evaluation(category)
-                evaluation_results[category.value] = category_result
+                evaluation_results[category] = category_result
 
                 # Update overall stats
                 summary = category_result["summary"]
@@ -116,12 +134,12 @@ class EvaluationManager:
                 overall_stats["total_passed"] += summary.get("passed", 0)
                 overall_stats["total_failed"] += summary.get("failed", 0)
                 overall_stats["total_errors"] += summary.get("errors", 0)
-                overall_stats["category_results"][category.value] = summary
+                overall_stats["category_results"][category] = summary
 
             except Exception as e:
-                print(f"❌ Error in {category.value} evaluation: {e}")
-                evaluation_results[category.value] = {
-                    "category": category.value,
+                print(f"❌ Error in {category} evaluation: {e}")
+                evaluation_results[category] = {
+                    "category": category,
                     "results": [],
                     "summary": {"error": str(e)},
                 }
@@ -137,14 +155,8 @@ class EvaluationManager:
             "timestamp": datetime.now().isoformat(),
             "config": {
                 "ci_mode": self.config.ci_mode,
-                "categories_run": [cat.value for cat in selected_categories],
-                "thresholds": {
-                    "robustness": self.config.robustness_threshold
-                    if not self.config.ci_mode
-                    else self.config.robustness_ci_threshold,
-                    "conversational": self.config.conversational_threshold,
-                    "overall": self.config.overall_threshold,
-                },
+                "categories_run": selected_categories,
+                "ci_threshold": self.config.get_ci_threshold() if self.config.ci_mode else None,
             },
             "overall_stats": overall_stats,
             "category_results": evaluation_results,
@@ -153,37 +165,24 @@ class EvaluationManager:
         return self.results
 
     def check_thresholds(self) -> bool:
-        """Check if evaluation results meet configured thresholds"""
+        """Check if evaluation results meet CI threshold"""
         if not self.results:
             return False
+
+        # Only check thresholds in CI mode
+        if not self.config.ci_mode:
+            return True
 
         overall_stats = self.results.get("overall_stats", {})
         overall_pass_rate = overall_stats.get("overall_pass_rate", 0.0)
 
-        # Check overall threshold
-        meets_overall = overall_pass_rate >= self.config.overall_threshold
-
-        # Check category-specific thresholds
-        category_results = overall_stats.get("category_results", {})
-        category_checks = {}
-
-        for category, summary in category_results.items():
-            if "error" in summary:
-                category_checks[category] = False
-                continue
-
-            pass_rate = summary.get("pass_rate", 0.0)
-            threshold = self.config.get_threshold(category)
-            category_checks[category] = pass_rate >= threshold
-
-        all_categories_pass = all(category_checks.values()) if category_checks else True
-
-        return meets_overall and all_categories_pass
+        # Check CI threshold
+        return overall_pass_rate >= self.config.get_ci_threshold()
 
     def save_results(self, output_path: Optional[Path] = None) -> None:
         """Save evaluation results to file"""
         if not self.results:
-            print("⚠️  No results to save")
+            print("⚠️ No results to save")
             return
 
         if output_path is None:
@@ -205,13 +204,13 @@ class EvaluationManager:
     def print_summary(self) -> None:
         """Print evaluation summary"""
         if not self.results:
-            print("⚠️  No results to summarize")
+            print("⚠️ No results to summarize")
             return
 
         overall_stats = self.results.get("overall_stats", {})
 
         print(f"\n{'=' * 60}")
-        print("📊 EVALUATION SUMMARY")
+        print("EVALUATION SUMMARY")
         print(f"{'=' * 60}")
         print(f"Total Tests: {overall_stats.get('total_tests', 0)}")
         print(f"Passed: {overall_stats.get('total_passed', 0)} ({overall_stats.get('overall_pass_rate', 0):.1%})")
@@ -219,7 +218,7 @@ class EvaluationManager:
         print(f"Errors: {overall_stats.get('total_errors', 0)}")
 
         # Category breakdown
-        print("\n📋 CATEGORY BREAKDOWN:")
+        print("\nCATEGORY SCORES:")
         print(f"{'-' * 60}")
 
         category_results = overall_stats.get("category_results", {})
@@ -231,15 +230,15 @@ class EvaluationManager:
             total = summary.get("total_tests", 0)
             passed = summary.get("passed", 0)
             pass_rate = summary.get("pass_rate", 0.0)
-            threshold = self.config.get_threshold(category)
-            status = "✅" if pass_rate >= threshold else "❌"
 
-            print(f"{category.upper()}: {passed}/{total} ({pass_rate:.1%}) {status} (threshold: {threshold:.1%})")
+            print(f"{category.upper()}: {passed}/{total} ({pass_rate:.1%})")
 
-        # Threshold check
-        meets_thresholds = self.check_thresholds()
-        threshold_status = "✅ PASSED" if meets_thresholds else "❌ FAILED"
-        print(f"\n🎯 THRESHOLD CHECK: {threshold_status}")
+        # CI threshold check (only in CI mode)
+        if self.config.ci_mode:
+            meets_thresholds = self.check_thresholds()
+            threshold_status = "✅ PASSED" if meets_thresholds else "❌ FAILED"
+            ci_threshold = self.config.get_ci_threshold()
+            print(f"\n🎯 CI THRESHOLD CHECK ({ci_threshold:.1%}): {threshold_status}")
 
         print(f"{'=' * 60}")
 
@@ -247,10 +246,14 @@ class EvaluationManager:
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(description="Isschat Evaluation System")
+    # Get available categories dynamically
+    temp_config = EvaluationConfig()
+    available_categories = temp_config.get_all_categories()
+
     parser.add_argument(
         "--categories",
         nargs="+",
-        choices=["robustness", "conversational"],
+        choices=available_categories,
         help="Specific categories to evaluate",
     )
     parser.add_argument("--ci", action="store_true", help="Run in CI mode")
@@ -284,7 +287,7 @@ def main():
             sys.exit(0 if meets_thresholds else 1)
 
     except KeyboardInterrupt:
-        print("\n⚠️  Evaluation interrupted by user")
+        print("\n⚠️ Evaluation interrupted by user")
         sys.exit(1)
     except Exception as e:
         print(f"❌ Evaluation failed: {e}")

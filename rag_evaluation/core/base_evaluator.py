@@ -9,13 +9,6 @@ from typing import Dict, List, Optional, Any
 from enum import Enum
 
 
-class TestCategory(Enum):
-    """Test category enumeration"""
-
-    ROBUSTNESS = "robustness"
-    CONVERSATIONAL = "conversational"
-
-
 class EvaluationStatus(Enum):
     """Evaluation status enumeration"""
 
@@ -31,7 +24,7 @@ class EvaluationResult:
 
     # Test identification
     test_id: str
-    category: TestCategory
+    category: str
     test_name: str
 
     # Test data
@@ -72,7 +65,7 @@ class EvaluationResult:
         """Convert to dictionary for serialization"""
         return {
             "test_id": self.test_id,
-            "category": self.category.value,
+            "category": self.category,
             "test_name": self.test_name,
             "question": self.question,
             "response": self.response,
@@ -92,7 +85,7 @@ class EvaluationResult:
         """Create from dictionary"""
         return cls(
             test_id=data["test_id"],
-            category=TestCategory(data["category"]),
+            category=data["category"],
             test_name=data["test_name"],
             question=data["question"],
             response=data["response"],
@@ -113,7 +106,7 @@ class TestCase:
     """Data structure for test cases"""
 
     test_id: str
-    category: TestCategory
+    category: str
     test_name: str
     question: str
     expected_behavior: str
@@ -129,7 +122,7 @@ class TestCase:
         """Convert to dictionary"""
         return {
             "test_id": self.test_id,
-            "category": self.category.value,
+            "category": self.category,
             "test_name": self.test_name,
             "question": self.question,
             "expected_behavior": self.expected_behavior,
@@ -143,7 +136,7 @@ class TestCase:
         """Create from dictionary"""
         return cls(
             test_id=data["test_id"],
-            category=TestCategory(data["category"]),
+            category=data["category"],
             test_name=data["test_name"],
             question=data["question"],
             expected_behavior=data["expected_behavior"],
@@ -162,7 +155,7 @@ class BaseEvaluator(ABC):
         self.results: List[EvaluationResult] = []
 
     @abstractmethod
-    def get_category(self) -> TestCategory:
+    def get_category(self) -> str:
         """Get the category this evaluator handles"""
         pass
 
@@ -220,7 +213,7 @@ class BaseEvaluator(ABC):
         avg_response_time = sum(r.response_time for r in self.results) / total
 
         return {
-            "category": self.get_category().value,
+            "category": self.get_category(),
             "total_tests": total,
             "passed": passed,
             "failed": failed,

@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-06-18T14:44:20.287954",
+  "config": {
+    "ci_mode": false,
+    "categories_run": [
+      "robustness",
+      "conversational"
+    ],
+    "thresholds": {
+      "robustness": 0.7,
+      "conversational": 0.7
+    }
+  },
+  "overall_stats": {
+    "total_tests": 0,
+    "total_passed": 0,
+    "total_failed": 0,
+    "total_errors": 0,
+    "category_results": {},
+    "overall_pass_rate": 0.0
+  },
+  "category_results": {
+    "robustness": {
+      "category": "robustness",
+      "results": [],
+      "summary": {
+        "error": "'str' object has no attribute 'value'"
+      }
+    },
+    "conversational": {
+      "category": "conversational",
+      "results": [],
+      "summary": {
+        "error": "'str' object has no attribute 'value'"
+      }
+    }
+  }
+}
