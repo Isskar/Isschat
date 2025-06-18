@@ -6,7 +6,7 @@ Refactored to use centralized configuration and database management.
 from typing import Dict, Any, Tuple, Optional
 
 from src.core.config import get_config
-from src.data_pipeline.offline_db_manager import OfflineDatabaseManager
+from src.data_pipeline.integrated_data_ingestion_pipeline import DataIngestionPipeline
 from src.core.embeddings_manager import EmbeddingsManager
 from src.core.exceptions import ConfigurationError, StorageAccessError
 from src.rag_system.query_processor import QueryProcessor
@@ -33,7 +33,7 @@ class RAGPipeline:
 
         # 1. Ensure database exists
         print("🔍 Checking vector database...")
-        self.db_manager = OfflineDatabaseManager(self.config)
+        self.db_manager = DataIngestionPipeline(self.config)
         try:
             # Check if database exists - this will raise StorageAccessError if storage is inaccessible
             if not self.db_manager.database_exists() and not force_rebuild:

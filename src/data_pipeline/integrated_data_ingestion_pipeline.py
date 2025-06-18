@@ -8,8 +8,8 @@ from src.core.config import get_config
 from src.core.exceptions import StorageAccessError
 
 
-class OfflineDatabaseManager:
-    """Centralized vector database manager"""
+class DataIngestionPipeline:
+    """Data ingestion pipeline for vector database building and management"""
 
     def __init__(self, config=None, storage_service=None):
         """

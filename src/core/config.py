@@ -294,9 +294,10 @@ class ConfigurationManager:
 
         if use_azure_storage:
             storage_account = os.getenv("AZURE_STORAGE_ACCOUNT")
+            container_name = os.getenv("AZURE_BLOB_CONTAINER_NAME")
             if not storage_account:
                 raise ValueError("AZURE_STORAGE_ACCOUNT required when USE_AZURE_STORAGE=true")
-            storage = StorageFactory.create_azure_storage(account_name=storage_account)
+            storage = StorageFactory.create_azure_storage(account_name=storage_account, container_name=container_name)
             logging.info(f"Using Azure Blob Storage: {storage_account}")
         else:
             storage = StorageFactory.create_local_storage(base_path="./data")

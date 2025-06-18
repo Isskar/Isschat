@@ -40,20 +40,27 @@ class FAISSVectorStore(BaseVectorStore):
         # Use relative path for storage service
         self.persist_directory_path = "vector_db"
 
+        # Determine storage type
+        self.storage_type = type(self.storage_service._storage).__name__
+
         # Create directory using storage service
         if hasattr(self.storage_service._storage, "create_directory"):
             self.storage_service._storage.create_directory(self.persist_directory_path)
 
-        # Keep local path for FAISS compatibility (fallback)
-        self.persist_directory = Path(self.app_config.persist_directory)
-        self.persist_directory.mkdir(parents=True, exist_ok=True)
+        # Only create local directory if using LocalStorage
+        if self.storage_type == "LocalStorage":
+            self.persist_directory = Path(self.app_config.persist_directory)
+            self.persist_directory.mkdir(parents=True, exist_ok=True)
+            print(f"✅ FAISSVectorStore initialized with LOCAL storage: {self.persist_directory}")
+        else:
+            # For Azure storage, we don't need local directory
+            self.persist_directory = None
+            print(f"✅ FAISSVectorStore initialized with AZURE storage: {self.persist_directory_path}")
 
         # Use centralized embeddings manager
         self.embeddings = EmbeddingsManager.get_embeddings()
         self._store = None
         self._is_loaded = False  # Flag to prevent multiple loads
-
-        print(f"✅ FAISSVectorStore initialized with persist_directory: {self.persist_directory}")
 
     def ensure_loaded(self) -> bool:
         """Ensure the vector store is loaded only once"""
@@ -100,6 +107,9 @@ class FAISSVectorStore(BaseVectorStore):
 
     def _load_from_local(self) -> bool:
         """Load vector database from local storage"""
+        if self.persist_directory is None:
+            raise VectorStoreError("Local storage not configured - using Azure storage instead")
+
         try:
             index_file = self.persist_directory / "index.faiss"
             if index_file.exists():
@@ -310,41 +320,99 @@ class FAISSVectorStore(BaseVectorStore):
             if storage_type == "LocalStorage":
                 self._persist_to_local()
             elif storage_type == "AzureStorage":
+                # Validate Azure access before persisting
+                self._validate_azure_access()
                 self._persist_to_azure()
             else:
                 print(f"⚠️ Unknown storage type: {storage_type}, falling back to local")
                 self._persist_to_local()
 
+        except StorageAccessError:
+            # Re-raise storage access errors with clear context
+            raise
         except Exception as e:
             raise VectorStoreError(f"Failed to persist store: {str(e)}")
 
     def _persist_to_local(self) -> None:
         """Persist vector store to local storage"""
+        if self.persist_directory is None:
+            raise VectorStoreError("Local storage not configured - using Azure storage instead")
+
         self._store.save_local(str(self.persist_directory))
         print(f"✅ Vector database persisted to local storage: {self.persist_directory}")
+
+    def _validate_azure_access(self) -> None:
+        """Validate Azure storage access before operations"""
+        try:
+            # Test write access by creating a small test file
+            test_path = f"{self.persist_directory_path}/.access_test"
+            test_data = b"access_test"
+
+            if not self.storage_service.write_binary_file(test_path, test_data):
+                raise StorageAccessError(
+                    "❌ IMPOSSIBLE D'ÉCRIRE SUR AZURE STORAGE: Test d'écriture échoué.\n"
+                    "Vous avez demandé d'utiliser Azure Storage mais l'écriture est impossible.\n"
+                    "Vérifiez vos permissions Azure.",
+                    storage_type="azure",
+                )
+
+            # Clean up test file
+            self.storage_service.delete_file(test_path)
+            print("✅ Azure Storage access validation successful")
+
+        except StorageAccessError:
+            raise
+        except Exception as e:
+            raise StorageAccessError(
+                f"❌ IMPOSSIBLE D'ACCÉDER AU STORAGE AZURE: {str(e)}\n"
+                "Vous avez demandé d'utiliser Azure Storage mais l'accès est impossible.\n"
+                "Vérifiez vos permissions et la configuration Azure.",
+                storage_type="azure",
+                original_error=e,
+            )
 
     def _persist_to_azure(self) -> None:
         """Persist vector store to Azure blob storage"""
         import tempfile
         import os
 
-        # Save to temporary directory first
-        with tempfile.TemporaryDirectory() as temp_dir:
-            self._store.save_local(temp_dir)
+        try:
+            # Save to temporary directory first
+            with tempfile.TemporaryDirectory() as temp_dir:
+                self._store.save_local(temp_dir)
 
-            # Upload FAISS files to blob storage
-            faiss_files = ["index.faiss", "index.pkl"]
+                # Upload FAISS files to blob storage
+                faiss_files = ["index.faiss", "index.pkl"]
 
-            for file_name in faiss_files:
-                local_file_path = os.path.join(temp_dir, file_name)
-                if os.path.exists(local_file_path):
-                    with open(local_file_path, "rb") as f:
-                        file_data = f.read()
+                for file_name in faiss_files:
+                    local_file_path = os.path.join(temp_dir, file_name)
+                    if os.path.exists(local_file_path):
+                        with open(local_file_path, "rb") as f:
+                            file_data = f.read()
 
-                    remote_path = f"{self.persist_directory_path}/{file_name}"
-                    self.storage_service.write_binary_file(remote_path, file_data)
+                        remote_path = f"{self.persist_directory_path}/{file_name}"
+                        success = self.storage_service.write_binary_file(remote_path, file_data)
 
-            print(f"✅ Vector database persisted to Azure blob storage: {self.persist_directory_path}")
+                        if not success:
+                            raise StorageAccessError(
+                                f"❌ ÉCHEC D'ÉCRITURE SUR AZURE: Impossible d'écrire {file_name}\n"
+                                "Vous avez demandé d'utiliser Azure Storage mais l'écriture a échoué.\n"
+                                "Vérifiez vos permissions Azure.",
+                                storage_type="azure",
+                            )
+
+                print(f"✅ Vector database persisted to Azure blob storage: {self.persist_directory_path}")
+
+        except StorageAccessError:
+            raise
+        except Exception as e:
+            raise StorageAccessError(
+                f"❌ ERREUR LORS DE LA PERSISTANCE AZURE: {str(e)}\n"
+                "Vous avez demandé d'utiliser Azure Storage mais la persistance a échoué.\n"
+                "Vérifiez vos permissions et la configuration Azure.",
+                storage_type="azure",
+                original_error=e,
+            )
 
     def load(self):
         """Load the vector store from disk and return self for chaining."""
@@ -357,6 +425,96 @@ class FAISSVectorStore(BaseVectorStore):
             raise
         except Exception as e:
             raise VectorStoreError(f"Failed to load store: {str(e)}")
+
+    def rebuild_database(self, force_azure: bool = False) -> bool:
+        """
+        Rebuild the vector database with proper storage validation
+
+        Args:
+            force_azure: Force using Azure storage even if not configured
+
+        Returns:
+            True if rebuild successful, False otherwise
+
+        Raises:
+            StorageAccessError: If requested storage is not accessible
+            RebuildError: If rebuild fails due to storage issues
+        """
+        from ..core.exceptions import RebuildError
+
+        try:
+            # Determine target storage type
+            storage_type = type(self.storage_service._storage).__name__
+
+            # If force_azure is requested but we're not using Azure, raise error
+            if force_azure and storage_type != "AzureStorage":
+                raise RebuildError(
+                    "❌ REBUILD AZURE DEMANDÉ MAIS STORAGE LOCAL CONFIGURÉ:\n"
+                    "Vous avez demandé un rebuild avec Azure Storage mais le système est configuré "
+                    "pour le stockage local.\n"
+                    "Configurez USE_AZURE_STORAGE=true et AZURE_STORAGE_ACCOUNT pour utiliser Azure.",
+                    storage_type="local",
+                    requested_storage="azure",
+                )
+
+            # If using Azure, validate access before rebuild
+            if storage_type == "AzureStorage":
+                print("🔍 Validation de l'accès Azure Storage avant rebuild...")
+                self._validate_azure_access()
+                print("✅ Accès Azure Storage validé")
+
+                # Clear any existing local data to prevent mixed storage
+                self._clear_local_storage()
+                print("🧹 Stockage local nettoyé pour éviter les conflits")
+
+            # Proceed with rebuild
+            print(f"🔄 Début du rebuild de la base vectorielle ({storage_type})...")
+
+            # Reset the store
+            self._store = None
+            self._is_loaded = False
+
+            # Trigger rebuild through the database manager
+            from ..data_pipeline.integrated_data_ingestion_pipeline import DataIngestionPipeline
+
+            pipeline = DataIngestionPipeline()
+
+            success = pipeline.build_database()
+
+            if success:
+                print(f"✅ Rebuild terminé avec succès ({storage_type})")
+                return True
+            else:
+                raise RebuildError(
+                    f"❌ ÉCHEC DU REBUILD: La construction de la base de données a échoué.\n"
+                    f"Storage utilisé: {storage_type}",
+                    storage_type=storage_type.lower(),
+                )
+
+        except StorageAccessError:
+            # Re-raise storage access errors
+            raise
+        except RebuildError:
+            # Re-raise rebuild errors
+            raise
+        except Exception as e:
+            raise RebuildError(
+                f"❌ ERREUR INATTENDUE LORS DU REBUILD: {str(e)}\nStorage type: {storage_type}",
+                storage_type=storage_type.lower() if "storage_type" in locals() else "unknown",
+            )
+
+    def _clear_local_storage(self) -> None:
+        """Clear local storage to prevent conflicts when using Azure"""
+        try:
+            import shutil
+
+            if self.persist_directory and self.persist_directory.exists():
+                shutil.rmtree(self.persist_directory)
+                print(f"🧹 Cleared local storage: {self.persist_directory}")
+            else:
+                print("🧹 No local storage to clear (using Azure storage)")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not clear local storage: {e}")
 
     def as_retriever(self, **kwargs):
         """Get a retriever interface for this store."""

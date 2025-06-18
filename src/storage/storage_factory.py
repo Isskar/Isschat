@@ -10,43 +10,6 @@ class StorageFactory:
     """Factory for creating storage implementations"""
 
     @staticmethod
-    def create_storage(storage_type: str, **kwargs) -> StorageInterface:
-        """
-        Create a storage implementation based on type
-
-        Args:
-            storage_type: Type of storage ("local" or "azure")
-            **kwargs: Additional arguments for storage initialization
-
-        Returns:
-            StorageInterface implementation
-
-        Raises:
-            ValueError: If storage type is unknown
-            ImportError: If Azure dependencies are missing
-        """
-        if storage_type.lower() == "local":
-            base_path = kwargs.get("base_path", ".")
-            return LocalStorage(base_path=base_path)
-
-        elif storage_type.lower() == "azure":
-            try:
-                # Import Azure storage only when needed
-                from .azure_storage_adapter import AzureStorage
-
-                account_name = kwargs.get("account_name")
-                if not account_name:
-                    raise ValueError("Azure storage requires 'account_name' parameter")
-
-                return AzureStorage(storage_account_name=account_name)
-
-            except ImportError as e:
-                raise ImportError(f"Azure storage dependencies not available: {e}")
-
-        else:
-            raise ValueError(f"Unknown storage type: {storage_type}")
-
-    @staticmethod
     def create_local_storage(base_path: str = ".") -> StorageInterface:
         """
         Convenience method to create local storage
@@ -60,12 +23,13 @@ class StorageFactory:
         return LocalStorage(base_path=base_path)
 
     @staticmethod
-    def create_azure_storage(account_name: str) -> StorageInterface:
+    def create_azure_storage(account_name: str, container_name: str) -> StorageInterface:
         """
         Convenience method to create Azure storage
 
         Args:
             account_name: Azure storage account name
+            container_name: Azure storage container name
 
         Returns:
             AzureStorage instance
@@ -76,6 +40,6 @@ class StorageFactory:
         try:
             from .azure_storage_adapter import AzureStorage
 
-            return AzureStorage(storage_account_name=account_name)
+            return AzureStorage(storage_account_name=account_name, container_name=container_name)
         except ImportError as e:
             raise ImportError(f"Azure storage dependencies not available: {e}")
