@@ -10,6 +10,7 @@ import traceback
 import pandas as pd
 from datetime import datetime, timedelta
 import uuid
+from typing import Optional
 
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -457,7 +458,7 @@ def process_question_with_model(
     prompt,
     start_time=None,
     chat_history=None,
-    conversation_id: str = None,  # ty : ignore
+    conversation_id: Optional[str] = None,
 ):
     """Process question with model and features"""
     try:

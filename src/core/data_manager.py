@@ -247,7 +247,7 @@ class DataManager:
 
     def get_conversation_history(
         self, user_id: Optional[str] = None, conversation_id: Optional[str] = None, limit: int = 50
-    ) -> List[Dict]:  # noqa
+    ) -> List[Dict]:
         """Retrieve the conversation history, filtered by user_id and conversation_id."""
         all_entries = []
 
