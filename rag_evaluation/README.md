@@ -115,28 +115,6 @@ Add your evaluator to [`config/evaluators.json`](config/evaluators.json):
 - Memory recall
 - Topic transitions
 
-## 🔧 CI/CD Integration
-
-```yaml
-# .github/workflows/evaluation.yml
-name: Isschat Evaluation
-on: [push, pull_request]
-
-jobs:
-  evaluate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-      - name: Run Evaluation
-        run: python rag_evaluation/main.py --ci
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-```
-
 ## 📈 Results Format
 
 Results are automatically saved in [`evaluation_results/`](../evaluation_results/) with timestamps:
@@ -163,7 +141,6 @@ Results are automatically saved in [`evaluation_results/`](../evaluation_results
 
 ## 🛠️ Dependencies
 
-- Python 3.8+
 - langchain-openai, langchain-core
 - OpenRouter API key (for LLM judge)
 - Isschat system components
@@ -171,7 +148,7 @@ Results are automatically saved in [`evaluation_results/`](../evaluation_results
 ## 💡 Key Features
 
 - **Auto-configuration**: System dynamically loads all configured evaluators
-- **LLM Judge**: Uses Claude 3.5 Sonnet for response evaluation
+- **LLM Judge**: Uses Claude 4 Sonnet for response evaluation
 - **CI Mode**: Critical tests only for fast feedback
 - **Easy Extension**: Add evaluators in 3 simple steps
 - **Full Traceability**: Timestamped results with complete details
