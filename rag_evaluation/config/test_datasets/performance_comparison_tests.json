@@ -1,0 +1,167 @@
+[
+  {
+    "test_id": "perf_easy_001",
+    "category": "performance_comparison",
+    "complexity": "easy",
+    "test_name": "Title-based Search - Lead Data Engineer",
+    "question": "Qui a rédigé la page : Lead Data Engineer ?",
+    "expected_behavior": "Should quickly find the author information from the page title or metadata",
+    "metadata": {
+      "test_type": "title_search",
+      "language": "french",
+      "expected_response_time": "≤2s",
+      "human_estimate": "30s",
+      "source_type": "single_page"
+    }
+  },
+  {
+    "test_id": "perf_easy_002",
+    "category": "performance_comparison",
+    "complexity": "easy",
+    "test_name": "Title-based Search - Project Manager",
+    "question": "Qui est responsable de la page : Project Manager ?",
+    "expected_behavior": "Should quickly identify the page owner or creator",
+    "metadata": {
+      "test_type": "title_search",
+      "language": "french",
+      "expected_response_time": "≤2s",
+      "human_estimate": "25s",
+      "source_type": "single_page"
+    }
+  },
+  {
+    "test_id": "perf_easy_003",
+    "category": "performance_comparison",
+    "complexity": "easy",
+    "test_name": "Title-based Search - Data Scientist",
+    "question": "Quand a été créée la page : Data Scientist ?",
+    "expected_behavior": "Should quickly find the creation date from page metadata",
+    "metadata": {
+      "test_type": "title_search",
+      "language": "french",
+      "expected_response_time": "≤2s",
+      "human_estimate": "20s",
+      "source_type": "single_page"
+    }
+  },
+  {
+    "test_id": "perf_intermediate_001",
+    "category": "performance_comparison",
+    "complexity": "intermediate",
+    "test_name": "Content Search - Benchmark Tests",
+    "question": "Quelle est la thématique principale dans la page Benchmark et tests techniques ?",
+    "expected_behavior": "Should analyze page content to identify the main theme",
+    "metadata": {
+      "test_type": "content_search",
+      "language": "french",
+      "expected_response_time": "≤5s",
+      "human_estimate": "2min",
+      "source_type": "single_page"
+    }
+  },
+  {
+    "test_id": "perf_intermediate_002",
+    "category": "performance_comparison",
+    "complexity": "intermediate",
+    "test_name": "Content Search - Technical Architecture",
+    "question": "Quels sont les composants principaux décrits dans la page Architecture technique ?",
+    "expected_behavior": "Should extract and list the main technical components",
+    "metadata": {
+      "test_type": "content_search",
+      "language": "french",
+      "expected_response_time": "≤5s",
+      "human_estimate": "3min",
+      "source_type": "single_page"
+    }
+  },
+  {
+    "test_id": "perf_intermediate_003",
+    "category": "performance_comparison",
+    "complexity": "intermediate",
+    "test_name": "Content Search - Development Process",
+    "question": "Quelles sont les étapes du processus de développement décrites dans la page Méthodologie ?",
+    "expected_behavior": "Should identify and list the development process steps",
+    "metadata": {
+      "test_type": "content_search",
+      "language": "french",
+      "expected_response_time": "≤5s",
+      "human_estimate": "2.5min",
+      "source_type": "single_page"
+    }
+  },
+  {
+    "test_id": "perf_hard_001",
+    "category": "performance_comparison",
+    "complexity": "hard",
+    "test_name": "Multi-source Synthesis - Air France Project",
+    "question": "En quoi consiste le projet Air France ?",
+    "expected_behavior": "Should synthesize information from multiple sources to provide comprehensive project overview",
+    "metadata": {
+      "test_type": "multi_source_synthesis",
+      "language": "french",
+      "expected_response_time": "≤15s",
+      "human_estimate": "10min",
+      "source_type": "multiple_pages"
+    }
+  },
+  {
+    "test_id": "perf_hard_002",
+    "category": "performance_comparison",
+    "complexity": "hard",
+    "test_name": "Generation Task - LinkedIn Post",
+    "question": "Crée un post LinkedIn pour présenter la mission de stagiaire Data Engineer",
+    "expected_behavior": "Should generate a professional LinkedIn post based on internship information",
+    "metadata": {
+      "test_type": "content_generation",
+      "language": "french",
+      "expected_response_time": "≤10s",
+      "human_estimate": "15min",
+      "source_type": "multiple_pages"
+    }
+  },
+  {
+    "test_id": "perf_hard_003",
+    "category": "performance_comparison",
+    "complexity": "hard",
+    "test_name": "Multi-source Analysis - Team Collaboration",
+    "question": "Comment les équipes Data et Dev collaborent-elles sur les projets ?",
+    "expected_behavior": "Should analyze multiple sources to explain collaboration patterns",
+    "metadata": {
+      "test_type": "multi_source_analysis",
+      "language": "french",
+      "expected_response_time": "≤15s",
+      "human_estimate": "12min",
+      "source_type": "multiple_pages"
+    }
+  },
+  {
+    "test_id": "perf_hard_004",
+    "category": "performance_comparison",
+    "complexity": "hard",
+    "test_name": "Generation Task - Technical Summary",
+    "question": "Rédige un résumé technique de la stack technologique utilisée chez Isskar",
+    "expected_behavior": "Should generate a comprehensive technical summary from various sources",
+    "metadata": {
+      "test_type": "content_generation",
+      "language": "french",
+      "expected_response_time": "≤10s",
+      "human_estimate": "20min",
+      "source_type": "multiple_pages"
+    }
+  },
+  {
+    "test_id": "perf_hard_005",
+    "category": "performance_comparison",
+    "complexity": "hard",
+    "test_name": "Multi-source Synthesis - Project Portfolio",
+    "question": "Quels sont les projets principaux en cours et leurs objectifs ?",
+    "expected_behavior": "Should synthesize information about current projects and their objectives",
+    "metadata": {
+      "test_type": "multi_source_synthesis",
+      "language": "french",
+      "expected_response_time": "≤15s",
+      "human_estimate": "15min",
+      "source_type": "multiple_pages"
+    }
+  }
+] 
