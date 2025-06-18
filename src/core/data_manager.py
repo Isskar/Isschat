@@ -247,8 +247,8 @@ class DataManager:
 
     def get_conversation_history(
         self, user_id: Optional[str] = None, conversation_id: Optional[str] = None, limit: int = 50
-    ) -> List[Dict]:
-        """Récupère l'historique des conversations, éventuellement filtré par user_id ou conversation_id."""
+    ) -> List[Dict]:  # noqa
+        """Retrieve the conversation history, filtered by user_id and conversation_id."""
         all_entries = []
 
         # List all conversation files (e.g., conversations_20231026.jsonl)
