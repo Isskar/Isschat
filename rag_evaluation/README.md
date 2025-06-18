@@ -44,7 +44,7 @@ Create a file in [`evaluators/`](evaluators/):
 
 ```python
 # evaluators/my_evaluator.py
-from core.base_evaluator import BaseEvaluator, TestResult
+from .core.base_evaluator import BaseEvaluator, TestResult
 
 class MyEvaluator(BaseEvaluator):
     """Description of my evaluator"""
