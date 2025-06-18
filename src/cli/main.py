@@ -19,40 +19,7 @@ class ChatCLI:
         """Initialize the RAG pipeline"""
         try:
             print("Initialisation d'Isschat...")
-
-            if rebuild_db:
-                # Use the new rebuild system with validation
-                try:
-                    self.pipeline = RAGPipelineFactory.create_default_pipeline(force_rebuild=False)
-
-                    if hasattr(self.pipeline.vector_store, "rebuild_database"):
-                        print("🔄 Utilisation du nouveau système de rebuild avec validation...")
-                        success = self.pipeline.vector_store.rebuild_database()
-                        if not success:
-                            print("❌ Échec du rebuild de la base de données")
-                            return False
-                    else:
-                        # Fallback to old method
-                        print("🔄 Utilisation de l'ancien système de rebuild...")
-                        self.pipeline = RAGPipelineFactory.create_default_pipeline(force_rebuild=True)
-
-                except Exception as e:
-                    from src.core.exceptions import StorageAccessError, RebuildError
-
-                    if isinstance(e, StorageAccessError):
-                        print(f"🚫 ERREUR D'ACCÈS AU STOCKAGE:\n{str(e)}")
-                        print("\n💡 CONSEILS:")
-                        print("- Vérifiez votre configuration Azure (USE_AZURE_STORAGE, AZURE_STORAGE_ACCOUNT)")
-                        print("- Vérifiez vos permissions Azure Storage")
-                        return False
-                    elif isinstance(e, RebuildError):
-                        print(f"🚫 ERREUR DE REBUILD:\n{str(e)}")
-                        return False
-                    else:
-                        raise
-            else:
-                self.pipeline = RAGPipelineFactory.create_default_pipeline(force_rebuild=False)
-
+            self.pipeline = RAGPipelineFactory.create_default_pipeline(force_rebuild=rebuild_db)
             print("Isschat prêt !")
             return True
         except Exception as e:
