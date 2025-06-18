@@ -141,6 +141,7 @@ For production deployment with Azure Blob Storage, set these environment variabl
 # Required for Azure Blob Storage
 USE_AZURE_STORAGE=true
 AZURE_STORAGE_ACCOUNT=your_storage_account_name
+AZURE_BLOB_CONTAINER_NAME=blob_container_name
 
 # Existing Azure configuration
 KEY_VAULT_URL=https://your-keyvault.vault.azure.net/
