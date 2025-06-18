@@ -258,7 +258,6 @@ def main():
     )
     parser.add_argument("--ci", action="store_true", help="Run in CI mode")
     parser.add_argument("--output", type=str, help="Output file path")
-    parser.add_argument("--config", type=str, help="Configuration file path")
 
     args = parser.parse_args()
 
