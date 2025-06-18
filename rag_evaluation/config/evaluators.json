@@ -1,0 +1,29 @@
+{
+  "robustness": {
+    "class_name": "RobustnessEvaluator",
+    "module": "rag_evaluation.evaluators.robustness_evaluator",
+    "name": "Model Robustness Tests",
+    "description": "Tests for model knowledge, data validation, and context handling",
+    "dataset": "config/test_datasets/robustness_tests.json",
+    "weight": 1.0,
+    "enabled": true
+  },
+  "conversational": {
+    "class_name": "ConversationalEvaluator",
+    "module": "rag_evaluation.evaluators.conversational_evaluator",
+    "name": "Conversational Tests",
+    "description": "Tests for conversational abilities and context handling",
+    "dataset": "config/test_datasets/conversational_tests.json",
+    "weight": 1.0,
+    "enabled": true
+  },
+  "performance_comparison": {
+    "class_name": "PerformanceComparisonEvaluator",
+    "module": "rag_evaluation.evaluators.performance_comparison_evaluator",
+    "name": "Performance Comparison Tests",
+    "description": "Tests for comparing Isschat vs Human performance across complexity levels",
+    "dataset": "config/test_datasets/performance_comparison_tests.json",
+    "weight": 1.0,
+    "enabled": true
+  }
+}
