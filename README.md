@@ -133,6 +133,23 @@ Isschat/
 - **Vector Store Abstraction**: Support for multiple vector storage backends (FAISS, etc.)
 - **Data Pipeline**: Automated document processing and embedding generation
 
+## Azure Production Deployment
+
+For production deployment with Azure Blob Storage, set these environment variables:
+
+```bash
+# Required for Azure Blob Storage
+USE_AZURE_STORAGE=true
+AZURE_STORAGE_ACCOUNT=your_storage_account_name
+AZURE_BLOB_CONTAINER_NAME=blob_container_name
+
+# Existing Azure configuration
+KEY_VAULT_URL=https://your-keyvault.vault.azure.net/
+ENVIRONMENT=production
+```
+
+**Local Development**: Leave `USE_AZURE_STORAGE` unset or `false` to use local file storage.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

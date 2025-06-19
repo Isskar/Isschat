@@ -15,8 +15,8 @@ repos:
 
       - id: pytest
         name: Run tests
-        entry: pytest
-        language: python
+        entry: uv run --extra test pytest
+        language: system
         pass_filenames: false
         always_run: true
         args: ["-v", "--tb=short"]
