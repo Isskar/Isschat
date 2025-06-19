@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "isschat"
 version = "0.1.0"
@@ -61,6 +65,11 @@ cli = [
 
 [project.scripts]
 isschat-cli = "src.cli.main:main"
+isschat-eval = "rag_evaluation.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "rag_evaluation*"]
 
 [tool.ruff]
 line-length = 120

@@ -16,6 +16,7 @@ class EvaluationStatus(Enum):
     FAILED = "failed"
     ERROR = "error"
     SKIPPED = "skipped"
+    MEASURED = "measured"  # For metric collection without pass/fail judgment
 
 
 @dataclass
@@ -60,6 +61,11 @@ class EvaluationResult:
     def has_error(self) -> bool:
         """Check if test had an error"""
         return self.status == EvaluationStatus.ERROR
+
+    @property
+    def is_measured(self) -> bool:
+        """Check if test was measured (no pass/fail judgment)"""
+        return self.status == EvaluationStatus.MEASURED
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
@@ -208,6 +214,7 @@ class BaseEvaluator(ABC):
         passed = sum(1 for r in self.results if r.passed)
         failed = sum(1 for r in self.results if r.failed)
         errors = sum(1 for r in self.results if r.has_error)
+        measured = sum(1 for r in self.results if r.is_measured)
 
         avg_score = sum(r.score for r in self.results) / total
         avg_response_time = sum(r.response_time for r in self.results) / total
@@ -218,6 +225,7 @@ class BaseEvaluator(ABC):
             "passed": passed,
             "failed": failed,
             "errors": errors,
+            "measured": measured,
             "pass_rate": passed / total if total > 0 else 0.0,
             "average_score": avg_score,
             "average_response_time": avg_response_time,
@@ -226,3 +234,7 @@ class BaseEvaluator(ABC):
     def clear_results(self):
         """Clear stored results"""
         self.results.clear()
+
+    def format_detailed_summary(self) -> str:
+        """Format detailed summary for this evaluator (optional override)"""
+        return ""

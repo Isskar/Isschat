@@ -16,5 +16,14 @@
     "dataset": "config/test_datasets/conversational_tests.json",
     "weight": 1.0,
     "enabled": true
+  },
+  "retrieval": {
+    "class_name": "RetrievalEvaluator",
+    "module": "rag_evaluation.evaluators.retrieval_evaluator",
+    "name": "Retrieval Performance Tests",
+    "description": "Tests for document retrieval accuracy and ranking quality",
+    "dataset": "config/test_datasets/retrieval_tests.json",
+    "weight": 1.0,
+    "enabled": true
   }
 }
