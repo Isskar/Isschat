@@ -92,7 +92,7 @@ EVALUATION:"""
 
         # Initialize LLM
         self.llm = ChatOpenAI(
-            model_name=config.judge_model,
+            model_name="anthropic/claude-3-sonnet",
             temperature=config.judge_temperature,
             max_tokens=config.judge_max_tokens,
             openai_api_key=api_key,
