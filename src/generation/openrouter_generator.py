@@ -113,14 +113,8 @@ class OpenRouterGenerator(BaseGenerator):
                 ]
             )
 
-            # Generate answer using async call
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-            answer = loop.run_until_complete(self._generate_async(context, query))
+            # Generate answer using direct synchronous call
+            answer = self._chain.invoke({"context": context, "question": query})
 
             # Format sources
             sources = self._format_sources(retrieval_result.documents)
