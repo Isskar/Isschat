@@ -56,25 +56,6 @@ class ConfigurationData:
                 return False
         return True
 
-    # === PATH HELPERS ===
-
-    def get_vector_db_path(self) -> str:
-        """Get vector database path"""
-        return self.persist_directory
-
-    def get_logs_path(self, log_type: str) -> str:
-        """Get logs path based on log type"""
-        return os.path.join("data", "logs", log_type)
-
-    # === VECTOR DB VERSION MANAGEMENT ===
-
-    def get_current_db_version(self) -> str:
-        """Generate current DB version hash based on embeddings config"""
-        import hashlib
-
-        version_string = f"{self.embeddings_model}_{self.vector_db_type}_{self.search_k}"
-        return hashlib.md5(version_string.encode()).hexdigest()[:8]
-
 
 class ConfigProvider(ABC):
     """Abstract base class for configuration providers"""
