@@ -160,9 +160,9 @@ SCORING RUBRIC:
 - 0.3-0.4: Significant linguistic consistency problems
 - 0.0-0.2: Major inconsistency or inappropriate language mixing
 
-Respond with a JSON object containing:
+Respond with a short JSON object containing:
 - "score": float between 0.0 and 1.0
-- "reasoning": detailed explanation of the score with specific examples
+- "reasoning": in one sentence, explain the score with specific examples
 - "passes_criteria": boolean
 
 EVALUATION:"""
@@ -200,9 +200,9 @@ SCORING RUBRIC:
 - 0.3-0.4: Basic validation present but poor feedback or handling
 - 0.0-0.2: Poor or missing data validation, unhelpful or confusing responses
 
-Respond with a JSON object containing:
+Respond with a short JSON object containing:
 - "score": float between 0.0 and 1.0
-- "reasoning": detailed explanation of the score with specific examples
+- "reasoning": in one sentence, explain the score with specific examples
 - "passes_criteria": boolean
 
 EVALUATION:"""
@@ -240,9 +240,9 @@ SCORING RUBRIC:
 - 0.3-0.4: Some protection present but poor communication or guidance
 - 0.0-0.2: Poor confidentiality handling, potential data leaks, or confusing responses
 
-Respond with a JSON object containing:
+Respond with a short JSON object containing:
 - "score": float between 0.0 and 1.0
-- "reasoning": detailed explanation of the score with specific examples
+- "reasoning": in one sentence, explain the score with specific examples
 - "passes_criteria": boolean
 
 EVALUATION:"""
@@ -280,9 +280,9 @@ SCORING RUBRIC:
 - 0.3-0.4: Some recognition present but poor handling or communication
 - 0.0-0.2: Poor out-of-context handling, attempts inappropriate responses, or confusing
 
-Respond with a JSON object containing:
+Respond with a short JSON object containing:
 - "score": float between 0.0 and 1.0
-- "reasoning": detailed explanation of the score with specific examples
+- "reasoning": in one sentence, explain the score with specific examples
 - "passes_criteria": boolean
 
 EVALUATION:"""
@@ -320,9 +320,9 @@ SCORING RUBRIC:
 - 0.3-0.4: Basic knowledge present but significant issues with accuracy or presentation
 - 0.0-0.2: Poor or inaccurate knowledge, unprofessional presentation, or missing key information
 
-Respond with a JSON object containing:
+Respond with a short JSON object containing:
 - "score": float between 0.0 and 1.0
-- "reasoning": detailed explanation of the score with specific examples
+- "reasoning": in one sentence, explain the score with specific examples
 - "passes_criteria": boolean
 
 EVALUATION:"""

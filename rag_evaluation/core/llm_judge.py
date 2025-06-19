@@ -69,11 +69,14 @@ class LLMJudge:
         try:
             result = self.llm.invoke(prompt).content.strip()
 
+            # FIXME: Clean up JSON response from markdown artifacts
+            cleaned_result = self._clean_json_response(result)
+
             # Try to parse as JSON
             import json
 
             try:
-                evaluation = json.loads(result)
+                evaluation = json.loads(cleaned_result)
 
                 # Validate required fields
                 if not all(key in evaluation for key in ["score", "reasoning", "passes_criteria"]):
@@ -93,6 +96,32 @@ class LLMJudge:
 
         except Exception as e:
             return {"score": 0.0, "reasoning": f"Evaluation error: {str(e)}", "passes_criteria": False}
+
+    def _clean_json_response(self, response: str) -> str:
+        """Clean JSON response from markdown formatting and other artifacts"""
+        import re
+        import json
+
+        response = re.sub(r"```json\s*", "", response)
+        response = re.sub(r"```\s*$", "", response)
+        response = response.strip()
+        start_idx = response.find("{")
+        end_idx = response.rfind("}")
+
+        if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+            response = response[start_idx : end_idx + 1]
+
+        # FIXME: Handle common JSON formatting issues
+        try:
+            json.loads(response)
+            return response
+        except json.JSONDecodeError:
+            # Add missing closing quote and brace if needed
+            if response.count('"') % 2 == 1:
+                response += '"'
+            if response.count("{") > response.count("}"):
+                response += "}"
+            return response
 
     def _fallback_evaluation(self, result: str) -> Dict[str, Any]:
         """Fallback evaluation when JSON parsing fails - uses simplified LLM retry"""
