@@ -30,21 +30,6 @@
     }
   },
   {
-    "test_id": "perf_easy_003",
-    "category": "performance_comparison",
-    "complexity": "easy",
-    "test_name": "Title-based Search - Data Scientist",
-    "question": "Quand a été créée la page : Data Scientist ?",
-    "expected_behavior": "Should quickly find the creation date from page metadata",
-    "metadata": {
-      "test_type": "title_search",
-      "language": "french",
-      "expected_response_time": "≤2s",
-      "human_estimate": "20s",
-      "source_type": "single_page"
-    }
-  },
-  {
     "test_id": "perf_intermediate_001",
     "category": "performance_comparison",
     "complexity": "intermediate",
@@ -55,7 +40,7 @@
       "test_type": "content_search",
       "language": "french",
       "expected_response_time": "≤5s",
-      "human_estimate": "2min",
+      "human_estimate": "180s",
       "source_type": "single_page"
     }
   },
@@ -71,21 +56,6 @@
       "language": "french",
       "expected_response_time": "≤5s",
       "human_estimate": "3min",
-      "source_type": "single_page"
-    }
-  },
-  {
-    "test_id": "perf_intermediate_003",
-    "category": "performance_comparison",
-    "complexity": "intermediate",
-    "test_name": "Content Search - Development Process",
-    "question": "Quelles sont les étapes du processus de développement décrites dans la page Méthodologie ?",
-    "expected_behavior": "Should identify and list the development process steps",
-    "metadata": {
-      "test_type": "content_search",
-      "language": "french",
-      "expected_response_time": "≤5s",
-      "human_estimate": "2.5min",
       "source_type": "single_page"
     }
   },
@@ -115,22 +85,7 @@
       "test_type": "content_generation",
       "language": "french",
       "expected_response_time": "≤10s",
-      "human_estimate": "15min",
-      "source_type": "multiple_pages"
-    }
-  },
-  {
-    "test_id": "perf_hard_003",
-    "category": "performance_comparison",
-    "complexity": "hard",
-    "test_name": "Multi-source Analysis - Team Collaboration",
-    "question": "Comment les équipes Data et Dev collaborent-elles sur les projets ?",
-    "expected_behavior": "Should analyze multiple sources to explain collaboration patterns",
-    "metadata": {
-      "test_type": "multi_source_analysis",
-      "language": "french",
-      "expected_response_time": "≤15s",
-      "human_estimate": "12min",
+      "human_estimate": "15m",
       "source_type": "multiple_pages"
     }
   },

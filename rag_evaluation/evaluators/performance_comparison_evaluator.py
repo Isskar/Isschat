@@ -193,6 +193,10 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
                     f"Efficiency: {efficiency_ratio:.1f}x"
                 )
 
+                # Print the question and response
+                print(f"\n    Question: {test_case.question}")
+                print(f"    Response: {result.response}\n")
+
             except Exception as e:
                 print(f"    ❌ Error: {str(e)}")
                 error_result = EvaluationResult(
