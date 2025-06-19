@@ -52,6 +52,7 @@ htmlcov/
 # Dependencies folders
 data/
 db/
+evaluation_results/
 
 # Temporary files
 *.tmp
