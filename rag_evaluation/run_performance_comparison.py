@@ -55,19 +55,58 @@ def main():
         print(f"Total Tests: {summary['total_tests']}")
         print(f"Passed: {summary['total_passed']} ({summary['overall_pass_rate']:.1%})")
         print(f"Failed: {summary['total_failed']}")
+
+        print("\n⏱️  PERFORMANCE METRICS:")
+        print("-" * 40)
         print(f"Average Response Time: {summary['avg_response_time']:.2f}s")
         print(f"Average Efficiency Ratio: {summary['avg_efficiency_ratio']:.1f}x")
-        print(f"Average Relevance Score: {summary['avg_relevance_score']:.2f}")
+
+        # Print quality comparison summary
+        if "quality_comparison" in summary:
+            quality = summary["quality_comparison"]
+            total_comparisons = quality["total_comparisons"]
+
+            print("\n🎯 QUALITY COMPARISON WITH HUMAN:")
+            print("-" * 40)
+            if total_comparisons > 0:
+                print(
+                    "Better than human: "
+                    f"{quality['better_than_human']} "
+                    f"({quality['better_than_human'] / total_comparisons:.1%})"
+                )
+                print(
+                    f"Equal to human: {quality['equal_to_human']} ({quality['equal_to_human'] / total_comparisons:.1%})"
+                )
+                print(
+                    "Worse than human: "
+                    f"{quality['worse_than_human']} "
+                    f"({quality['worse_than_human'] / total_comparisons:.1%})"
+                )
+                print(f"Total comparisons: {total_comparisons}")
+            else:
+                print("No quality comparisons available (no human responses provided)")
 
         # Print complexity breakdown
         if "complexity_breakdown" in summary:
             print("\n📋 COMPLEXITY BREAKDOWN:")
             print("-" * 40)
             for complexity, stats in summary["complexity_breakdown"].items():
-                print(f"{complexity.upper()}:")
+                print(f"\n{complexity.upper()}:")
                 print(f"  Tests: {stats['passed']}/{stats['total_tests']} passed ({stats['pass_rate']:.1%})")
-                print(f"  Avg Response Time: {stats['avg_response_time']:.2f}s")
-                print(f"  Avg Efficiency: {stats['avg_efficiency_ratio']:.1f}x")
+                print("  Performance:")
+                print(f"    Avg Response Time: {stats['avg_response_time']:.2f}s")
+                print(f"    Avg Efficiency: {stats['avg_efficiency_ratio']:.1f}x")
+
+                if "quality_stats" in stats:
+                    quality = stats["quality_stats"]
+                    total = sum(quality.values())
+                    if total > 0:
+                        print("  Quality vs Human:")
+                        print(
+                            f"    Better: {quality['better_than_human']} ({quality['better_than_human'] / total:.1%})"
+                        )
+                        print(f"    Equal: {quality['equal_to_human']} ({quality['equal_to_human'] / total:.1%})")
+                        print(f"    Worse: {quality['worse_than_human']} ({quality['worse_than_human'] / total:.1%})")
 
         # Save results if output specified
         if args.output:
@@ -100,7 +139,18 @@ def main():
             print(f"\n💾 Results saved to: {output_path}")
 
         # Exit with appropriate code
-        if summary["overall_pass_rate"] >= 0.8:
+        quality_threshold = 0.5  # 50% des métriques doivent être meilleures ou égales à l'humain
+        if "quality_comparison" in summary:
+            quality = summary["quality_comparison"]
+            total = quality["total_comparisons"]
+            if total > 0:
+                quality_ratio = (quality["better_than_human"] + quality["equal_to_human"]) / total
+            else:
+                quality_ratio = 1.0  # Si pas de comparaison possible, on considère que c'est passé
+        else:
+            quality_ratio = 1.0
+
+        if summary["overall_pass_rate"] >= 0.8 and quality_ratio >= quality_threshold:
             print("\n✅ Performance comparison completed successfully!")
             sys.exit(0)
         else:

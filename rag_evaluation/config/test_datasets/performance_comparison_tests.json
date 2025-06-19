@@ -6,6 +6,15 @@
     "test_name": "Title-based Search - Lead Data Engineer",
     "question": "Qui a rédigé la page : Lead Data Engineer ?",
     "expected_behavior": "Should quickly find the author information from the page title or metadata",
+    "human_response": {
+      "content": "",
+      "quality_metrics": {
+        "relevance": 0.0,
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "clarity": 0.0
+      }
+    },
     "metadata": {
       "test_type": "title_search",
       "language": "french",
@@ -21,6 +30,15 @@
     "test_name": "Title-based Search - Project Manager",
     "question": "Qui est responsable de la page : Project Manager ?",
     "expected_behavior": "Should quickly identify the page owner or creator",
+    "human_response": {
+      "content": "",
+      "quality_metrics": {
+        "relevance": 0.0,
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "clarity": 0.0
+      }
+    },
     "metadata": {
       "test_type": "title_search",
       "language": "french",
@@ -36,6 +54,15 @@
     "test_name": "Content Search - Benchmark Tests",
     "question": "Quelle est la thématique principale dans la page Benchmark et tests techniques ?",
     "expected_behavior": "Should analyze page content to identify the main theme",
+    "human_response": {
+      "content": "",
+      "quality_metrics": {
+        "relevance": 0.0,
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "clarity": 0.0
+      }
+    },
     "metadata": {
       "test_type": "content_search",
       "language": "french",
@@ -51,6 +78,15 @@
     "test_name": "Content Search - Technical Architecture",
     "question": "Quels sont les composants principaux décrits dans la page Architecture technique ?",
     "expected_behavior": "Should extract and list the main technical components",
+    "human_response": {
+      "content": "",
+      "quality_metrics": {
+        "relevance": 0.0,
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "clarity": 0.0
+      }
+    },
     "metadata": {
       "test_type": "content_search",
       "language": "french",
@@ -66,6 +102,15 @@
     "test_name": "Multi-source Synthesis - Air France Project",
     "question": "En quoi consiste le projet Air France ?",
     "expected_behavior": "Should synthesize information from multiple sources to provide comprehensive project overview",
+    "human_response": {
+      "content": "",
+      "quality_metrics": {
+        "relevance": 0.0,
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "clarity": 0.0
+      }
+    },
     "metadata": {
       "test_type": "multi_source_synthesis",
       "language": "french",
@@ -81,6 +126,15 @@
     "test_name": "Generation Task - LinkedIn Post",
     "question": "Crée un post LinkedIn pour présenter la mission de stagiaire Data Engineer",
     "expected_behavior": "Should generate a professional LinkedIn post based on internship information",
+    "human_response": {
+      "content": "",
+      "quality_metrics": {
+        "relevance": 0.0,
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "clarity": 0.0
+      }
+    },
     "metadata": {
       "test_type": "content_generation",
       "language": "french",
@@ -96,6 +150,15 @@
     "test_name": "Generation Task - Technical Summary",
     "question": "Rédige un résumé technique de la stack technologique utilisée chez Isskar",
     "expected_behavior": "Should generate a comprehensive technical summary from various sources",
+    "human_response": {
+      "content": "",
+      "quality_metrics": {
+        "relevance": 0.0,
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "clarity": 0.0
+      }
+    },
     "metadata": {
       "test_type": "content_generation",
       "language": "french",
@@ -111,6 +174,15 @@
     "test_name": "Multi-source Synthesis - Project Portfolio",
     "question": "Quels sont les projets principaux en cours et leurs objectifs ?",
     "expected_behavior": "Should synthesize information about current projects and their objectives",
+    "human_response": {
+      "content": "",
+      "quality_metrics": {
+        "relevance": 0.0,
+        "accuracy": 0.0,
+        "completeness": 0.0,
+        "clarity": 0.0
+      }
+    },
     "metadata": {
       "test_type": "multi_source_synthesis",
       "language": "french",
