@@ -18,6 +18,7 @@ class ConversationEntry:
 
     timestamp: str
     user_id: str
+    conversation_id: str
     question: str
     answer: str
     answer_length: int
@@ -233,6 +234,7 @@ class DataManager:
     def save_conversation(
         self,
         user_id: str,
+        conversation_id: str,
         question: str,
         answer: str,
         response_time_ms: float,
@@ -243,6 +245,7 @@ class DataManager:
         entry = ConversationEntry(
             timestamp=datetime.now().isoformat(),
             user_id=user_id,
+            conversation_id=conversation_id,
             question=question,
             answer=answer,
             answer_length=len(answer),
@@ -284,12 +287,36 @@ class DataManager:
         # Use the unified storage system via feedback_store
         return self.feedback_store.save_entry(entry)
 
-    def get_conversation_history(self, user_id: Optional[str] = None, limit: int = 50) -> List[Dict]:
-        """Récupère l'historique des conversations."""
-        if user_id:
-            return self.conversation_store.get_entries_by_user(user_id, limit)
-        else:
-            return self.conversation_store.load_entries(limit)
+    def get_conversation_history(
+        self, user_id: Optional[str] = None, conversation_id: Optional[str] = None, limit: int = 50
+    ) -> List[Dict]:
+        """Retrieve the conversation history, filtered by user_id and conversation_id."""
+        all_entries = []
+
+        try:
+            # Use the conversation_store which already handles storage service properly
+            all_entries = self.conversation_store.load_entries(limit=None)  # Load all first, then filter
+
+            # Filter by user_id if provided
+            if user_id:
+                all_entries = [entry for entry in all_entries if entry.get("user_id") == user_id]
+
+            # Filter by conversation_id if provided
+            if conversation_id:
+                all_entries = [entry for entry in all_entries if entry.get("conversation_id") == conversation_id]
+
+            # Sort by timestamp (most recent first) - already done in load_entries but ensure it
+            all_entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+
+            # Apply limit
+            if limit is not None and limit > 0:
+                all_entries = all_entries[:limit]
+
+        except Exception as e:
+            logging.error(f"Error retrieving conversation history: {e}")
+            return []
+
+        return all_entries
 
     def get_performance_metrics(self, user_id: Optional[str] = None, limit: int = 100) -> List[Dict]:
         """Récupère les métriques de performance."""
