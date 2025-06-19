@@ -8,7 +8,8 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from pathlib import Path
 
-from rag_evaluation.core import BaseEvaluator, EvaluationResult, TestCase, EvaluationStatus, LLMJudge, IsschatClient
+from rag_evaluation.core import BaseEvaluator, LLMJudge, IsschatClient
+from rag_evaluation.core.base_evaluator import TestCase, EvaluationResult, EvaluationStatus
 
 
 @dataclass
@@ -44,7 +45,7 @@ class BusinessValueEvaluator(BaseEvaluator):
 
     def _load_test_dataset(self) -> List[Dict[str, Any]]:
         """Load business value test dataset"""
-        dataset_path = Path(__file__).parent.parent / "config" / "test_datasets" / "business_value_tests.json"
+        dataset_path = Path(__file__).parent.parent / "config" / "test_datasets" / "bva_tests.json"
 
         try:
             with open(dataset_path, "r", encoding="utf-8") as f:
@@ -63,8 +64,7 @@ class BusinessValueEvaluator(BaseEvaluator):
             actual_response_time = time.time() - start_time
 
             # Get human estimate and response from test metadata
-            human_estimate_str = test_case.metadata.get("human_estimate", "30s")
-            human_estimate = self._parse_time_estimate(human_estimate_str)
+            human_estimate = test_case.metadata.get("human_estimate", 30)
             human_response = test_case.metadata.get("human_response", {"content": "", "quality_metrics": {}})
 
             # Calculate efficiency ratio
@@ -113,10 +113,13 @@ class BusinessValueEvaluator(BaseEvaluator):
                     "quality_comparison": quality_comparison,
                     "time_passed": time_passed,
                     "quality_passed": quality_passed,
-                    "reasoning": (
-                        f"Response time: {actual_response_time:.2f}s, "
-                        f"Efficiency: {efficiency_ratio:.1f}x\n"
-                        "Quality comparison details in quality_comparison field"
+                    "reasoning": self._format_detailed_comparison(
+                        actual_response_time,
+                        human_estimate,
+                        efficiency_ratio,
+                        quality_comparison,
+                        isschat_quality,
+                        human_response,
                     ),
                 },
                 response_time=actual_response_time,
@@ -129,6 +132,9 @@ class BusinessValueEvaluator(BaseEvaluator):
                     "quality_comparison": quality_comparison,
                 },
             )
+
+            # Display detailed results
+            self._display_evaluation_results(evaluation_result, response, isschat_quality)
 
             return evaluation_result
 
@@ -295,19 +301,6 @@ class BusinessValueEvaluator(BaseEvaluator):
                 results.append(error_result)
 
         return results
-
-    def _parse_time_estimate(self, time_str: str) -> float:
-        """Parse human time estimate string to seconds"""
-        time_str = time_str.lower().strip()
-
-        if "min" in time_str:
-            minutes = float(time_str.replace("min", "").strip())
-            return minutes * 60
-        elif "s" in time_str:
-            seconds = float(time_str.replace("s", "").strip())
-            return seconds
-        else:
-            return float(time_str)
 
     def _check_performance_threshold(self, response_time: float, complexity: str) -> bool:
         """Check if response time meets threshold for complexity level"""
