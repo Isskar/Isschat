@@ -1,37 +1,25 @@
-"""
-Local file system storage implementation
-"""
-
 import os
 import logging
 from pathlib import Path
 from typing import List
 
-from .storage_interface import StorageInterface
+from src.storage.storage_interface import StorageInterface
 
 
 class LocalStorage(StorageInterface):
     """Local file system storage implementation"""
 
     def __init__(self, base_path: str = "."):
-        """
-        Initialize local storage
-
-        Args:
-            base_path: Base directory for storage operations
-        """
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
         logging.debug(f"LocalStorage initialized with base_path: {self.base_path}")
 
     def _get_full_path(self, file_path: str) -> Path:
-        """Get full path for a file"""
         if os.path.isabs(file_path):
             return Path(file_path)
         return self.base_path / file_path
 
     def read_file(self, file_path: str) -> bytes:
-        """Read a file from local storage"""
         full_path = self._get_full_path(file_path)
         try:
             with open(full_path, "rb") as f:
@@ -41,7 +29,6 @@ class LocalStorage(StorageInterface):
             raise
 
     def write_file(self, file_path: str, data: bytes) -> bool:
-        """Write a file to local storage"""
         full_path = self._get_full_path(file_path)
         try:
             # Create directory if needed
@@ -57,12 +44,10 @@ class LocalStorage(StorageInterface):
             return False
 
     def file_exists(self, file_path: str) -> bool:
-        """Check if a file exists in local storage"""
         full_path = self._get_full_path(file_path)
         return full_path.exists()
 
     def delete_file(self, file_path: str) -> bool:
-        """Delete a file from local storage"""
         full_path = self._get_full_path(file_path)
         try:
             if full_path.exists():
@@ -74,7 +59,6 @@ class LocalStorage(StorageInterface):
             return False
 
     def list_files(self, directory_path: str, pattern: str = "*") -> List[str]:
-        """List files in a directory in local storage"""
         full_path = self._get_full_path(directory_path)
         try:
             if not full_path.exists():
@@ -90,7 +74,6 @@ class LocalStorage(StorageInterface):
             return []
 
     def create_directory(self, directory_path: str) -> bool:
-        """Create a directory in local storage"""
         full_path = self._get_full_path(directory_path)
         try:
             full_path.mkdir(parents=True, exist_ok=True)
@@ -101,6 +84,5 @@ class LocalStorage(StorageInterface):
             return False
 
     def directory_exists(self, directory_path: str) -> bool:
-        """Check if a directory exists in local storage"""
         full_path = self._get_full_path(directory_path)
         return full_path.exists() and full_path.is_dir()

@@ -102,7 +102,7 @@ class FeedbackSystem:
 
             # Use data_manager to get feedback data directly
             logger.info("Loading feedbacks from data_manager")
-            all_feedback = data_manager.get_feedback_data(limit=1000)
+            all_feedback = data_manager.get_feedback_data()
 
             logger.info(f"Total: {len(all_feedback)} feedbacks loaded from data_manager")
             return all_feedback
