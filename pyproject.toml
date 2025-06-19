@@ -41,16 +41,16 @@ dependencies = [
     "dotenv>=0.9.9",
     "azure-keyvault-secrets>=4.9.0",
     "azure-identity>=1.23.0",
+    "azure-storage-blob>=12.19.0",
     "plotly>=6.1.2",
     "streamlit-feedback>=0.1.4",
     "psutil>=7.0.0",
     "einops>=0.8.1",
-    "pytest>=8.4.0",
 ]
 
 [project.optional-dependencies]
 test = [
-    "pytest>=7.0.0",
+    "pytest>=8.4.0",
     "pytest-mock>=3.10.0",
     "pytest-cov>=4.0.0"
 ]

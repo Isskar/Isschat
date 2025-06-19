@@ -71,43 +71,68 @@ class BaseDataStore(ABC):
 
 
 class JSONLDataStore(BaseDataStore):
-    """Data store using JSONL format."""
+    """Data store using JSONL format with storage service."""
 
-    def __init__(self, file_path: Path, entry_class: type):
+    def __init__(self, storage_service, file_path: str, entry_class: type):
+        """
+        Initialize JSONL data store with storage service
+
+        Args:
+            storage_service: StorageService instance for file operations
+            file_path: Path to the JSONL file (relative to storage base)
+            entry_class: Class type for entries
+        """
+        self.storage_service = storage_service
         self.file_path = file_path
         self.entry_class = entry_class
         self._ensure_directory()
 
     def _ensure_directory(self):
-        """Ensure that the directory exists."""
-        self.file_path.parent.mkdir(parents=True, exist_ok=True)
+        """Ensure that the directory exists using storage service."""
+        # Extract directory path from file path
+        directory_path = "/".join(self.file_path.split("/")[:-1])
+        if directory_path:
+            # Use storage service to create directory if it has the method
+            if hasattr(self.storage_service._storage, "create_directory"):
+                self.storage_service._storage.create_directory(directory_path)
 
     def save_entry(self, entry: Any) -> bool:
-        """Save an entry in JSONL format."""
+        """Save an entry in JSONL format using storage service."""
         try:
-            with open(self.file_path, "a", encoding="utf-8") as f:
-                if isinstance(entry, dict):
-                    json.dump(entry, f, ensure_ascii=False)
-                else:
-                    json.dump(asdict(entry), f, ensure_ascii=False)
-                f.write("\n")
-            return True
+            # Convert entry to dict if needed
+            if isinstance(entry, dict):
+                entry_dict = entry
+            else:
+                entry_dict = asdict(entry)
+
+            # Use storage service to append JSONL data
+            return self.storage_service.append_jsonl_data(self.file_path, entry_dict)
         except Exception as e:
             logging.error(f"Error saving to {self.file_path}: {e}")
             return False
 
     def load_entries(self, limit: Optional[int] = None) -> List[Any]:
-        """Load entries from JSONL file."""
+        """Load entries from JSONL file using storage service."""
         entries = []
-        if not self.file_path.exists():
+
+        # Check if file exists using storage service
+        if not self.storage_service.file_exists(self.file_path):
             return entries
 
         try:
-            with open(self.file_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
+            # Load file content using storage service
+            content = self.storage_service.load_text_file(self.file_path)
+            if not content:
+                return entries
+
+            # Parse JSONL content
+            for line in content.split("\n"):
+                if line.strip():
+                    try:
                         data = json.loads(line.strip())
                         entries.append(data)
+                    except json.JSONDecodeError:
+                        continue  # Skip malformed lines
 
             # Sort by timestamp (most recent first)
             entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
@@ -132,28 +157,38 @@ class JSONLDataStore(BaseDataStore):
 
 
 class DataManager:
-    """Gestionnaire principal des données avec la nouvelle structure."""
+    """Main data manager with new directory structure."""
 
-    def __init__(self, base_data_dir: Optional[Path] = None):
+    def __init__(self, base_data_dir: Optional[Path] = None, storage_service=None):
         """
-        Initialise le gestionnaire de données.
+        Initialize the data manager.
 
         Args:
-            base_data_dir: Répertoire de base pour les données. Si None, utilise la config.
+            base_data_dir: Base directory for data. If None, uses config.
+            storage_service: StorageService instance. If None, uses config.
         """
         if base_data_dir is None:
-            # Utiliser le répertoire du projet comme base
+            # Use project directory as base
             project_root = Path(__file__).parent.parent.parent
             self.base_data_dir = project_root / "data"
         else:
             self.base_data_dir = Path(base_data_dir)
 
-        # Structure des répertoires selon votre plan
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
+
+        # Directory structure according to plan
         self.raw_dir = self.base_data_dir / "raw"
         self.processed_dir = self.base_data_dir / "processed"
         self.vector_db_dir = self.base_data_dir / "vector_db"
 
-        # Répertoires pour les logs structurés
+        # Directories for structured logs
         self.logs_dir = self.base_data_dir / "logs"
         self.conversations_dir = self.logs_dir / "conversations"
         self.performance_dir = self.logs_dir / "performance"
@@ -163,31 +198,37 @@ class DataManager:
         self._init_stores()
 
     def _create_directories(self):
-        """Crée la structure de répertoires."""
+        """Create directory structure using storage service."""
         directories = [
-            self.raw_dir,
-            self.processed_dir,
-            self.vector_db_dir,
-            self.conversations_dir,
-            self.performance_dir,
-            self.feedback_dir,
+            "raw",
+            "processed",
+            "vector_db",
+            "logs/conversations",
+            "logs/performance",
+            "logs/feedback",
         ]
 
+        # Use storage service to create directories
         for directory in directories:
-            directory.mkdir(parents=True, exist_ok=True)
+            if hasattr(self.storage_service._storage, "create_directory"):
+                self.storage_service._storage.create_directory(directory)
 
     def _init_stores(self):
-        """Initialise les stores de données."""
+        """Initialize data stores using storage service."""
         today = datetime.now().strftime("%Y%m%d")
 
-        # Stores pour les différents types de données
+        # Stores for different data types using storage service
         self.conversation_store = JSONLDataStore(
-            self.conversations_dir / f"conversations_{today}.jsonl", ConversationEntry
+            self.storage_service, f"logs/conversations/conversations_{today}.jsonl", ConversationEntry
         )
 
-        self.performance_store = JSONLDataStore(self.performance_dir / f"performance_{today}.jsonl", PerformanceEntry)
+        self.performance_store = JSONLDataStore(
+            self.storage_service, f"logs/performance/performance_{today}.jsonl", PerformanceEntry
+        )
 
-        self.feedback_store = JSONLDataStore(self.feedback_dir / f"feedback_{today}.jsonl", FeedbackEntry)
+        self.feedback_store = JSONLDataStore(
+            self.storage_service, f"logs/feedback/feedback_{today}.jsonl", FeedbackEntry
+        )
 
     def save_conversation(
         self,
@@ -198,7 +239,7 @@ class DataManager:
         sources: Optional[List[Dict]] = None,
         metadata: Optional[Dict] = None,
     ) -> bool:
-        """Sauvegarde une conversation."""
+        """Save conversation using unified storage system"""
         entry = ConversationEntry(
             timestamp=datetime.now().isoformat(),
             user_id=user_id,
@@ -230,7 +271,7 @@ class DataManager:
     def save_feedback(
         self, user_id: str, conversation_id: str, rating: int, comment: str = "", metadata: Optional[Dict] = None
     ) -> bool:
-        """Sauvegarde un feedback utilisateur."""
+        """Save user feedback using unified storage system"""
         entry = FeedbackEntry(
             timestamp=datetime.now().isoformat(),
             user_id=user_id,
@@ -240,6 +281,7 @@ class DataManager:
             metadata=metadata,
         )
 
+        # Use the unified storage system via feedback_store
         return self.feedback_store.save_entry(entry)
 
     def get_conversation_history(self, user_id: Optional[str] = None, limit: int = 50) -> List[Dict]:
@@ -262,69 +304,6 @@ class DataManager:
             return self.feedback_store.get_entries_by_user(user_id, limit)
         else:
             return self.feedback_store.load_entries(limit)
-
-    def migrate_legacy_logs(self, legacy_logs_dir: Path) -> Dict[str, int]:
-        """
-        Migre les anciens logs vers la nouvelle structure.
-
-        Args:
-            legacy_logs_dir: Répertoire contenant les anciens logs
-
-        Returns:
-            Dictionnaire avec le nombre d'entrées migrées par type
-        """
-        migration_stats = {"conversations": 0, "performance": 0, "feedback": 0, "errors": 0}
-
-        # Migration des conversations
-        conv_dir = legacy_logs_dir / "conversations"
-        if conv_dir.exists():
-            for conv_file in conv_dir.glob("*.jsonl"):
-                try:
-                    with open(conv_file, "r", encoding="utf-8") as f:
-                        for line in f:
-                            if line.strip():
-                                data = json.loads(line.strip())
-                                # Adapter le format si nécessaire
-                                if self.conversation_store.save_entry(data):
-                                    migration_stats["conversations"] += 1
-                except Exception as e:
-                    logging.error(f"Erreur migration conversation {conv_file}: {e}")
-                    migration_stats["errors"] += 1
-
-        # Migration des performances
-        perf_dir = legacy_logs_dir / "performance"
-        if perf_dir.exists():
-            for perf_file in perf_dir.glob("*.jsonl"):
-                try:
-                    with open(perf_file, "r", encoding="utf-8") as f:
-                        for line in f:
-                            if line.strip():
-                                data = json.loads(line.strip())
-                                if self.performance_store.save_entry(data):
-                                    migration_stats["performance"] += 1
-                except Exception as e:
-                    logging.error(f"Erreur migration performance {perf_file}: {e}")
-                    migration_stats["errors"] += 1
-
-        # Migration du feedback
-        feedback_dir = legacy_logs_dir / "feedback"
-        if feedback_dir.exists():
-            for feedback_file in feedback_dir.glob("*.json"):
-                try:
-                    with open(feedback_file, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                        if isinstance(data, list):
-                            for item in data:
-                                if self.feedback_store.save_entry(item):
-                                    migration_stats["feedback"] += 1
-                        else:
-                            if self.feedback_store.save_entry(data):
-                                migration_stats["feedback"] += 1
-                except Exception as e:
-                    logging.error(f"Erreur migration feedback {feedback_file}: {e}")
-                    migration_stats["errors"] += 1
-
-        return migration_stats
 
     def get_data_structure_info(self) -> Dict[str, Any]:
         """Retourne des informations sur la structure de données."""

@@ -5,30 +5,70 @@ Handles database existence, building, and loading.
 
 from pathlib import Path
 from src.core.config import get_config
+from src.core.exceptions import StorageAccessError
 
 
-class OfflineDatabaseManager:
-    """Centralized vector database manager"""
+class DataIngestionPipeline:
+    """Data ingestion pipeline for vector database building and management"""
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, storage_service=None):
         """
         Initialize database manager.
 
         Args:
             config: Optional configuration (uses get_config() by default)
+            storage_service: Optional storage service for file operations
         """
         self.config = config or get_config()
         self.persist_path = Path(self.config.persist_directory)
         self.index_file = self.persist_path / "index.faiss"
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
 
     def database_exists(self) -> bool:
         """
-        Check if the database exists.
+        Check if the database exists in the configured storage.
 
         Returns:
             True if database exists, False otherwise
+
+        Raises:
+            StorageAccessError: If storage access fails
         """
-        return self.persist_path.exists() and self.index_file.exists()
+        try:
+            # Check storage type to determine where to look for the database
+            storage_type = type(self.storage_service._storage).__name__
+
+            if storage_type == "AzureStorage":
+                # For Azure, check if the index file exists in blob storage
+                try:
+                    return self.storage_service.file_exists("vector_db/index.faiss")
+                except Exception as e:
+                    raise StorageAccessError(
+                        f"Cannot access Azure storage to check database existence: {str(e)}",
+                        storage_type="Azure",
+                        original_error=e,
+                    )
+            else:
+                # For local storage, check local files
+                return self.persist_path.exists() and self.index_file.exists()
+
+        except StorageAccessError:
+            # Re-raise storage access errors
+            raise
+        except Exception as e:
+            # Any other error during existence check
+            raise StorageAccessError(
+                f"Failed to check database existence: {str(e)}",
+                storage_type=type(self.storage_service._storage).__name__,
+                original_error=e,
+            )
 
     def build_database(self) -> bool:
         """
@@ -74,7 +114,7 @@ class OfflineDatabaseManager:
             pipeline.set_chunker(DocumentChunker(config_dict))
             pipeline.set_post_processor(PostProcessor(config_dict))
             pipeline.set_embedder(HuggingFaceEmbedder(config_dict))
-            pipeline.set_vector_store(FAISSVectorStore(config_dict))
+            pipeline.set_vector_store(FAISSVectorStore(config_dict, storage_service=self.storage_service))
 
             # Run the pipeline
             stats = pipeline.run_pipeline()
@@ -105,10 +145,18 @@ class OfflineDatabaseManager:
 
         Returns:
             True if database is ready, False otherwise
+
+        Raises:
+            StorageAccessError: If storage access fails
         """
-        if not force_rebuild and self.database_exists():
-            print("✅ Using existing vector database")
-            return True
+        try:
+            if not force_rebuild and self.database_exists():
+                print("✅ Using existing vector database")
+                return True
+        except StorageAccessError as e:
+            # If we can't access storage, we can't build or load the database
+            print(f"❌ Storage access failed: {e}")
+            raise e
 
         print("🔄 Database not found or rebuild requested")
         return self.build_database()
@@ -119,6 +167,9 @@ class OfflineDatabaseManager:
 
         Returns:
             Loaded vector store instance or None if failed
+
+        Raises:
+            StorageAccessError: If storage access fails
         """
         try:
             from src.vector_store.faiss_store import FAISSVectorStore
@@ -130,7 +181,7 @@ class OfflineDatabaseManager:
                 "confluence_api_key": self.config.confluence_private_api_key,
             }
 
-            vector_store = FAISSVectorStore(config_dict)
+            vector_store = FAISSVectorStore(config_dict, storage_service=self.storage_service)
             loaded_store = vector_store.load()
 
             if loaded_store is None:
@@ -140,6 +191,8 @@ class OfflineDatabaseManager:
             print("✅ Vector store loaded successfully")
             return loaded_store
 
+        except StorageAccessError:
+            raise
         except Exception as e:
             print(f"❌ Failed to load vector store: {str(e)}")
             return None
