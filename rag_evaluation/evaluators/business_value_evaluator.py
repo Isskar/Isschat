@@ -1,5 +1,5 @@
 """
-Performance comparison evaluator for Isschat vs Human efficiency
+Business Value Evaluator for measuring Isschat's business impact and efficiency
 """
 
 import time
@@ -8,9 +8,7 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, EvaluationStatus
-from ..core.isschat_client import IsschatClient
-from ..core.llm_judge import LLMJudge
+from rag_evaluation.core import BaseEvaluator, EvaluationResult, TestCase, EvaluationStatus, LLMJudge, IsschatClient
 
 
 @dataclass
@@ -23,11 +21,11 @@ class PerformanceMetrics:
     quality_comparison: Dict[str, float]  # Comparaison des métriques de qualité
 
 
-class PerformanceComparisonEvaluator(BaseEvaluator):
-    """Evaluator for comparing Isschat performance against human benchmarks"""
+class BusinessValueEvaluator(BaseEvaluator):
+    """Business Value Evaluator for measuring Isschat's business impact and efficiency"""
 
     def __init__(self, config: Any):
-        """Initialize performance comparison evaluator"""
+        """Initialize business value evaluator"""
         super().__init__(config)
         self.isschat_client = IsschatClient()
         self.llm_judge = LLMJudge(config)
@@ -42,19 +40,19 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
 
     def get_category(self) -> str:
         """Get the category this evaluator handles"""
-        return "performance_comparison"
+        return "business_value"
 
     def _load_test_dataset(self) -> List[Dict[str, Any]]:
-        """Load performance comparison test dataset"""
-        dataset_path = Path(__file__).parent.parent / "config" / "test_datasets" / "performance_comparison_tests.json"
+        """Load business value test dataset"""
+        dataset_path = Path(__file__).parent.parent / "config" / "test_datasets" / "business_value_tests.json"
 
         try:
             with open(dataset_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except FileNotFoundError:
-            raise FileNotFoundError(f"Performance comparison test dataset not found at {dataset_path}")
+            raise FileNotFoundError(f"Business value test dataset not found at {dataset_path}")
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in performance comparison test dataset: {e}")
+            raise ValueError(f"Invalid JSON in business value test dataset: {e}")
 
     def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
         """Evaluate a single test case"""
@@ -210,9 +208,9 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
 
         return (metrics_with_comparison / total_metrics_compared) >= 0.5
 
-    def evaluate_performance_comparison(self, complexity_filter: Optional[str] = None) -> Dict[str, Any]:
-        """Evaluate performance comparison across all complexity levels"""
-        print("🚀 Starting Performance Comparison Evaluation")
+    def evaluate_business_value(self, complexity_filter: Optional[str] = None) -> Dict[str, Any]:
+        """Evaluate business value across all complexity levels"""
+        print("🚀 Starting Business Value Evaluation")
         print("=" * 60)
 
         results = []
@@ -244,7 +242,7 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
         overall_summary = self._calculate_overall_summary(results)
 
         return {
-            "category": "performance_comparison",
+            "category": "business_value",
             "results": results,
             "summary": overall_summary,
             "timestamp": time.time(),
