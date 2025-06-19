@@ -190,27 +190,55 @@ def main():
             # Add button to force complete reconstruction
             if st.button("Rebuild from Confluence", type="primary"):
                 with st.spinner("Rebuilding database from Confluence..."):
-                    # Delete existing files
-                    config = get_config()
-
-                    try:
-                        if os.path.exists(config.persist_directory):
-                            shutil.rmtree(config.persist_directory)
-                            st.info(f"Directory {config.persist_directory} successfully deleted.")
-                        os.makedirs(config.persist_directory, exist_ok=True)
-                    except Exception as e:
-                        st.error(f"Error deleting directory: {str(e)}")
-
-                    # Force model reload with new_db=True
                     try:
                         st.cache_resource.clear()
-                        get_model(rebuild_db=True)
-                        st.success("Database successfully rebuilt from Confluence!")
-                        time.sleep(2)
-                        st.rerun()
+
+                        # Get the current pipeline to access vector store
+                        pipeline = get_model(rebuild_db=False)  # Don't auto-rebuild, we'll do it manually
+
+                        # Use the new rebuild method with proper validation
+                        if hasattr(pipeline.vector_store, "rebuild_database"):
+                            success = pipeline.vector_store.rebuild_database()
+                            if success:
+                                st.success("✅ Database successfully rebuilt from Confluence!")
+                                st.cache_resource.clear()  # Clear cache after successful rebuild
+                                time.sleep(2)
+                                st.rerun()
+                            else:
+                                st.error("❌ Database rebuild failed. Check logs for details.")
+                        else:
+                            # Fallback to old method
+                            config = get_config()
+                            try:
+                                if os.path.exists(config.persist_directory):
+                                    shutil.rmtree(config.persist_directory)
+                                    st.info(f"Directory {config.persist_directory} successfully deleted.")
+                                os.makedirs(config.persist_directory, exist_ok=True)
+                            except Exception as e:
+                                st.error(f"Error deleting directory: {str(e)}")
+
+                            get_model(rebuild_db=True)
+                            st.success("✅ Database successfully rebuilt from Confluence!")
+                            time.sleep(2)
+                            st.rerun()
+
                     except Exception as e:
-                        st.error(f"Error during reconstruction: {str(e)}")
-                        st.code(traceback.format_exc(), language="python")
+                        from src.core.exceptions import StorageAccessError, RebuildError
+
+                        if isinstance(e, StorageAccessError):
+                            st.error(f"🚫 **Erreur d'accès au stockage:**\n\n{str(e)}")
+                        elif isinstance(e, RebuildError):
+                            st.error(f"🚫 **Erreur de rebuild:**\n\n{str(e)}")
+                        else:
+                            st.error(f"❌ **Erreur inattendue lors du rebuild:**\n\n{str(e)}")
+                            st.code(traceback.format_exc(), language="python")
+
+                        st.info(
+                            "💡 **Conseils de dépannage:**\n"
+                            "- Vérifiez votre configuration Azure (USE_AZURE_STORAGE, AZURE_STORAGE_ACCOUNT)\n"
+                            "- Vérifiez vos permissions Azure Storage\n"
+                            "- Consultez les logs pour plus de détails"
+                        )
 
         # Close Button
         st.divider()
@@ -382,7 +410,7 @@ def chat_page():
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
             result, sources = process_question_with_model(
-                model, features, prompt, start_time, chat_history, st.session_state["current_conversation_id"]
+                model, features, prompt, chat_history, st.session_state["current_conversation_id"], start_time
             )
 
             # Build the response content
@@ -425,7 +453,7 @@ def chat_page():
         # Process the question with all features
         with st.spinner("Analysis in progress..."):
             result, sources = process_question_with_model(
-                model, features, prompt, start_time, chat_history, st.session_state["current_conversation_id"]
+                model, features, prompt, chat_history, st.session_state["current_conversation_id"], start_time
             )
 
             # Build the response content
@@ -456,9 +484,9 @@ def process_question_with_model(
     model,
     features,
     prompt,
-    start_time=None,
     chat_history=None,
     conversation_id: Optional[str] = None,
+    start_time=None,
 ):
     """Process question with model and features"""
     try:

@@ -187,13 +187,13 @@ class AzureKeyVaultConfigProvider(ConfigProvider):
         for field, secret_name in secret_mapping.items():
             config_dict[field] = self._get_secret(secret_name)
 
-        # Add path configurations
-        # Use /tmp for Azure environment to ensure write permissions
+        # Use standard local paths for Key Vault config too
         persist_dir = os.getenv("PERSIST_DIRECTORY", os.path.join(base_dir, "data", "vector_db"))
+        db_path = os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db"))
 
         config_dict.update(
             {
-                "db_path": os.getenv("DB_PATH", os.path.join(base_dir, "data", "users.db")),
+                "db_path": db_path,
                 "persist_directory": persist_dir,
             }
         )
@@ -254,17 +254,37 @@ class ConfigurationManager:
             return False
 
     def auto_initialize(self) -> bool:
-        """Auto-detect and initialize the appropriate configuration provider"""
+        """Initialize the appropriate configuration provider"""
         environment = os.getenv("ENVIRONMENT", "").lower()
 
         if environment == "ci":
-            logging.info("CI environment detected, using Service Principal with Key Vault")
+            logging.info("CI environment detected")
             return self._initialize_ci_config()
         elif environment in ["production", "prod", "azure"]:
-            logging.info("Production environment detected, using Managed Identity with Key Vault")
+            logging.info("Production environment detected")
             return self._initialize_production_config()
-        logging.info("Local environment detected, using .env configuration")
+        logging.info("Local environment detected")
         return self._initialize_local_config()
+
+    def get_storage_service(self):
+        """Get storage service based on environment variables"""
+        from ..storage.storage_factory import StorageFactory
+        from ..services.storage_service import StorageService
+
+        use_azure_storage = os.getenv("USE_AZURE_STORAGE", "false").lower() == "true"
+
+        if use_azure_storage:
+            storage_account = os.getenv("AZURE_STORAGE_ACCOUNT")
+            container_name = os.getenv("AZURE_BLOB_CONTAINER_NAME")
+            if not storage_account:
+                raise ValueError("AZURE_STORAGE_ACCOUNT required when USE_AZURE_STORAGE=true")
+            storage = StorageFactory.create_azure_storage(account_name=storage_account, container_name=container_name)
+            logging.info(f"Using Azure Blob Storage: {storage_account}")
+        else:
+            storage = StorageFactory.create_local_storage(base_path="./data")
+            logging.info("Using Local Storage")
+
+        return StorageService(storage)
 
     def _initialize_ci_config(self) -> bool:  # FIXME : Add secrets when CD deployed
         """Initialize configuration for CI environment"""

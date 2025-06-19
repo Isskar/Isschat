@@ -4,13 +4,10 @@ Features manager for advanced chatbot functionality.
 
 import streamlit as st
 from streamlit_feedback import streamlit_feedback
-import os
 import logging
 import time
-import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from pathlib import Path
 
 
 class ConversationAnalyzer:
@@ -63,21 +60,60 @@ class ConversationAnalyzer:
 class FeedbackSystem:
     """Handles user feedback collection and storage."""
 
-    def __init__(self):
-        self.feedback_file = "./logs/feedback/feedback_log.jsonl"  # Not used directly, but kept for reference
-        os.makedirs(Path(self.feedback_file).parent, exist_ok=True)
+    def __init__(self, storage_service=None, feedback_file: Optional[str] = None):
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
+
+        if feedback_file is None:
+            # Create a filename with current date
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            feedback_file = f"logs/feedback/feedback_{date_str}.json"
+        self.feedback_file = feedback_file
+        self._ensure_feedback_file_exists()
+
+    def _ensure_feedback_file_exists(self):
+        """Ensure that the feedback file exists using storage service"""
+        # Create directory using storage service
+        directory_path = "/".join(self.feedback_file.split("/")[:-1])
+        if directory_path and hasattr(self.storage_service._storage, "create_directory"):
+            self.storage_service._storage.create_directory(directory_path)
+
+        # Create empty file if it doesn't exist
+        if not self.storage_service.file_exists(self.feedback_file):
+            self.storage_service.save_json_data(self.feedback_file, [])
 
     def _load_feedback_data(self):
-        """Load feedback data from the JSONL file. (Legacy fallback)"""
-        feedback_data = []
-        if os.path.exists(self.feedback_file):
-            with open(self.feedback_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    try:
-                        feedback_data.append(json.loads(line.strip()))
-                    except json.JSONDecodeError as e:
-                        logging.error(f"Error decoding JSON from feedback file: {e} in line: {line.strip()}")
-        return feedback_data
+        """Load feedback data from data_manager (JSONL format)"""
+        import logging
+
+        logger = logging.getLogger(__name__)
+        all_feedback = []
+
+        try:
+            from src.core.data_manager import get_data_manager
+
+            data_manager = get_data_manager()
+
+            # Use data_manager to get feedback data directly
+            logger.info("Loading feedbacks from data_manager")
+            all_feedback = data_manager.get_feedback_data()
+
+            logger.info(f"Total: {len(all_feedback)} feedbacks loaded from data_manager")
+            return all_feedback
+
+        except Exception as e:
+            logger.error(f"Error loading feedback data from data_manager: {e}")
+            return []
+
+    def _save_feedback_data(self, data):
+        """Save feedback data to file using storage service"""
+        self.storage_service.save_json_data(self.feedback_file, data)
 
     def render_feedback_widget(
         self, user_id: str, question: str, answer: str, sources: str, conversation_id: str, key_suffix: str = ""
@@ -101,37 +137,42 @@ class FeedbackSystem:
         def feedback_callback(response):
             print(f"Feedback received: {response}")
             try:
-                from ...core.data_manager import get_data_manager
+                # Sauvegarder dans le data manager d'abord
+                try:
+                    from src.core.data_manager import get_data_manager
 
-                data_manager = get_data_manager()
+                    data_manager = get_data_manager()
 
-                rating = 3  # neutral default
-                comment = ""
+                    rating = 3  # neutral default
+                    comment = ""
 
-                if isinstance(response, dict):
-                    score = response.get("score")
-                    if score == 1 or score == "👍":
-                        rating = 5
-                    elif score == 0 or score == "👎":
-                        rating = 1
-                    comment = response.get("text", "")
+                    if isinstance(response, dict):
+                        score = response.get("score")
+                        if score == 1 or score == "👍":
+                            rating = 5
+                        elif score == 0 or score == "👎":
+                            rating = 1
+                        comment = response.get("text", "")
 
-                # Save feedback via data_manager (JSONL format)
-                data_manager.save_feedback(
-                    user_id=user_id,
-                    conversation_id=conversation_id,  # Pass conversation_id
-                    rating=rating,
-                    comment=comment,
-                    metadata={
-                        "original_feedback": response,
-                        "question": question,
-                        "answer": answer,
-                        "sources": sources,
-                    },
-                )
-                print(
-                    f"Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
-                )
+                    # Save feedback via data_manager (JSONL format)
+                    data_manager.save_feedback(
+                        user_id=user_id,
+                        conversation_id=conversation_id,  # Pass conversation_id
+                        rating=rating,
+                        comment=comment,
+                        metadata={
+                            "original_feedback": response,
+                            "question": question,
+                            "answer": answer,
+                            "sources": sources,
+                        },
+                    )
+                    print(
+                        f"Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
+                    )
+                except Exception as e:
+                    print(f"Error saving feedback via data_manager: {e}")
+
             except Exception as e:
                 print(f"Error saving feedback via data_manager: {e}")
 
@@ -164,7 +205,7 @@ class FeedbackSystem:
         """
         # Try data manager first
         try:
-            from ...core.data_manager import get_data_manager
+            from src.core.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             feedback_data = data_manager.get_feedback_data(limit=1000)
@@ -390,15 +431,24 @@ class QueryHistory:
 class FeaturesManager:
     """Central manager for all advanced chatbot features."""
 
-    def __init__(self, user_id: str = "anonymous"):
+    def __init__(self, user_id: str = "anonymous", storage_service=None):
         """Initialize and integrate all features."""
         self.user_id = user_id
 
-        # Create necessary folders if they don't exist
-        os.makedirs("./logs", exist_ok=True)
-        os.makedirs("./logs/feedback", exist_ok=True)
-        os.makedirs("./data", exist_ok=True)
-        os.makedirs("./cache", exist_ok=True)
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
+
+        # Create necessary directories using storage service
+        directories = ["logs", "logs/feedback", "data", "cache"]
+        for directory in directories:
+            if hasattr(self.storage_service._storage, "create_directory"):
+                self.storage_service._storage.create_directory(directory)
 
         # Configure logging
         logging.basicConfig(
@@ -413,12 +463,12 @@ class FeaturesManager:
         self.logger = logging.getLogger("features_manager")
         self.logger.info(f"Initializing features manager for user {user_id}")
 
-        # Initialize feature components
+        # Initialize feature components with storage service
         self.analyzer = ConversationAnalyzer()
         self.response_tracker = ResponseTracker()
         self.performance_tracker = PerformanceTracker()
         self.query_history = QueryHistory()
-        self.feedback_system = FeedbackSystem()  # Nouveau système de feedback avec pouces
+        self.feedback_system = FeedbackSystem(storage_service=self.storage_service)
 
         # Initialize session state for features
         if "features_data" not in st.session_state:
@@ -440,7 +490,7 @@ class FeaturesManager:
 
         # Save to data manager
         try:
-            from ...core.data_manager import get_data_manager
+            from src.core.data_manager import get_data_manager
 
             data_manager = get_data_manager()
 
