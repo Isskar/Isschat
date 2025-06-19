@@ -4,6 +4,7 @@ OpenRouter-based generator implementation.
 
 from typing import Dict, Any
 import time
+import asyncio
 
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
@@ -48,11 +49,12 @@ class OpenRouterGenerator(BaseGenerator):
                 raise ValueError("OPENROUTER_API_KEY not found in configuration")
 
             self._llm = ChatOpenAI(
-                model_name=self.model_name,
+                model_name="anthropic/claude-sonnet-4",
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
                 openai_api_key=api_key,
                 openai_api_base="https://openrouter.ai/api/v1",
+                request_timeout=60,  # Increase timeout to 60 seconds
             )
 
             # Create prompt template
@@ -69,6 +71,22 @@ class OpenRouterGenerator(BaseGenerator):
 
         except Exception as e:
             raise GenerationError(f"Failed to initialize OpenRouter generator: {str(e)}")
+
+    async def _generate_async(self, context: str, query: str) -> str:
+        """Generate answer asynchronously."""
+        try:
+            # Ensure we have an event loop
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            # Generate answer with async call
+            answer = await self._chain.ainvoke({"context": context, "question": query})
+            return answer
+        except Exception as e:
+            raise GenerationError(f"Failed to generate answer: {str(e)}")
 
     def generate(self, query: str, retrieval_result: RetrievalResult) -> GenerationResult:
         """
@@ -95,8 +113,14 @@ class OpenRouterGenerator(BaseGenerator):
                 ]
             )
 
-            # Generate answer
-            answer = self._chain.invoke({"context": context, "question": query})
+            # Generate answer using async call
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            answer = loop.run_until_complete(self._generate_async(context, query))
 
             # Format sources
             sources = self._format_sources(retrieval_result.documents)
