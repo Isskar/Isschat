@@ -245,9 +245,9 @@ class EvaluationManager:
                 pass_rate = summary.get("pass_rate", 0.0)
                 print(f"{category.upper()}: {passed}/{total} ({pass_rate:.1%})")
             else:
-                measured = summary.get("measured", 0)
+                passed = summary.get("passed", 0)
                 avg_score = summary.get("average_score", 0.0)
-                print(f"{category.upper()}: {measured}/{total} tests (avg score: {avg_score:.3f})")
+                print(f"{category.upper()}: {passed}/{total} tests (avg score: {avg_score:.3f})")
 
             # Show detailed metrics if evaluator supports it
             if category in self.evaluators:
