@@ -83,7 +83,9 @@ class RAGPipeline:
 
         print("✅ RAG Pipeline initialized successfully")
 
-    def process_query(self, query: str, top_k: Optional[int] = None, verbose: bool = True) -> Tuple[str, str]:
+    def process_query(
+        self, query: str, top_k: Optional[int] = None, verbose: bool = True, return_chunks: bool = False
+    ) -> Tuple[str, str]:
         """
         Process a query through the RAG pipeline.
 
@@ -91,9 +93,10 @@ class RAGPipeline:
             query: User query
             top_k: Number of documents to retrieve (uses config default if None)
             verbose: Whether to print verbose output
+            return_chunks: Whether to return retrieved chunks in addition to answer and sources
 
         Returns:
-            Tuple of (answer, sources)
+            Tuple of (answer, sources) or (answer, sources, chunks) if return_chunks=True
         """
         try:
             if verbose:
@@ -119,9 +122,20 @@ class RAGPipeline:
 
             documents = []
             scores = []
+            seen_content = set()
+            duplicates_filtered = 0
+
             for doc in docs:
-                documents.append(Document(page_content=doc.page_content, metadata=doc.metadata))
-                scores.append(getattr(doc, "score", 0.0))
+                content_hash = hash(doc.page_content)
+                if content_hash not in seen_content:
+                    seen_content.add(content_hash)
+                    documents.append(Document(page_content=doc.page_content, metadata=doc.metadata))
+                    scores.append(getattr(doc, "score", 0.0))
+                else:
+                    duplicates_filtered += 1
+
+            if verbose and duplicates_filtered > 0:
+                print(f"🔧 {duplicates_filtered} doublons automatiquement filtrés")
 
             retrieval_result = RetrievalResult(
                 documents=documents,
@@ -150,16 +164,23 @@ class RAGPipeline:
                 print(f"\n📖 Sources:\n{generation_result.sources}")
                 print("=" * 50)
 
-            return generation_result.answer, generation_result.sources
+            if return_chunks:
+                return generation_result.answer, generation_result.sources, retrieval_result.documents
+            else:
+                return generation_result.answer, generation_result.sources
 
         except Exception as e:
             error_msg = f"RAG pipeline failed: {str(e)}"
             if verbose:
                 print(f"❌ Error: {error_msg}")
-            return (
+            error_response = (
                 f"Désolé, une erreur s'est produite lors du traitement de votre question: {error_msg}",
                 "Aucune source disponible",
             )
+            if return_chunks:
+                return error_response + ([],)  # Add empty chunks list
+            else:
+                return error_response
 
     def get_pipeline_stats(self) -> Dict[str, Any]:
         """Get comprehensive pipeline statistics."""

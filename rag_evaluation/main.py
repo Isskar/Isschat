@@ -14,6 +14,7 @@ from datetime import datetime
 
 from rag_evaluation.config.evaluation_config import EvaluationConfig
 from rag_evaluation.core.base_evaluator import TestCase
+from rag_evaluation.report_generator import HTMLReportGenerator
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -207,6 +208,28 @@ class EvaluationManager:
         except Exception as e:
             print(f"❌ Error saving results: {e}")
 
+    def generate_html_report(self, output_path: Optional[Path] = None) -> Optional[Path]:
+        """Generate HTML report from evaluation results"""
+        if not self.results:
+            print("⚠️ No results to generate report from")
+            return None
+
+        try:
+            generator = HTMLReportGenerator()
+
+            if output_path is None:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"rapport_evaluation_{timestamp}.html"
+                output_path = self.config.output_dir / filename
+
+            report_path = generator.generate_report(self.results, output_path)
+            print(f"📄 Rapport HTML généré: {report_path}")
+            return report_path
+
+        except Exception as e:
+            print(f"❌ Erreur lors de la génération du rapport HTML: {e}")
+            return None
+
     def print_summary(self) -> None:
         """Print evaluation summary"""
         if not self.results:
@@ -280,6 +303,8 @@ def main():
     )
     parser.add_argument("--ci", action="store_true", help="Run in CI mode")
     parser.add_argument("--output", type=str, help="Output file path")
+    parser.add_argument("--html-report", action="store_true", help="Generate HTML report")
+    parser.add_argument("--html-output", type=str, help="HTML report output file path")
 
     args = parser.parse_args()
 
@@ -298,6 +323,11 @@ def main():
         # Save results
         output_path = Path(args.output) if args.output else None
         manager.save_results(output_path)
+
+        # Generate HTML report if requested
+        if args.html_report:
+            html_output_path = Path(args.html_output) if args.html_output else None
+            manager.generate_html_report(html_output_path)
 
         # Print summary
         manager.print_summary()
