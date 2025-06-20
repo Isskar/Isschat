@@ -278,7 +278,7 @@ class ChatCLI:
             # Database info
             db_info = stats.get("database_info", {})
             if db_info:
-                print(f"📚 Informations de la base:")
+                print("📚 Informations de la base:")
                 print(f"   - Documents: {db_info.get('document_count', 'N/A')}")
                 print(f"   - Chunks: {db_info.get('chunk_count', 'N/A')}")
                 print(f"   - Taille moyenne des chunks: {db_info.get('avg_chunk_size', 'N/A')} caractères")
@@ -286,7 +286,7 @@ class ChatCLI:
             # Embeddings info
             embeddings_info = stats.get("embeddings_info", {})
             if embeddings_info:
-                print(f"🧠 Modèle d'embeddings:")
+                print("🧠 Modèle d'embeddings:")
                 print(f"   - Modèle: {embeddings_info.get('model_name', 'N/A')}")
                 print(f"   - Dimensions: {embeddings_info.get('dimensions', 'N/A')}")
                 print(f"   - Device: {embeddings_info.get('device', 'N/A')}")
@@ -294,7 +294,7 @@ class ChatCLI:
             # Generator stats
             generator_stats = stats.get("generator_stats", {})
             if generator_stats:
-                print(f"⚡ Générateur:")
+                print("⚡ Générateur:")
                 print(f"   - Modèle: {generator_stats.get('model_name', 'N/A')}")
                 print(f"   - Requêtes totales: {generator_stats.get('total_requests', 'N/A')}")
                 print(f"   - Tokens totaux: {generator_stats.get('total_tokens', 'N/A')}")
@@ -302,7 +302,7 @@ class ChatCLI:
             # Config info
             config = stats.get("config", {})
             if config:
-                print(f"⚙️  Configuration:")
+                print("⚙️  Configuration:")
                 print(f"   - search_k: {config.get('search_k', 'N/A')}")
                 print(f"   - search_fetch_k: {config.get('search_fetch_k', 'N/A')}")
                 print(f"   - embeddings_model: {config.get('embeddings_model', 'N/A')}")

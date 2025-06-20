@@ -8,7 +8,7 @@ Includes specialized tabs for different evaluation categories
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from jinja2 import Template
 
 

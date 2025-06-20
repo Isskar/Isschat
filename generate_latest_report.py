@@ -5,11 +5,9 @@ Inclut maintenant un onglet spécialisé pour les métriques de retrieval
 """
 
 import json
-import glob
 from pathlib import Path
 from datetime import datetime
 import sys
-import os
 
 # Ajouter le répertoire rag_evaluation au path
 sys.path.append(str(Path(__file__).parent / "rag_evaluation"))
@@ -70,7 +68,7 @@ def generate_report_from_latest():
         )
 
         print(f"✅ Rapport HTML généré: {report_path}")
-        print(f"🌐 Ouvrez le fichier dans votre navigateur pour voir le rapport")
+        print("🌐 Ouvrez le fichier dans votre navigateur pour voir le rapport")
 
         # Afficher les fonctionnalités du rapport
         print("\n" + "=" * 60)
