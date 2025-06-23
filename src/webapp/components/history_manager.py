@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import plotly.express as px
+from itertools import groupby
 
 from ...core.data_manager import get_data_manager
 
@@ -70,7 +71,7 @@ class ConversationHistoryManager:
             selected_period = st.selectbox(
                 "Time Period",
                 options=list(period_options.keys()),
-                index=1,  # Last 7 days by default
+                index=3,  # Changed default to "All history" (index 3)
             )
 
             # User filter (for admins)
@@ -103,7 +104,7 @@ class ConversationHistoryManager:
         self, user_id: Optional[str] = None, period_days: Optional[int] = None, limit: int = 50
     ) -> List[Dict]:
         """Get filtered conversations."""
-        conversations = self.data_manager.get_conversation_history(user_id, limit)
+        conversations = self.data_manager.get_conversation_history(user_id=user_id, limit=limit)
 
         if period_days and conversations:
             cutoff_date = datetime.now() - timedelta(days=period_days)
@@ -122,65 +123,83 @@ class ConversationHistoryManager:
         # Display options
         col1, col2 = st.columns([3, 1])
         with col1:
-            show_details = st.checkbox("Show full details", value=False)
+            show_details = st.checkbox("Show full details", value=False, key="show_details_history_list")
         with col2:
-            export_btn = st.button("Export CSV")
+            export_btn = st.button("Export CSV", key="export_csv_history_list")
 
         if export_btn:
             self._export_conversations_csv(conversations)
 
+        # Group conversations by conversation_id
+        # First, sort by conversation_id and then by timestamp to ensure consistent grouping and order within groups
+        conversations.sort(key=lambda x: (x.get("conversation_id", ""), x.get("timestamp", "")))
+
+        grouped_conversations = {}
+        for k, g in groupby(conversations, lambda x: x.get("conversation_id", "")):
+            grouped_conversations[k] = list(g)
+
+        # Sort conversation groups by the timestamp of their first message (most recent conversation first)
+        sorted_conversation_groups = sorted(
+            grouped_conversations.items(),
+            key=lambda item: item[1][0].get("timestamp", ""),  # Use timestamp of the first message in the group
+            reverse=True,
+        )
+
         # Display conversations
-        for i, conv in enumerate(conversations):
+        for i, (conversation_id, conv_entries) in enumerate(sorted_conversation_groups):
+            # Get the first message for summary display
+            first_entry = conv_entries[0]
+            num_messages = len(conv_entries)
+            total_response_time = sum(e.get("response_time_ms", 0) for e in conv_entries)
+
             with st.expander(
-                f"{self._format_timestamp(conv['timestamp'])} - "
-                f"{conv.get('user_id', 'Anonymous')} - "
-                f"{conv.get('response_time_ms', 0):.0f}ms",
+                f"💬 Conversation with {num_messages} messages "
+                f"({self._format_timestamp(first_entry['timestamp'])}) - "
+                f"👤 {first_entry.get('user_id', 'Anonymous')} - "
+                f"⏱️ {total_response_time:.0f}ms",
                 expanded=False,
             ):
-                # Question
-                st.markdown("**Question:**")
-                st.write(conv["question"])
+                # Display all entries within this conversation
+                for j, entry in enumerate(conv_entries):
+                    st.markdown(f"**❓ Question ({self._format_timestamp(entry['timestamp'])}):**")
+                    st.write(entry["question"])
 
-                # Answer
-                st.markdown("**Answer:**")
-                if show_details:
-                    st.write(conv["answer"])
-                else:
-                    # Truncated preview
-                    preview = conv["answer"][:200] + "..." if len(conv["answer"]) > 200 else conv["answer"]
-                    st.write(preview)
-
-                # Metadata
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Response Length", f"{conv.get('answer_length', 0)} chars")
-                with col2:
-                    st.metric("Sources", conv.get("sources_count", 0))
-                with col3:
-                    st.metric("Response Time", f"{conv.get('response_time_ms', 0):.0f}ms")
-                with col4:
-                    feedback = conv.get("feedback")
-                    if feedback:
-                        st.metric("Rating", f"{feedback.get('rating', 'N/A')}/5")
+                    st.markdown("**💡 Answer:**")
+                    if show_details:
+                        st.write(entry["answer"])
                     else:
-                        st.metric("Rating", "Not rated")
+                        preview = entry["answer"][:200] + "..." if len(entry["answer"]) > 200 else entry["answer"]
+                        st.write(preview)
 
-                # Sources if available
-                if show_details and conv.get("sources"):
-                    st.markdown("**Sources used:**")
-                    for j, source in enumerate(conv["sources"][:3]):  # Limit to 3 sources
-                        title = source.get("title", "Unknown source")
-                        url = source.get("url", "")
-
-                        if url and url != "#":
-                            # Create clickable link
-                            st.markdown(f"{j + 1}. [{title}]({url})")
+                    # Display metadata for each turn
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Response Length", f"{entry.get('answer_length', 0)} chars")
+                    with col2:
+                        st.metric("Sources", entry.get("sources_count", 0))
+                    with col3:
+                        st.metric("Response Time", f"{entry.get('response_time_ms', 0):.0f}ms")
+                    with col4:
+                        feedback = entry.get("feedback")
+                        if feedback:
+                            st.metric("Rating", f"{feedback.get('rating', 'N/A')}/5")
                         else:
-                            st.write(f"{j + 1}. {title}")
+                            st.metric("Rating", "Not rated")
 
-                # Button to reuse the question
-                if st.button("Reuse this question", key=f"reuse_{i}"):
-                    st.session_state["reuse_question"] = conv["question"]
+                    if show_details and entry.get("sources"):
+                        st.markdown("**Sources used:**")
+                        for k, source in enumerate(entry["sources"][:3]):
+                            title = source.get("title", "Unknown source")
+                            url = source.get("url", "")
+                            if url and url != "#":
+                                st.markdown(f"{k + 1}. [{title}]({url})")
+                            else:
+                                st.write(f"{k + 1}. {title}")
+                    st.markdown("---")  # Separator between turns
+
+                # Button to continue this conversation
+                if st.button("Continue this conversation", key=f"continue_conv_{conversation_id}_{i}"):
+                    st.session_state["reuse_conversation_id"] = conversation_id
                     st.session_state["page"] = "chat"
                     st.rerun()
 
