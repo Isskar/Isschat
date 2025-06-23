@@ -70,23 +70,9 @@ class FeedbackSystem:
         else:
             self.storage_service = storage_service
 
-        if feedback_file is None:
-            # Create a filename with current date
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            feedback_file = f"logs/feedback/feedback_{date_str}.json"
+        # Remove redundant feedback file creation - use only data_manager
+        # The feedback_file parameter is kept for backward compatibility but not used
         self.feedback_file = feedback_file
-        self._ensure_feedback_file_exists()
-
-    def _ensure_feedback_file_exists(self):
-        """Ensure that the feedback file exists using storage service"""
-        # Create directory using storage service
-        directory_path = "/".join(self.feedback_file.split("/")[:-1])
-        if directory_path and hasattr(self.storage_service._storage, "create_directory"):
-            self.storage_service._storage.create_directory(directory_path)
-
-        # Create empty file if it doesn't exist
-        if not self.storage_service.file_exists(self.feedback_file):
-            self.storage_service.save_json_data(self.feedback_file, [])
 
     def _load_feedback_data(self):
         """Load feedback data from data_manager (JSONL format)"""
@@ -110,10 +96,6 @@ class FeedbackSystem:
         except Exception as e:
             logger.error(f"Error loading feedback data from data_manager: {e}")
             return []
-
-    def _save_feedback_data(self, data):
-        """Save feedback data to file using storage service"""
-        self.storage_service.save_json_data(self.feedback_file, data)
 
     def render_feedback_widget(
         self, user_id: str, question: str, answer: str, sources: str, conversation_id: str, key_suffix: str = ""
@@ -450,7 +432,7 @@ class FeaturesManager:
             if hasattr(self.storage_service._storage, "create_directory"):
                 self.storage_service._storage.create_directory(directory)
 
-        # Configure logging
+        # Configure logging - use only console logging to avoid local file creation
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
