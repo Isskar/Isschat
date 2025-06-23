@@ -1,8 +1,8 @@
-# Performance Comparison Feature
+# Performance bva Feature
 
 ## Overview
 
-The Performance Comparison feature measures Isschat's efficiency against human benchmarks across different task complexity levels. This helps track Isschat's performance improvements and identify areas for optimization.
+The Performance bva feature measures Isschat's efficiency against human benchmarks across different task complexity levels. This helps track Isschat's performance improvements and identify areas for optimization.
 
 ## Why This Feature?
 

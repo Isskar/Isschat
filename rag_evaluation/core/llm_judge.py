@@ -12,6 +12,38 @@ from langchain_core.utils.utils import convert_to_secret_str
 class LLMJudge:
     """LLM-based evaluation judge for Isschat responses"""
 
+    bva_PROMPT = """Compare la réponse d'Isschat avec la réponse parfaite sur les aspects suivants :
+    - Relevance (pertinence par rapport à la question)
+    - Accuracy (précision et exactitude des informations)
+    - Completeness (exhaustivité de la réponse)
+    - Clarity (clarté et structure de la réponse)
+
+Question : {question}
+Réponse d'Isschat : {isschat_response}
+Réponse parfaite : {perfect_answer}
+
+Évalue chaque aspect sur une échelle de 0.0 à 1.0 et explique ton raisonnement.
+Réponds au format JSON suivant :
+{{
+    "relevance": {{
+        "score": float,
+        "reasoning": "explication"
+    }},
+    "accuracy": {{
+        "score": float,
+        "reasoning": "explication"
+    }},
+    "completeness": {{
+        "score": float,
+        "reasoning": "explication"
+    }},
+    "clarity": {{
+        "score": float,
+        "reasoning": "explication"
+    }},
+    "overall_bva": "synthèse globale de la comparaison"
+}}"""
+
     def __init__(self, config: Any):
         """Initialize LLM judge with configuration"""
         self.config = config
@@ -38,6 +70,13 @@ class LLMJudge:
             openai_api_key=api_key,
             openai_api_base="https://openrouter.ai/api/v1",
         )
+
+    def evaluate_bva(self, question: str, isschat_response: str, perfect_answer: str) -> Dict[str, Any]:
+        """Compare Isschat's response with the perfect answer on multiple aspects"""
+        prompt = self.bva_PROMPT.format(
+            question=question, isschat_response=isschat_response, perfect_answer=perfect_answer
+        )
+        return self._evaluate_with_prompt(prompt)
 
     def evaluate_conversational(self, question: str, response: str, expected: str, context: str = "") -> Dict[str, Any]:
         """Evaluate conversational test response"""

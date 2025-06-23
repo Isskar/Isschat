@@ -63,37 +63,31 @@ class BusinessValueEvaluator(BaseEvaluator):
             response, response_time, sources = self.isschat_client.query(test_case.question)
             actual_response_time = time.time() - start_time
 
-            # Get human estimate and response from test metadata
+            # Get human estimate and perfect answer from test metadata
             human_estimate = test_case.metadata.get("human_estimate", 30)
             perfect_answer = test_case.metadata.get("perfect_answer", {"content": "", "quality_metrics": {}})
 
             # Calculate efficiency ratio
             efficiency_ratio = human_estimate / actual_response_time if actual_response_time > 0 else 0
 
-            # Evaluate Isschat response quality using LLM judge
-            isschat_quality = self.llm_judge.evaluate_performance(
-                question=test_case.question,
-                response=response,
-                expected=test_case.expected_behavior,
-                response_time=actual_response_time,
-                complexity=test_case.metadata.get("complexity", "medium"),
+            # Compare Isschat response with perfect answer using LLM judge
+            comparison_result = self.llm_judge.evaluate_comparison(
+                question=test_case.question, isschat_response=response, perfect_answer=perfect_answer.get("content", "")
             )
 
-            # Compare quality metrics between Isschat and human
-            quality_comparison = self._compare_quality_metrics(
-                isschat_metrics={
-                    "relevance": isschat_quality.get("score", 0.0),
-                    "accuracy": isschat_quality.get("accuracy", 0.0),
-                    "completeness": isschat_quality.get("completeness", 0.0),
-                    "clarity": isschat_quality.get("clarity", 0.0),
-                },
-                human_metrics=perfect_answer.get("quality_metrics", {}),
-            )
+            # Calculate average score from comparison metrics
+            scores = [
+                comparison_result["relevance"]["score"],
+                comparison_result["accuracy"]["score"],
+                comparison_result["completeness"]["score"],
+                comparison_result["clarity"]["score"],
+            ]
+            average_score = sum(scores) / len(scores)
 
             # Check if test passed based on response time and quality comparison
             complexity = test_case.metadata.get("complexity", "medium")
             time_passed = self._check_performance_threshold(actual_response_time, complexity)
-            quality_passed = self._check_quality_threshold(quality_comparison)
+            quality_passed = average_score >= 0.7  # Seuil de qualité à 70%
             passed = time_passed and quality_passed
 
             # Create evaluation result
@@ -103,24 +97,16 @@ class BusinessValueEvaluator(BaseEvaluator):
                 test_name=test_case.test_name,
                 question=test_case.question,
                 response=response,
-                expected_behavior=test_case.expected_behavior,
                 status=EvaluationStatus.PASSED if passed else EvaluationStatus.FAILED,
-                score=isschat_quality.get("score", 0.0),
+                score=average_score,
                 evaluation_details={
                     "response_time": actual_response_time,
                     "human_estimate": human_estimate,
                     "efficiency_ratio": efficiency_ratio,
-                    "quality_comparison": quality_comparison,
+                    "comparison_details": comparison_result,
                     "time_passed": time_passed,
                     "quality_passed": quality_passed,
-                    "reasoning": self._format_detailed_comparison(
-                        actual_response_time,
-                        human_estimate,
-                        efficiency_ratio,
-                        quality_comparison,
-                        isschat_quality,
-                        perfect_answer,
-                    ),
+                    "reasoning": comparison_result.get("overall_comparison", "No overall comparison provided"),
                 },
                 response_time=actual_response_time,
                 sources=sources,
@@ -129,12 +115,17 @@ class BusinessValueEvaluator(BaseEvaluator):
                     "human_estimate": human_estimate,
                     "efficiency_ratio": efficiency_ratio,
                     "complexity": complexity,
-                    "quality_comparison": quality_comparison,
+                    "quality_scores": {
+                        "relevance": comparison_result["relevance"]["score"],
+                        "accuracy": comparison_result["accuracy"]["score"],
+                        "completeness": comparison_result["completeness"]["score"],
+                        "clarity": comparison_result["clarity"]["score"],
+                    },
                 },
             )
 
             # Display detailed results
-            self._display_evaluation_results(evaluation_result, response, isschat_quality)
+            self._display_evaluation_results(evaluation_result, response, comparison_result)
 
             return evaluation_result
 
@@ -145,7 +136,6 @@ class BusinessValueEvaluator(BaseEvaluator):
                 test_name=test_case.test_name,
                 question=test_case.question,
                 response="",
-                expected_behavior=test_case.expected_behavior,
                 status=EvaluationStatus.ERROR,
                 score=0.0,
                 error_message=str(e),
@@ -156,7 +146,7 @@ class BusinessValueEvaluator(BaseEvaluator):
         self, isschat_metrics: Dict[str, float], human_metrics: Dict[str, float]
     ) -> Dict[str, Any]:
         """Compare quality metrics between Isschat and human responses"""
-        comparison = {}
+        bva = {}
 
         # Compare each metric
         for metric in ["relevance", "accuracy", "completeness", "clarity"]:
@@ -165,54 +155,46 @@ class BusinessValueEvaluator(BaseEvaluator):
 
             if human_score > 0:  # Only compare if human score is available
                 difference = isschat_score - human_score
-                comparison[metric] = {
+                bva[metric] = {
                     "isschat_score": isschat_score,
                     "human_score": human_score,
                     "difference": difference,
                     "relative_performance": (isschat_score / human_score) if human_score > 0 else 0,
                 }
             else:
-                comparison[metric] = {
+                bva[metric] = {
                     "isschat_score": isschat_score,
                     "human_score": None,
                     "difference": None,
                     "relative_performance": None,
                 }
 
-        # Calculate overall comparison
-        comparison["overall"] = {
-            "average_difference": sum(c["difference"] for c in comparison.values() if c["difference"] is not None)
-            / len([c for c in comparison.values() if c["difference"] is not None])
-            if any(c["difference"] is not None for c in comparison.values())
+        # Calculate overall bva
+        bva["overall"] = {
+            "average_difference": sum(c["difference"] for c in bva.values() if c["difference"] is not None)
+            / len([c for c in bva.values() if c["difference"] is not None])
+            if any(c["difference"] is not None for c in bva.values())
             else None,
-            "better_than_human": sum(
-                1 for c in comparison.values() if c["difference"] is not None and c["difference"] > 0
-            ),
-            "equal_to_human": sum(
-                1 for c in comparison.values() if c["difference"] is not None and c["difference"] == 0
-            ),
-            "worse_than_human": sum(
-                1 for c in comparison.values() if c["difference"] is not None and c["difference"] < 0
-            ),
+            "better_than_human": sum(1 for c in bva.values() if c["difference"] is not None and c["difference"] > 0),
+            "equal_to_human": sum(1 for c in bva.values() if c["difference"] is not None and c["difference"] == 0),
+            "worse_than_human": sum(1 for c in bva.values() if c["difference"] is not None and c["difference"] < 0),
         }
 
-        return comparison
+        return bva
 
-    def _check_quality_threshold(self, quality_comparison: Dict[str, Any]) -> bool:
+    def _check_quality_threshold(self, quality_bva: Dict[str, Any]) -> bool:
         """Check if quality metrics meet thresholds"""
-        if not quality_comparison.get("overall"):
+        if not quality_bva.get("overall"):
             return True  # Si pas de comparaison possible (pas de référence humaine), on considère que c'est passé
 
         # Le test passe si Isschat est meilleur ou égal à l'humain dans au moins 50% des métriques
-        metrics_with_comparison = (
-            quality_comparison["overall"]["better_than_human"] + quality_comparison["overall"]["equal_to_human"]
-        )
-        total_metrics_compared = metrics_with_comparison + quality_comparison["overall"]["worse_than_human"]
+        metrics_with_bva = quality_bva["overall"]["better_than_human"] + quality_bva["overall"]["equal_to_human"]
+        total_metrics_compared = metrics_with_bva + quality_bva["overall"]["worse_than_human"]
 
         if total_metrics_compared == 0:
             return True
 
-        return (metrics_with_comparison / total_metrics_compared) >= 0.5
+        return (metrics_with_bva / total_metrics_compared) >= 0.5
 
     def evaluate_business_value(self, complexity_filter: Optional[str] = None) -> Dict[str, Any]:
         """Evaluate business value across all complexity levels"""
@@ -292,7 +274,6 @@ class BusinessValueEvaluator(BaseEvaluator):
                     test_name=test["test_name"],
                     question=test["question"],
                     response="",
-                    expected_behavior=test["expected_behavior"],
                     status=EvaluationStatus.ERROR,
                     score=0.0,
                     error_message=str(e),
@@ -323,15 +304,15 @@ class BusinessValueEvaluator(BaseEvaluator):
         response_times = [r.metadata.get("response_time", 0) for r in results if "response_time" in r.metadata]
         efficiency_ratios = [r.metadata.get("efficiency_ratio", 0) for r in results if "efficiency_ratio" in r.metadata]
 
-        # Collect quality comparisons
+        # Collect quality bvas
         quality_stats = {"better_than_human": 0, "equal_to_human": 0, "worse_than_human": 0}
 
         for r in results:
-            if "quality_comparison" in r.metadata:
-                comparison = r.metadata["quality_comparison"].get("overall", {})
-                quality_stats["better_than_human"] += comparison.get("better_than_human", 0)
-                quality_stats["equal_to_human"] += comparison.get("equal_to_human", 0)
-                quality_stats["worse_than_human"] += comparison.get("worse_than_human", 0)
+            if "quality_bva" in r.metadata:
+                bva = r.metadata["quality_bva"].get("overall", {})
+                quality_stats["better_than_human"] += bva.get("better_than_human", 0)
+                quality_stats["equal_to_human"] += bva.get("equal_to_human", 0)
+                quality_stats["worse_than_human"] += bva.get("worse_than_human", 0)
 
         avg_response_time = sum(response_times) / len(response_times) if response_times else 0.0
         avg_efficiency_ratio = sum(efficiency_ratios) / len(efficiency_ratios) if efficiency_ratios else 0.0
@@ -341,7 +322,7 @@ class BusinessValueEvaluator(BaseEvaluator):
         print(f"Tests: {passed_count}/{total_tests} passed ({passed_count / total_tests:.1%})")
         print(f"Avg Response Time: {avg_response_time:.2f}s")
         print(f"Avg Efficiency Ratio: {avg_efficiency_ratio:.1f}x")
-        print("\nQuality Comparison with Human:")
+        print("\nQuality bva with Human:")
         print(f"Better than human: {quality_stats['better_than_human']}")
         print(f"Equal to human: {quality_stats['equal_to_human']}")
         print(f"Worse than human: {quality_stats['worse_than_human']}")
@@ -354,15 +335,15 @@ class BusinessValueEvaluator(BaseEvaluator):
         response_times = [r.metadata.get("response_time", 0) for r in results if "response_time" in r.metadata]
         efficiency_ratios = [r.metadata.get("efficiency_ratio", 0) for r in results if "efficiency_ratio" in r.metadata]
 
-        # Aggregate quality comparisons
+        # Aggregate quality bvas
         quality_stats = {"better_than_human": 0, "equal_to_human": 0, "worse_than_human": 0}
 
         for r in results:
-            if "quality_comparison" in r.metadata:
-                comparison = r.metadata["quality_comparison"].get("overall", {})
-                quality_stats["better_than_human"] += comparison.get("better_than_human", 0)
-                quality_stats["equal_to_human"] += comparison.get("equal_to_human", 0)
-                quality_stats["worse_than_human"] += comparison.get("worse_than_human", 0)
+            if "quality_bva" in r.metadata:
+                bva = r.metadata["quality_bva"].get("overall", {})
+                quality_stats["better_than_human"] += bva.get("better_than_human", 0)
+                quality_stats["equal_to_human"] += bva.get("equal_to_human", 0)
+                quality_stats["worse_than_human"] += bva.get("worse_than_human", 0)
 
         return {
             "total_tests": total_tests,
@@ -371,10 +352,10 @@ class BusinessValueEvaluator(BaseEvaluator):
             "overall_pass_rate": total_passed / total_tests if total_tests > 0 else 0.0,
             "avg_response_time": sum(response_times) / len(response_times) if response_times else 0.0,
             "avg_efficiency_ratio": sum(efficiency_ratios) / len(efficiency_ratios) if efficiency_ratios else 0.0,
-            "quality_comparison": {
+            "quality_bva": {
                 "better_than_human": quality_stats["better_than_human"],
                 "equal_to_human": quality_stats["equal_to_human"],
                 "worse_than_human": quality_stats["worse_than_human"],
-                "total_comparisons": sum(quality_stats.values()),
+                "total_bvas": sum(quality_stats.values()),
             },
         }
