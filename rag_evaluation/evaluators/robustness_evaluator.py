@@ -6,13 +6,13 @@ Uses LLM-based semantic evaluation instead of hard-coded keywords
 import sys
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, List
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from rag_evaluation.core.base_evaluator import TestCase, EvaluationStatus
-from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator, EvaluationResult
+from rag_evaluation.core.base_evaluator import TestCase
+from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,72 +31,13 @@ class RobustnessEvaluator(BaseEvaluator):
         """Get the category this evaluator handles"""
         return "robustness"
 
-    def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
-        """Evaluate a single robustness test case"""
-        try:
-            # Query Isschat
-            response, response_time, sources = self.isschat_client.query(test_case.question)
+    def _query_system(self, test_case: TestCase) -> Tuple[str, float, List[str]]:
+        """Query the system - simple query for robustness tests"""
+        return self.isschat_client.query(test_case.question)
 
-            # Check for errors
-            if response.startswith("ERROR:"):
-                return EvaluationResult(
-                    test_id=test_case.test_id,
-                    category=test_case.category,
-                    test_name=test_case.test_name,
-                    question=test_case.question,
-                    response=response,
-                    expected_behavior=test_case.expected_behavior,
-                    status=EvaluationStatus.ERROR,
-                    score=0.0,
-                    response_time=response_time,
-                    error_message=response,
-                    sources=sources,
-                )
-
-            # Evaluate with LLM judge using semantic evaluation
-            evaluation = self._evaluate_robustness_semantically(test_case, response)
-
-            # Determine status based on evaluation
-            status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED  # noqa
-
-            # Get test type for better logging
-            test_type = test_case.metadata.get("test_type", "generic")
-            reasoning = evaluation.get("reasoning", "No reasoning provided")
-
-            logger.info(
-                f"Test {test_case.test_id} ({test_type}): LLM evaluation score={evaluation['score']}, passes={evaluation['passes_criteria']}"  # noqa : E501
-            )
-            logger.info(f"LLM Judge Comment: {reasoning}")
-
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response=response,
-                expected_behavior=test_case.expected_behavior,
-                status=status,
-                score=evaluation["score"],
-                evaluation_details=evaluation,
-                response_time=response_time,
-                sources=sources,
-                metadata=test_case.metadata,
-            )
-
-        except Exception as e:
-            logger.error(f"Error evaluating test {test_case.test_id}: {str(e)}")
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response="",
-                expected_behavior=test_case.expected_behavior,
-                status=EvaluationStatus.ERROR,
-                score=0.0,
-                error_message=str(e),
-                metadata=test_case.metadata,
-            )
+    def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
+        """Evaluate response semantically using robustness-specific logic"""
+        return self._evaluate_robustness_semantically(test_case, response)
 
     def _evaluate_robustness_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
         """Evaluate robustness using semantic LLM analysis based on test type"""

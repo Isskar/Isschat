@@ -6,13 +6,13 @@ Uses LLM-based semantic evaluation for conversation flow and context handling
 import sys
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from rag_evaluation.core.base_evaluator import TestCase, EvaluationStatus
-from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator, EvaluationResult
+from rag_evaluation.core.base_evaluator import TestCase
+from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,82 +32,26 @@ class GenerationEvaluator(BaseEvaluator):
         """Get the category this evaluator handles"""
         return "generation"
 
-    def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
-        """Evaluate a single conversational generation test case"""
-        try:
-            # Handle conversation context if present
-            if test_case.conversation_context:
-                self._setup_conversation_context(test_case)
+    def _query_system(self, test_case: TestCase) -> Tuple[str, float, List[str]]:
+        """Query the system - handles conversation context for generation tests"""
+        # Handle conversation context if present
+        if test_case.conversation_context:
+            self._setup_conversation_context(test_case)
 
-            # Build context string for IsschatClient
-            context_str = self._build_context_string(test_case)
+        # Build context string for IsschatClient
+        context_str = self._build_context_string(test_case)
 
-            # Query Isschat with context
-            response, response_time, sources = self.isschat_client.query(test_case.question, context=context_str)
+        # Query Isschat with context
+        response, response_time, sources = self.isschat_client.query(test_case.question, context=context_str)
 
-            # Store response for future context
-            self._store_conversation_turn(test_case, response)
+        # Store response for future context
+        self._store_conversation_turn(test_case, response)
 
-            # Check for errors
-            if response.startswith("ERROR:"):
-                return EvaluationResult(
-                    test_id=test_case.test_id,
-                    category=test_case.category,
-                    test_name=test_case.test_name,
-                    question=test_case.question,
-                    response=response,
-                    expected_behavior=test_case.expected_behavior,
-                    status=EvaluationStatus.ERROR,
-                    score=0.0,
-                    response_time=response_time,
-                    error_message=response,
-                    sources=sources,
-                )
+        return response, response_time, sources
 
-            # Evaluate with LLM judge using semantic evaluation
-            evaluation = self._evaluate_generation_semantically(test_case, response)
-
-            # Determine status based on evaluation
-            status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED
-
-            # Get test type for better logging
-            test_type = test_case.metadata.get("test_type", "conversational")
-            reasoning = evaluation.get("reasoning", "No reasoning provided")
-
-            logger.info(
-                f"Test {test_case.test_id} ({test_type}): LLM evaluation score={evaluation['score']}, passes={evaluation['passes_criteria']}"  # noqa
-            )
-            logger.info(f"LLM Judge Comment: {reasoning}")
-
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response=response,
-                expected_behavior=test_case.expected_behavior,
-                status=status,
-                score=evaluation["score"],
-                evaluation_details=evaluation,
-                response_time=response_time,
-                sources=sources,
-                metadata=test_case.metadata,
-            )
-
-        except Exception as e:
-            logger.error(f"Error evaluating test {test_case.test_id}: {str(e)}")
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response="",
-                expected_behavior=test_case.expected_behavior,
-                status=EvaluationStatus.ERROR,
-                score=0.0,
-                error_message=str(e),
-                metadata=test_case.metadata,
-            )
+    def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
+        """Evaluate response semantically using generation-specific logic"""
+        return self._evaluate_generation_semantically(test_case, response)
 
     def _setup_conversation_context(self, test_case: TestCase):
         """Setup conversation context for multi-turn conversations"""

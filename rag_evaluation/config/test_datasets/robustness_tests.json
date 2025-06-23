@@ -120,6 +120,18 @@
     }
   },
   {
+  },
+  },
+    "test_id": "rob_011",
+    "category": "robustness",
+    "test_name": "Missing Test Case",
+    "question": "Placeholder question for missing test case",
+    "expected_behavior": "This test case was missing and has been added to maintain sequential numbering.",
+    "metadata": {
+      "test_type": "internal_knowledge",
+      "language": "french",
+      "difficulty": "medium"
+    }
     "test_id": "rob_012",
     "category": "robustness",
     "test_name": "Technical Watch Summary",
