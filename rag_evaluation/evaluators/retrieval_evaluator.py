@@ -125,7 +125,6 @@ class RetrievalEvaluator(BaseEvaluator):
                 "mrr": 1.0 if not retrieved_docs else 0.0,
                 "map": 1.0 if not retrieved_docs else 0.0,
                 "ndcg_at_5": 1.0 if not retrieved_docs else 0.0,
-                "ndcg_at_10": 1.0 if not retrieved_docs else 0.0,
             }
 
         # Extract URLs for comparison
@@ -174,10 +173,10 @@ class RetrievalEvaluator(BaseEvaluator):
         }
 
     def _calculate_precision_at_k(self, expected_urls: set, retrieved_urls: List[str]) -> Dict[str, float]:
-        """Calculate Precision@K for K=1,3,5,10"""
+        """Calculate Precision@K for K=1,3,5"""
         precision_at_k = {}
 
-        for k in [1, 3, 5, 10]:
+        for k in [1, 3, 5]:
             if len(retrieved_urls) >= k:
                 relevant_at_k = sum(1 for url in retrieved_urls[:k] if url in expected_urls)
                 precision_at_k[f"precision_at_{k}"] = relevant_at_k / k
@@ -189,10 +188,10 @@ class RetrievalEvaluator(BaseEvaluator):
         return precision_at_k
 
     def _calculate_recall_at_k(self, expected_urls: set, retrieved_urls: List[str]) -> Dict[str, float]:
-        """Calculate Recall@K for K=1,3,5,10"""
+        """Calculate Recall@K for K=1,3,5"""
         recall_at_k = {}
 
-        for k in [1, 3, 5, 10]:
+        for k in [1, 3, 5]:
             relevant_at_k = sum(1 for url in retrieved_urls[:k] if url in expected_urls)
             recall_at_k[f"recall_at_{k}"] = relevant_at_k / len(expected_urls) if expected_urls else 0.0
 
@@ -222,13 +221,13 @@ class RetrievalEvaluator(BaseEvaluator):
         return precision_sum / len(expected_urls) if expected_urls else 0.0
 
     def _calculate_ndcg(self, expected_docs: List[Dict], retrieved_docs: List[Dict]) -> Dict[str, float]:
-        """Calculate Normalized Discounted Cumulative Gain at K=5,10"""
+        """Calculate Normalized Discounted Cumulative Gain at K=5"""
         ndcg_scores = {}
 
         # Create relevance mapping (1 for relevant, 0 for not relevant)
         expected_urls = {doc["url"] for doc in expected_docs}
 
-        for k in [5, 10]:
+        for k in [5]:
             dcg = 0.0
             for i, doc in enumerate(retrieved_docs[:k]):
                 url = doc.get("url", "")
@@ -267,7 +266,7 @@ class RetrievalEvaluator(BaseEvaluator):
 
         # Calculate NDCG-like score
         dcg = 0.0
-        for i, retrieved_doc in enumerate(retrieved_docs[:10]):  # Top 10
+        for i, retrieved_doc in enumerate(retrieved_docs[:5]):  # Top 5
             url = retrieved_doc.get("url", "")
             if url in expected_ranks:
                 relevance = 1.0 / expected_ranks[url]  # Higher relevance for lower expected rank
@@ -275,7 +274,7 @@ class RetrievalEvaluator(BaseEvaluator):
 
         # Ideal DCG (if documents were in perfect order)
         sorted_expected = sorted(expected_docs, key=lambda x: x.get("expected_rank", float("inf")))
-        idcg = sum(1.0 / doc.get("expected_rank", 1) / (i + 1) for i, doc in enumerate(sorted_expected[:10]))
+        idcg = sum(1.0 / doc.get("expected_rank", 1) / (i + 1) for i, doc in enumerate(sorted_expected[:5]))
 
         return dcg / idcg if idcg > 0 else 0.0
 
@@ -297,21 +296,16 @@ class RetrievalEvaluator(BaseEvaluator):
             avg_precision_at_1 = sum(r.evaluation_details.get("precision_at_1", 0) for r in self.results) / num_results
             avg_precision_at_3 = sum(r.evaluation_details.get("precision_at_3", 0) for r in self.results) / num_results
             avg_precision_at_5 = sum(r.evaluation_details.get("precision_at_5", 0) for r in self.results) / num_results
-            avg_precision_at_10 = (
-                sum(r.evaluation_details.get("precision_at_10", 0) for r in self.results) / num_results
-            )
 
             # Recall@K metrics
             avg_recall_at_1 = sum(r.evaluation_details.get("recall_at_1", 0) for r in self.results) / num_results
             avg_recall_at_3 = sum(r.evaluation_details.get("recall_at_3", 0) for r in self.results) / num_results
             avg_recall_at_5 = sum(r.evaluation_details.get("recall_at_5", 0) for r in self.results) / num_results
-            avg_recall_at_10 = sum(r.evaluation_details.get("recall_at_10", 0) for r in self.results) / num_results
 
             # Advanced metrics
             avg_mrr = sum(r.evaluation_details.get("mrr", 0) for r in self.results) / num_results
             avg_map = sum(r.evaluation_details.get("map", 0) for r in self.results) / num_results
             avg_ndcg_at_5 = sum(r.evaluation_details.get("ndcg_at_5", 0) for r in self.results) / num_results
-            avg_ndcg_at_10 = sum(r.evaluation_details.get("ndcg_at_10", 0) for r in self.results) / num_results
 
             base_stats.update(
                 {
@@ -323,17 +317,14 @@ class RetrievalEvaluator(BaseEvaluator):
                     "average_precision_at_1": avg_precision_at_1,
                     "average_precision_at_3": avg_precision_at_3,
                     "average_precision_at_5": avg_precision_at_5,
-                    "average_precision_at_10": avg_precision_at_10,
                     # Recall@K metrics
                     "average_recall_at_1": avg_recall_at_1,
                     "average_recall_at_3": avg_recall_at_3,
                     "average_recall_at_5": avg_recall_at_5,
-                    "average_recall_at_10": avg_recall_at_10,
                     # Advanced metrics
                     "average_mrr": avg_mrr,
                     "average_map": avg_map,
                     "average_ndcg_at_5": avg_ndcg_at_5,
-                    "average_ndcg_at_10": avg_ndcg_at_10,
                 }
             )
 
@@ -361,23 +352,20 @@ class RetrievalEvaluator(BaseEvaluator):
         p_at_1 = summary.get("average_precision_at_1", 0)
         p_at_3 = summary.get("average_precision_at_3", 0)
         p_at_5 = summary.get("average_precision_at_5", 0)
-        p_at_10 = summary.get("average_precision_at_10", 0)
-        lines.append(f"  Precision@K: P@1={p_at_1:.3f} | P@3={p_at_3:.3f} | P@5={p_at_5:.3f} | P@10={p_at_10:.3f}")
+        lines.append(f"  Precision@K: P@1={p_at_1:.3f} | P@3={p_at_3:.3f} | P@5={p_at_5:.3f}")
 
         # Recall@K metrics
         r_at_1 = summary.get("average_recall_at_1", 0)
         r_at_3 = summary.get("average_recall_at_3", 0)
         r_at_5 = summary.get("average_recall_at_5", 0)
-        r_at_10 = summary.get("average_recall_at_10", 0)
-        lines.append(f"  Recall@K:    R@1={r_at_1:.3f} | R@3={r_at_3:.3f} | R@5={r_at_5:.3f} | R@10={r_at_10:.3f}")
+        lines.append(f"  Recall@K:    R@1={r_at_1:.3f} | R@3={r_at_3:.3f} | R@5={r_at_5:.3f}")
 
         # Advanced metrics
         mrr = summary.get("average_mrr", 0)
         map_score = summary.get("average_map", 0)
         ndcg_5 = summary.get("average_ndcg_at_5", 0)
-        ndcg_10 = summary.get("average_ndcg_at_10", 0)
         lines.append(f"  Métriques avancées: MRR={mrr:.3f} | MAP={map_score:.3f}")
-        lines.append(f"  NDCG: NDCG@5={ndcg_5:.3f} | NDCG@10={ndcg_10:.3f}")
+        lines.append(f"  NDCG: NDCG@5={ndcg_5:.3f}")
 
         # Performance metrics
         avg_time = summary.get("average_retrieval_time_ms", 0)
