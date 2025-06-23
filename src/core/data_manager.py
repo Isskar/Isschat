@@ -168,13 +168,6 @@ class DataManager:
             base_data_dir: Base directory for data. If None, uses config.
             storage_service: StorageService instance. If None, uses config.
         """
-        if base_data_dir is None:
-            # Use project directory as base
-            project_root = Path(__file__).parent.parent.parent
-            self.base_data_dir = project_root / "data"
-        else:
-            self.base_data_dir = Path(base_data_dir)
-
         # Get storage service from config if not provided
         if storage_service is None:
             from src.core.config import _ensure_config_initialized
@@ -184,16 +177,23 @@ class DataManager:
         else:
             self.storage_service = storage_service
 
-        # Directory structure according to plan
-        self.raw_dir = self.base_data_dir / "raw"
-        self.processed_dir = self.base_data_dir / "processed"
-        self.vector_db_dir = self.base_data_dir / "vector_db"
+        # Use storage service paths instead of local paths
+        # All paths are relative to the storage service base
+        if base_data_dir is None:
+            self.base_data_dir = "data"  # Relative path for storage service
+        else:
+            self.base_data_dir = str(base_data_dir)
+
+        # Directory structure according to plan (all relative to storage service)
+        self.raw_dir = f"{self.base_data_dir}/raw"
+        self.processed_dir = f"{self.base_data_dir}/processed"
+        self.vector_db_dir = f"{self.base_data_dir}/vector_db"
 
         # Directories for structured logs
-        self.logs_dir = self.base_data_dir / "logs"
-        self.conversations_dir = self.logs_dir / "conversations"
-        self.performance_dir = self.logs_dir / "performance"
-        self.feedback_dir = self.logs_dir / "feedback"
+        self.logs_dir = f"{self.base_data_dir}/logs"
+        self.conversations_dir = f"{self.logs_dir}/conversations"
+        self.performance_dir = f"{self.logs_dir}/performance"
+        self.feedback_dir = f"{self.logs_dir}/feedback"
 
         self._create_directories()
         self._init_stores()
@@ -334,22 +334,33 @@ class DataManager:
 
     def get_data_structure_info(self) -> Dict[str, Any]:
         """Retourne des informations sur la structure de données."""
+        # Get file counts using storage service
+        try:
+            conversations_files = self.storage_service.get_file_list(self.conversations_dir, "*.jsonl")
+            performance_files = self.storage_service.get_file_list(self.performance_dir, "*.jsonl")
+            feedback_files = self.storage_service.get_file_list(self.feedback_dir, "*.jsonl")
+        except Exception:
+            # Fallback if storage service doesn't support file listing
+            conversations_files = []
+            performance_files = []
+            feedback_files = []
+
         return {
-            "base_directory": str(self.base_data_dir),
+            "base_directory": self.base_data_dir,
             "directories": {
-                "raw": str(self.raw_dir),
-                "processed": str(self.processed_dir),
-                "vector_db": str(self.vector_db_dir),
+                "raw": self.raw_dir,
+                "processed": self.processed_dir,
+                "vector_db": self.vector_db_dir,
                 "logs": {
-                    "conversations": str(self.conversations_dir),
-                    "performance": str(self.performance_dir),
-                    "feedback": str(self.feedback_dir),
+                    "conversations": self.conversations_dir,
+                    "performance": self.performance_dir,
+                    "feedback": self.feedback_dir,
                 },
             },
             "current_files": {
-                "conversations": len(list(self.conversations_dir.glob("*.jsonl"))),
-                "performance": len(list(self.performance_dir.glob("*.jsonl"))),
-                "feedback": len(list(self.feedback_dir.glob("*.jsonl"))),
+                "conversations": len(conversations_files),
+                "performance": len(performance_files),
+                "feedback": len(feedback_files),
             },
         }
 
