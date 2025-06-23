@@ -76,7 +76,37 @@ Réponds au format JSON suivant :
         prompt = self.bva_PROMPT.format(
             question=question, isschat_response=isschat_response, perfect_answer=perfect_answer
         )
-        return self._evaluate_with_prompt(prompt)
+        try:
+            result = self.llm.invoke(prompt).content.strip()
+            cleaned_result = self._clean_json_response(result)
+            import json
+
+            evaluation = json.loads(cleaned_result)
+
+            # Basic validation for the bva structure
+            required_keys = ["relevance", "accuracy", "completeness", "clarity"]
+            if not all(key in evaluation for key in required_keys):
+                raise ValueError("Missing required keys in BVA evaluation response")
+
+            return evaluation
+
+        except (json.JSONDecodeError, ValueError) as e:
+            # Fallback if parsing fails
+            return {
+                "relevance": {"score": 0.0, "reasoning": f"Parsing error: {e}"},
+                "accuracy": {"score": 0.0, "reasoning": f"Parsing error: {e}"},
+                "completeness": {"score": 0.0, "reasoning": f"Parsing error: {e}"},
+                "clarity": {"score": 0.0, "reasoning": f"Parsing error: {e}"},
+                "overall_bva": f"Could not parse LLM Judge response: {e}",
+            }
+        except Exception as e:
+            return {
+                "relevance": {"score": 0.0, "reasoning": f"Evaluation error: {e}"},
+                "accuracy": {"score": 0.0, "reasoning": f"Evaluation error: {e}"},
+                "completeness": {"score": 0.0, "reasoning": f"Evaluation error: {e}"},
+                "clarity": {"score": 0.0, "reasoning": f"Evaluation error: {e}"},
+                "overall_bva": f"An unexpected error occurred: {e}",
+            }
 
     def evaluate_conversational(self, question: str, response: str, expected: str, context: str = "") -> Dict[str, Any]:
         """Evaluate conversational test response"""

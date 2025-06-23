@@ -4,7 +4,7 @@ Business Value Evaluator for measuring Isschat's business impact and efficiency
 
 import time
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -55,146 +55,87 @@ class BusinessValueEvaluator(BaseEvaluator):
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in business value test dataset: {e}")
 
-    def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
-        """Evaluate a single test case"""
-        try:
-            # Run Isschat query and measure time
-            start_time = time.time()
-            response, response_time, sources = self.isschat_client.query(test_case.question)
-            actual_response_time = time.time() - start_time
+    def _query_system(self, test_case: TestCase) -> Tuple[str, float, List[str]]:
+        """Query the system and return response, response time, and sources."""
+        start_time = time.time()
+        response, _, sources = self.isschat_client.query(test_case.question)
+        response_time = time.time() - start_time
+        return response, response_time, sources
 
-            # Get human estimate and perfect answer from test metadata
-            human_estimate = test_case.metadata.get("human_estimate", 30)
-            perfect_answer = test_case.metadata.get("perfect_answer", {"content": "", "quality_metrics": {}})
+    def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
+        """Evaluate the response semantically using the LLM judge."""
+        perfect_answer = test_case.metadata.get("perfect_answer", {"content": ""})
+        comparison_result = self.llm_judge.evaluate_bva(
+            question=test_case.question,
+            isschat_response=response,
+            perfect_answer=perfect_answer.get("content", ""),
+        )
 
-            # Calculate efficiency ratio
-            efficiency_ratio = human_estimate / actual_response_time if actual_response_time > 0 else 0
+        scores = [
+            comparison_result["relevance"]["score"],
+            comparison_result["accuracy"]["score"],
+            comparison_result["completeness"]["score"],
+            comparison_result["clarity"]["score"],
+        ]
+        average_score = sum(scores) / len(scores) if scores else 0.0
 
-            # Compare Isschat response with perfect answer using LLM judge
-            comparison_result = self.llm_judge.evaluate_comparison(
-                question=test_case.question, isschat_response=response, perfect_answer=perfect_answer.get("content", "")
-            )
-
-            # Calculate average score from comparison metrics
-            scores = [
-                comparison_result["relevance"]["score"],
-                comparison_result["accuracy"]["score"],
-                comparison_result["completeness"]["score"],
-                comparison_result["clarity"]["score"],
-            ]
-            average_score = sum(scores) / len(scores)
-
-            # Check if test passed based on response time and quality comparison
-            complexity = test_case.metadata.get("complexity", "medium")
-            time_passed = self._check_performance_threshold(actual_response_time, complexity)
-            quality_passed = average_score >= 0.7  # Seuil de qualité à 70%
-            passed = time_passed and quality_passed
-
-            # Create evaluation result
-            evaluation_result = EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response=response,
-                status=EvaluationStatus.PASSED if passed else EvaluationStatus.FAILED,
-                score=average_score,
-                evaluation_details={
-                    "response_time": actual_response_time,
-                    "human_estimate": human_estimate,
-                    "efficiency_ratio": efficiency_ratio,
-                    "comparison_details": comparison_result,
-                    "time_passed": time_passed,
-                    "quality_passed": quality_passed,
-                    "reasoning": comparison_result.get("overall_comparison", "No overall comparison provided"),
-                },
-                response_time=actual_response_time,
-                sources=sources,
-                metadata={
-                    "response_time": actual_response_time,
-                    "human_estimate": human_estimate,
-                    "efficiency_ratio": efficiency_ratio,
-                    "complexity": complexity,
-                    "quality_scores": {
-                        "relevance": comparison_result["relevance"]["score"],
-                        "accuracy": comparison_result["accuracy"]["score"],
-                        "completeness": comparison_result["completeness"]["score"],
-                        "clarity": comparison_result["clarity"]["score"],
-                    },
-                },
-            )
-
-            # Display detailed results
-            self._display_evaluation_results(evaluation_result, response, comparison_result)
-
-            return evaluation_result
-
-        except Exception as e:
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response="",
-                status=EvaluationStatus.ERROR,
-                score=0.0,
-                error_message=str(e),
-                metadata={"error": str(e)},
-            )
-
-    def _compare_quality_metrics(
-        self, isschat_metrics: Dict[str, float], human_metrics: Dict[str, float]
-    ) -> Dict[str, Any]:
-        """Compare quality metrics between Isschat and human responses"""
-        bva = {}
-
-        # Compare each metric
-        for metric in ["relevance", "accuracy", "completeness", "clarity"]:
-            isschat_score = isschat_metrics.get(metric, 0.0)
-            human_score = human_metrics.get(metric, 0.0)
-
-            if human_score > 0:  # Only compare if human score is available
-                difference = isschat_score - human_score
-                bva[metric] = {
-                    "isschat_score": isschat_score,
-                    "human_score": human_score,
-                    "difference": difference,
-                    "relative_performance": (isschat_score / human_score) if human_score > 0 else 0,
-                }
-            else:
-                bva[metric] = {
-                    "isschat_score": isschat_score,
-                    "human_score": None,
-                    "difference": None,
-                    "relative_performance": None,
-                }
-
-        # Calculate overall bva
-        bva["overall"] = {
-            "average_difference": sum(c["difference"] for c in bva.values() if c["difference"] is not None)
-            / len([c for c in bva.values() if c["difference"] is not None])
-            if any(c["difference"] is not None for c in bva.values())
-            else None,
-            "better_than_human": sum(1 for c in bva.values() if c["difference"] is not None and c["difference"] > 0),
-            "equal_to_human": sum(1 for c in bva.values() if c["difference"] is not None and c["difference"] == 0),
-            "worse_than_human": sum(1 for c in bva.values() if c["difference"] is not None and c["difference"] < 0),
+        return {
+            "score": average_score,
+            "reasoning": comparison_result.get("overall_comparison", "No overall comparison provided"),
+            "comparison_details": comparison_result,
+            "passes_criteria": average_score >= 0.7,  # Assuming 70% is the quality threshold
         }
 
-        return bva
+    def _create_success_result(
+        self,
+        test_case: TestCase,
+        response: str,
+        evaluation: Dict[str, Any],
+        response_time: float,
+        sources: Optional[List[str]] = None,
+    ) -> EvaluationResult:
+        """Create a successful evaluation result with business value metrics."""
+        human_estimate = test_case.metadata.get("human_estimate", 30)
+        complexity = test_case.metadata.get("complexity", "medium")
 
-    def _check_quality_threshold(self, quality_bva: Dict[str, Any]) -> bool:
-        """Check if quality metrics meet thresholds"""
-        if not quality_bva.get("overall"):
-            return True  # Si pas de comparaison possible (pas de référence humaine), on considère que c'est passé
+        efficiency_ratio = human_estimate / response_time if response_time > 0 else 0
+        time_passed = self._check_performance_threshold(response_time, complexity)
+        quality_passed = evaluation["passes_criteria"]
 
-        # Le test passe si Isschat est meilleur ou égal à l'humain dans au moins 50% des métriques
-        metrics_with_bva = quality_bva["overall"]["better_than_human"] + quality_bva["overall"]["equal_to_human"]
-        total_metrics_compared = metrics_with_bva + quality_bva["overall"]["worse_than_human"]
+        status = EvaluationStatus.PASSED if time_passed and quality_passed else EvaluationStatus.FAILED
 
-        if total_metrics_compared == 0:
-            return True
+        # Add business-specific details to the evaluation and metadata
+        evaluation["response_time"] = response_time
+        evaluation["human_estimate"] = human_estimate
+        evaluation["efficiency_ratio"] = efficiency_ratio
+        evaluation["time_passed"] = time_passed
+        evaluation["quality_passed"] = quality_passed
 
-        return (metrics_with_bva / total_metrics_compared) >= 0.5
+        metadata = {
+            "response_time": response_time,
+            "human_estimate": human_estimate,
+            "efficiency_ratio": efficiency_ratio,
+            "complexity": complexity,
+            "quality_scores": {
+                k: v["score"]
+                for k, v in evaluation["comparison_details"].items()
+                if isinstance(v, dict) and "score" in v
+            },
+        }
+
+        return EvaluationResult(
+            test_id=test_case.test_id,
+            category=self.get_category(),
+            test_name=test_case.test_name,
+            question=test_case.question,
+            response=response,
+            status=status,
+            score=evaluation["score"],
+            evaluation_details=evaluation,
+            response_time=response_time,
+            sources=sources or [],
+            metadata=metadata,
+        )
 
     def evaluate_business_value(self, complexity_filter: Optional[str] = None) -> Dict[str, Any]:
         """Evaluate business value across all complexity levels"""
