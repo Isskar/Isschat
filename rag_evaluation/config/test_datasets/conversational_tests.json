@@ -1,7 +1,7 @@
 [
   {
     "test_id": "conv_001",
-    "category": "conversational",
+    "category": "generation",
     "test_name": "Context Continuity Test - Part 1",
     "question": "Cite moi un des collaborateurs d'Isschat",
     "expected_behavior": "Should name a known collaborator from Isschat.",
@@ -15,7 +15,7 @@
   },
   {
     "test_id": "conv_002",
-    "category": "conversational", 
+    "category": "generation",
     "test_name": "Context Continuity Test - Part 2",
     "question": "Cite moi l'autre",
     "expected_behavior": "Should maintain context from previous question (Cite moi un des collaborateurs d'Isschat) and cite another collaborator.",
@@ -35,7 +35,7 @@
   },
   {
     "test_id": "conv_003",
-    "category": "conversational",
+    "category": "generation",
     "test_name": "Multi-turn Project Discussion",
     "question": "Parle moi du projet Cedrus",
     "expected_behavior": "Should provide information about the Cedrus project if available.",
@@ -49,7 +49,7 @@
   },
   {
     "test_id": "conv_004",
-    "category": "conversational",
+    "category": "generation",
     "test_name": "Follow-up Project Question",
     "question": "Qui travaille dessus ?",
     "expected_behavior": "Should understand 'dessus' refers to the Cedrus project from previous question and provide team information.",
@@ -69,7 +69,7 @@
   },
   {
     "test_id": "conv_005",
-    "category": "conversational",
+    "category": "generation",
     "test_name": "Technical Discussion Setup",
     "question": "Quelles sont les technologies utilisées dans nos projets ?",
     "expected_behavior": "Should provide an overview of technologies used in company projects.",
@@ -83,7 +83,7 @@
   },
   {
     "test_id": "conv_006",
-    "category": "conversational",
+    "category": "generation",
     "test_name": "Specific Technology Follow-up",
     "question": "Peux-tu me donner plus de détails sur la première que tu as mentionnée ?",
     "expected_behavior": "Should reference the first technology mentioned in the previous response and provide more details.",
@@ -103,7 +103,7 @@
   },
   {
     "test_id": "conv_007",
-    "category": "conversational",
+    "category": "generation",
     "test_name": "Memory Consistency Test",
     "question": "De quoi avons-nous parlé au début de notre conversation ?",
     "expected_behavior": "Should be able to reference earlier parts of the conversation and summarize the topics discussed.",
@@ -130,7 +130,7 @@
   },
   {
     "test_id": "conv_008",
-    "category": "conversational",
+    "category": "generation",
     "test_name": "Clarification Request",
     "question": "Peux-tu clarifier ce que tu viens de dire ?",
     "expected_behavior": "Should reference the immediately previous response and provide clarification or more detail.",
@@ -149,7 +149,7 @@
   },
   {
     "test_id": "conv_009",
-    "category": "conversational",
+    "category": "generation",
     "test_name": "Topic Transition Test",
     "question": "Revenons au sujet des collaborateurs",
     "expected_behavior": "Should recognize the request to return to a previous topic and provide relevant information about collaborators.",
@@ -168,6 +168,20 @@
       "language": "french",
       "difficulty": "complex",
       "sequence_part": 3
+    }
+  },
+  {
+    "test_id": "gen_010",
+    "category": "generation",
+    "test_name": "Language Consistency Test (Molière Test)",
+    "question": "Tell me more about Cedrus project.",
+    "expected_behavior": "Should always respond in French, even when the question is in English, demonstrating consistent language generation.",
+    "conversation_context": [],
+    "metadata": {
+      "test_type": "language_consistency",
+      "language": "english",
+      "difficulty": "medium",
+      "sequence_part": 1
     }
   }
 ]
