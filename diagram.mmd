@@ -1,0 +1,91 @@
+flowchart TB
+    %% Définition des styles
+    classDef sourceStyle fill:#FFE4B5,stroke:#D2691E,stroke-width:2px,color:#000001
+    classDef connectorStyle fill:#E6E6FA,stroke:#9370DB,stroke-width:2px,color:#000001
+    classDef processStyle fill:#E0F6FF,stroke:#4682B4,stroke-width:2px,color:#000001
+    classDef treatmentStyle fill:#F0FFF0,stroke:#32CD32,stroke-width:2px,color:#000001
+    classDef vectorStyle fill:#FFE4E1,stroke:#DC143C,stroke-width:2px,color:#000001
+    classDef triggerStyle fill:#E0FFE0,stroke:#228B22,stroke-width:2px,color:#000001
+    classDef definitionStyle fill:#F5F5DC,stroke:#8B4513,stroke-width:2px,color:#000001
+    
+
+    %% Section 0 - Source Definition
+    subgraph DEF ["Sources"]
+
+    end
+
+    %% Section A - Triggers
+    subgraph A ["Trigger Strategies"]
+    end
+
+    %% Section B - Ingestion Pipelines
+    subgraph B ["Ingestion Pipelines"]
+        direction LR
+        subgraph B1 ["Documents Pipeline"]
+            S1["Documents<br/>PDF, Docx, TXT"]
+            C1["Connector<br/>S3/FileSystem"]
+            P1["Text Extraction & OCR"]
+            S1 --> C1 --> P1
+        end
+        
+        subgraph B2 ["Web Pipeline"]
+            S2["Web Sources<br/>HTML, REST APIs"]
+            C2["Connector<br/>HTTP/WebScraper"]
+            P2["HTML/JSON Parsing"]
+            S2["Web Sources<br>HTML, REST APIs"] --> C2 --> P2
+        end
+        
+        subgraph B3 ["Media Pipeline"]
+            S3["Media Files<br/>MP4, WAV, MP3"]
+            C3["Connector<br/>SharePoint/S3"]
+            P3["Speech-to-Text<br/>Whisper, Azure Speech"]
+            S3["Media Files<br>Teams Meeting Records"] --> C3 --> P3
+        end
+        
+        subgraph B4 ["Collaboration Pipeline"]
+            S4["Enterprise Tools<br/>Confluence, Outlook, Teams"]
+            C4["API Connectors<br/>Graph API, Confluence REST"]
+            P4["Extraction"]
+            S4["Enterprise Tools<br>Confluence, Outlook"] --> C4 --> P4
+        end
+    end
+
+    %% Section C - Processing
+    subgraph C ["Processing Text Data"]
+        T2["Chunking Strategies"]
+        T3["Quality Control"]
+        T4["Metadata Enrichment"]
+    end
+
+    %% Section D - Vectorization
+    subgraph D [" "]
+        V1["Embedding Generation"]
+        V2["Vector Database"]
+    end
+
+    %% Main connections
+    DEF --> A
+    A --> B
+    
+    %% Convergence to C
+    P1 --> T2
+    P2 --> T2
+    P3 --> T2
+    P4 --> T2
+    
+    %% Processing flow
+    T2 --> T3
+    T3 --> T4
+    
+    %% To vectorization
+    T4 --> V1
+    V1 --> V2
+
+    %% Apply styles
+    class SOURCE_DEF definitionStyle
+    class S1,S2,S3,S4 sourceStyle
+    class C1,C2,C3,C4 connectorStyle
+    class P1,P2,P3,P4 processStyle
+    class T2,T3,T4 treatmentStyle
+    class V1,V2 vectorStyle
+    class T1A,T1B,T1C triggerStyle

@@ -780,9 +780,6 @@ class HTMLReportGenerator:
                         <div class="metric-value">
                             P@5: {{ "%.3f"|format(summary.average_precision_at_5 or 0) }}
                         </div>
-                        <div class="metric-value">
-                            P@10: {{ "%.3f"|format(summary.average_precision_at_10 or 0) }}
-                        </div>
                         <div class="metric-explanation">
                             <h5>📝 Explication</h5>
                             <strong>Precision@K:</strong> Proportion de documents pertinents parmi les K premiers résultats retournés. Mesure la qualité des premiers résultats.
@@ -801,9 +798,6 @@ class HTMLReportGenerator:
                         <div class="metric-value">
                             R@5: {{ "%.3f"|format(summary.average_recall_at_5 or 0) }}
                         </div>
-                        <div class="metric-value">
-                            R@10: {{ "%.3f"|format(summary.average_recall_at_10 or 0) }}
-                        </div>
                         <div class="metric-explanation">
                             <h5>📝 Explication</h5>
                             <strong>Recall@K:</strong> Proportion de documents pertinents trouvés dans les K premiers résultats. Mesure la capacité à retrouver les documents importants rapidement.
@@ -821,9 +815,6 @@ class HTMLReportGenerator:
                         </div>
                         <div class="metric-value">
                             NDCG@5: {{ "%.3f"|format(summary.average_ndcg_at_5 or 0) }}
-                        </div>
-                        <div class="metric-value">
-                            NDCG@10: {{ "%.3f"|format(summary.average_ndcg_at_10 or 0) }}
                         </div>
                         <div class="metric-explanation">
                             <h5>📝 Explication</h5>
