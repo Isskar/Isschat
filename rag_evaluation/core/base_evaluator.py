@@ -5,8 +5,11 @@ Base evaluator classes and data structures for Isschat evaluation system
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from enum import Enum
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class EvaluationStatus(Enum):
@@ -153,10 +156,107 @@ class BaseEvaluator(ABC):
         """Get the category this evaluator handles"""
         pass
 
-    @abstractmethod
     def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
-        """Evaluate a single test case"""
+        """Template method for evaluation - implements common flow"""
+        try:
+            # Step 1: Query the system
+            response, response_time, sources = self._query_system(test_case)
+
+            # Step 2: Check for errors
+            if response.startswith("ERROR:"):
+                return self._create_error_result(test_case, response, response_time, sources)
+
+            # Step 3: Evaluate semantically (abstract method)
+            evaluation = self._evaluate_semantically(test_case, response)
+
+            # Step 4: Log results
+            self._log_evaluation_result(test_case, evaluation)
+
+            # Step 5: Create success result
+            return self._create_success_result(test_case, response, evaluation, response_time, sources)
+
+        except Exception as e:
+            return self._create_exception_result(test_case, e)
+
+    @abstractmethod
+    def _query_system(self, test_case: TestCase) -> Tuple[str, float, List[str]]:
+        """Query the system - implemented by subclasses"""
         pass
+
+    @abstractmethod
+    def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
+        """Evaluate response semantically - implemented by subclasses"""
+        pass
+
+    def _create_error_result(
+        self, test_case: TestCase, response: str, response_time: float, sources: List[str] = Optional[None]
+    ) -> EvaluationResult:
+        """Create an error result for failed responses"""
+        return EvaluationResult(
+            test_id=test_case.test_id,
+            category=test_case.category,
+            test_name=test_case.test_name,
+            question=test_case.question,
+            response=response,
+            expected_behavior=test_case.expected_behavior,
+            status=EvaluationStatus.ERROR,
+            score=0.0,
+            response_time=response_time,
+            error_message=response,
+            sources=sources or [],
+        )
+
+    def _create_success_result(
+        self,
+        test_case: TestCase,
+        response: str,
+        evaluation: Dict[str, Any],
+        response_time: float,
+        sources: List[str] = Optional[None],
+    ) -> EvaluationResult:
+        """Create a successful evaluation result"""
+        status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED
+        return EvaluationResult(
+            test_id=test_case.test_id,
+            category=test_case.category,
+            test_name=test_case.test_name,
+            question=test_case.question,
+            response=response,
+            expected_behavior=test_case.expected_behavior,
+            status=status,
+            score=evaluation["score"],
+            evaluation_details=evaluation,
+            response_time=response_time,
+            sources=sources or [],
+            metadata=test_case.metadata,
+        )
+
+    def _create_exception_result(self, test_case: TestCase, exception: Exception) -> EvaluationResult:
+        """Create an error result for exceptions"""
+        logger.error(f"Error evaluating test {test_case.test_id}: {str(exception)}")
+        return EvaluationResult(
+            test_id=test_case.test_id,
+            category=test_case.category,
+            test_name=test_case.test_name,
+            question=test_case.question,
+            response="",
+            expected_behavior=test_case.expected_behavior,
+            status=EvaluationStatus.ERROR,
+            score=0.0,
+            error_message=str(exception),
+            metadata=test_case.metadata,
+        )
+
+    def _log_evaluation_result(self, test_case: TestCase, evaluation: Dict[str, Any]):
+        """Log evaluation results consistently"""
+        test_type = test_case.metadata.get("test_type", "generic")
+        reasoning = evaluation.get("reasoning", "No reasoning provided")
+
+        logger.info(
+            f"Test {test_case.test_id} ({test_type}): LLM evaluation score={evaluation['score']}, "
+            f"passes={evaluation['passes_criteria']}"
+        )
+        logger.info(f"LLM Judge Comment: {reasoning}")
 
     def evaluate_batch(self, test_cases: List[TestCase]) -> List[EvaluationResult]:
         """Evaluate a batch of test cases"""

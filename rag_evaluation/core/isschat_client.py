@@ -5,7 +5,7 @@ Client interface for interacting with Isschat system
 import time
 import sys
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 # Add src to path to import RAGPipeline
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -17,6 +17,8 @@ class IsschatClient:
     """Client for interacting with Isschat system"""
 
     def __init__(self, conversation_memory: bool = False):
+        self.conversation_memory = conversation_memory
+        self.conversation_history = []
         try:
             self.rag_pipeline = RAGPipelineFactory.create_default_pipeline(force_rebuild=False)
             print("✅ Isschat client initialized successfully")
@@ -30,11 +32,21 @@ class IsschatClient:
                 print(f"❌ Failed to initialize Isschat client: {e}")
             raise
 
-    def query(self, question: str) -> Tuple[str, float, List[str]]:
+    def query(self, question: str, context: Optional[str] = None) -> Tuple[str, float, List[str]]:
         start_time = time.time()
         try:
-            response, sources = self.rag_pipeline.process_query(question, verbose=False)
+            # Use provided context or build contextual question
+            contextual_question = question
+            if context:
+                contextual_question = f"Contexte de conversation:\n{context}\n\nQuestion actuelle: {question}"
+
+            response, sources = self.rag_pipeline.process_query(contextual_question, verbose=False)
             response_time = time.time() - start_time
+
+            # Store in conversation history if memory is enabled
+            if self.conversation_memory:
+                self.conversation_history.append({"question": question, "response": response})
+
             source_list = []
             if sources:
                 if isinstance(sources, str):

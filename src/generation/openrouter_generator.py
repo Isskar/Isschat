@@ -57,11 +57,11 @@ class OpenRouterGenerator(BaseGenerator):
 
             # Create prompt template
             prompt = PromptTemplates.get_default_template()
-            self._prompt = PromptTemplate(template=prompt, input_variables=["context", "question"])
+            self._prompt = PromptTemplate(template=prompt, input_variables=["history", "context", "question"])
 
             # Create the chain
             self._chain = (
-                {"context": RunnablePassthrough(), "question": RunnablePassthrough()}
+                {"history": RunnablePassthrough(), "context": RunnablePassthrough(), "question": RunnablePassthrough()}
                 | self._prompt
                 | self._llm
                 | StrOutputParser()
@@ -70,13 +70,14 @@ class OpenRouterGenerator(BaseGenerator):
         except Exception as e:
             raise GenerationError(f"Failed to initialize OpenRouter generator: {str(e)}")
 
-    def generate(self, query: str, retrieval_result: RetrievalResult) -> GenerationResult:
+    def generate(self, query: str, retrieval_result: RetrievalResult, history: str = "") -> GenerationResult:
         """
         Generate answer based on query and retrieved documents.
 
         Args:
             query: User query
             retrieval_result: Result from retrieval step
+            history: Conversation history as a formatted string
 
         Returns:
             GenerationResult with answer and metadata
@@ -96,7 +97,7 @@ class OpenRouterGenerator(BaseGenerator):
             )
 
             # Generate answer
-            answer = self._chain.invoke({"context": context, "question": query})
+            answer = self._chain.invoke({"history": history, "context": context, "question": query})
 
             # Format sources
             sources = self._format_sources(retrieval_result.documents)
