@@ -12,8 +12,10 @@
       "expected_response_time": 2,
       "human_estimate": 30,
       "source_type": "single_page",
-      "human_response": {
-        "content": "La personne qui a rédigé la page : Lead Data Engineer est : Johan Jublanc",
+      "perfect_answer": {
+        "content": "Johan Jublanc est un expert reconnu dans le domaine de la data science et de l'intelligence artificielle.
+                   Il occupe actuellement les fonctions de co-fondateur et Chief Data Officer (CDO) du cabinet de conseil Isskar, société spécialisée dans l'accompagnement des entreprises pour la conception, 
+                   le développement et le déploiement de solutions data et d'intelligence artificielle.",
         "quality_metrics": {
           "relevance": 0.9,
           "accuracy": 0.9,

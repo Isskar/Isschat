@@ -65,7 +65,7 @@ class BusinessValueEvaluator(BaseEvaluator):
 
             # Get human estimate and response from test metadata
             human_estimate = test_case.metadata.get("human_estimate", 30)
-            human_response = test_case.metadata.get("human_response", {"content": "", "quality_metrics": {}})
+            perfect_answer = test_case.metadata.get("perfect_answer", {"content": "", "quality_metrics": {}})
 
             # Calculate efficiency ratio
             efficiency_ratio = human_estimate / actual_response_time if actual_response_time > 0 else 0
@@ -87,7 +87,7 @@ class BusinessValueEvaluator(BaseEvaluator):
                     "completeness": isschat_quality.get("completeness", 0.0),
                     "clarity": isschat_quality.get("clarity", 0.0),
                 },
-                human_metrics=human_response.get("quality_metrics", {}),
+                human_metrics=perfect_answer.get("quality_metrics", {}),
             )
 
             # Check if test passed based on response time and quality comparison
@@ -119,7 +119,7 @@ class BusinessValueEvaluator(BaseEvaluator):
                         efficiency_ratio,
                         quality_comparison,
                         isschat_quality,
-                        human_response,
+                        perfect_answer,
                     ),
                 },
                 response_time=actual_response_time,
