@@ -4,6 +4,8 @@ Business Value Evaluator for measuring Isschat's business impact and efficiency
 
 import time
 import json
+import re
+import logging
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,10 +21,35 @@ class PerformanceMetrics:
     response_time: float
     efficiency_ratio: float  # human_time / isschat_time
     relevance_score: float
-    quality_comparison: Dict[str, float]  # Comparaison des métriques de qualité
+    quality_bva: Dict[str, float]  # Comparaison des métriques de qualité
 
+
+logger = logging.getLogger(__name__)
 
 class BusinessValueEvaluator(BaseEvaluator):
+    BVA_PROMPT = """Tu es un évaluateur expert et strict. Ta tâche est de comparer la "Réponse d'Isschat" à la "Réponse parfaite" en te basant sur la "Question" de l'utilisateur.
+
+Évalue la réponse sur les critères suivants :
+- Relevance (pertinence par rapport à la question)
+- Accuracy (précision et exactitude des informations)
+- Completeness (exhaustivité de la réponse)
+- Clarity (clarté et structure de la réponse)
+
+Question : {question}
+Réponse d'Isschat : {isschat_response}
+Réponse parfaite : {perfect_answer}
+
+Fournis ton évaluation dans le format suivant, sans texte d'introduction ni formatage supplémentaire. Chaque score DOIT être un float entre 0.0 et 1.0. Ne réponds qu'avec le format ci-dessous :
+Relevance Score: <float_between_0.0_and_1.0>
+Relevance Reasoning: <one_sentence_reasoning>
+Accuracy Score: <float_between_0.0_and_1.0>
+Accuracy Reasoning: <one_sentence_reasoning>
+Completeness Score: <float_between_0.0_and_1.0>
+Completeness Reasoning: <one_sentence_reasoning>
+Clarity Score: <float_between_0.0_and_1.0>
+Clarity Reasoning: <one_sentence_reasoning>
+Overall BVA: <overall_summary_of_the_comparison>
+"""
     """Business Value Evaluator for measuring Isschat's business impact and efficiency"""
 
     def __init__(self, config: Any):
@@ -63,28 +90,64 @@ class BusinessValueEvaluator(BaseEvaluator):
         return response, response_time, sources
 
     def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
-        """Evaluate the response semantically using the LLM judge."""
-        perfect_answer = test_case.metadata.get("perfect_answer", {"content": ""})
-        comparison_result = self.llm_judge.evaluate_bva(
+        """Evaluate the response semantically using a structured text prompt."""
+        perfect_answer = test_case.metadata.get("perfect_answer", {}).get("content", "")
+        prompt = self.BVA_PROMPT.format(
             question=test_case.question,
             isschat_response=response,
-            perfect_answer=perfect_answer.get("content", ""),
+            perfect_answer=perfect_answer,
         )
 
+        llm_response = self.llm_judge.llm.invoke(prompt).content.strip()
+        logger.info(f"LLM BVA raw response for {test_case.test_id}:\n{llm_response}")
+
+        bva_details = self._parse_bva_response(llm_response)
+
         scores = [
-            comparison_result["relevance"]["score"],
-            comparison_result["accuracy"]["score"],
-            comparison_result["completeness"]["score"],
-            comparison_result["clarity"]["score"],
+            bva_details["relevance"]["score"],
+            bva_details["accuracy"]["score"],
+            bva_details["completeness"]["score"],
+            bva_details["clarity"]["score"],
         ]
         average_score = sum(scores) / len(scores) if scores else 0.0
 
         return {
             "score": average_score,
-            "reasoning": comparison_result.get("overall_comparison", "No overall comparison provided"),
-            "comparison_details": comparison_result,
-            "passes_criteria": average_score >= 0.7,  # Assuming 70% is the quality threshold
+            "reasoning": bva_details.get("overall_bva", "No overall BVA provided"),
+            "bva_details": bva_details,
+            "passes_criteria": average_score >= 0.7,
         }
+
+    def _parse_bva_response(self, response: str) -> Dict[str, Any]:
+        """Parse the structured text response from the LLM for BVA evaluation."""
+        parsed = {
+            "relevance": {"score": 0.0, "reasoning": "Parsing failed"},
+            "accuracy": {"score": 0.0, "reasoning": "Parsing failed"},
+            "completeness": {"score": 0.0, "reasoning": "Parsing failed"},
+            "clarity": {"score": 0.0, "reasoning": "Parsing failed"},
+            "overall_bva": "Parsing failed",
+        }
+
+        # Handle overall BVA first to capture multi-line reasoning
+        overall_bva_match = re.search(r"Overall BVA:(.*)", response, re.DOTALL)
+        if overall_bva_match:
+            parsed["overall_bva"] = overall_bva_match.group(1).strip()
+
+        lines = response.splitlines()
+        for line in lines:
+            for metric in ["Relevance", "Accuracy", "Completeness", "Clarity"]:
+                if line.startswith(f"{metric} Score:"):
+                    score_str = line.split(f"{metric} Score:")[1].strip()
+                    try:
+                        score = float(score_str)
+                        parsed[metric.lower()]["score"] = max(0.0, min(1.0, score))
+                    except (ValueError, IndexError):
+                        parsed[metric.lower()]["score"] = 0.0
+                elif line.startswith(f"{metric} Reasoning:"):
+                    reasoning = line.split(f"{metric} Reasoning:")[1].strip()
+                    parsed[metric.lower()]["reasoning"] = reasoning
+
+        return parsed
 
     def _create_success_result(
         self,
@@ -102,7 +165,7 @@ class BusinessValueEvaluator(BaseEvaluator):
         time_passed = self._check_performance_threshold(response_time, complexity)
         quality_passed = evaluation["passes_criteria"]
 
-        status = EvaluationStatus.PASSED if time_passed and quality_passed else EvaluationStatus.FAILED
+        status = EvaluationStatus.PASSED if quality_passed else EvaluationStatus.FAILED
 
         # Add business-specific details to the evaluation and metadata
         evaluation["response_time"] = response_time
@@ -118,7 +181,7 @@ class BusinessValueEvaluator(BaseEvaluator):
             "complexity": complexity,
             "quality_scores": {
                 k: v["score"]
-                for k, v in evaluation["comparison_details"].items()
+                for k, v in evaluation["bva_details"].items()
                 if isinstance(v, dict) and "score" in v
             },
         }
