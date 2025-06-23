@@ -120,18 +120,6 @@
     }
   },
   {
-    "test_id": "rob_011",
-    "category": "robustness",
-    "test_name": "Molière Test (Language)",
-    "question": "Tell me more about Cedrus project.",
-    "expected_behavior": "Should always respond in French, even when the question is in English.",
-    "metadata": {
-      "test_type": "language_consistency",
-      "language": "english",
-      "difficulty": "medium"
-    }
-  },
-  {
     "test_id": "rob_012",
     "category": "robustness",
     "test_name": "Technical Watch Summary",

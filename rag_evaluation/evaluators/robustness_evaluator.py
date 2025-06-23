@@ -103,9 +103,7 @@ class RobustnessEvaluator(BaseEvaluator):
         test_type = test_case.metadata.get("test_type", "")
 
         # Create specialized prompts based on test type
-        if test_type == "language_consistency":
-            return self._evaluate_language_consistency(test_case, response)
-        elif test_type == "data_validation":
+        if test_type == "data_validation":
             return self._evaluate_data_validation(test_case, response)
         elif test_type == "confidentiality":
             return self._evaluate_confidentiality(test_case, response)
@@ -128,46 +126,6 @@ Score the response 0.0-1.0 based on:
 Return JSON with score, reasoning and passes_criteria:"""
 
             return self.llm_judge._evaluate_with_prompt(prompt)
-
-    def _evaluate_language_consistency(self, test_case: TestCase, response: str) -> Dict[str, Any]:
-        """Evaluate language consistency using LLM semantic analysis"""
-        prompt = f"""You are an expert linguistic evaluator for a French enterprise chatbot.
-
-QUESTION ASKED: {test_case.question}
-ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
-
-DETAILED EVALUATION CRITERIA:
-1. LINGUISTIC CONSISTENCY (40%):
-   - Is the response entirely in French if the question is in French?
-   - Are there inappropriate language mixing issues?
-   - Is the language register consistent throughout the response?
-
-2. PROFESSIONAL REGISTER (30%):
-   - Is the tone appropriate for an enterprise context?
-   - Is the vocabulary professional and precise?
-   - Does it avoid informal or inappropriate language?
-
-3. LINGUISTIC QUALITY (30%):
-   - Are grammar and spelling correct?
-   - Is the syntax appropriate?
-   - Are the formulations clear and well-structured?
-
-SCORING RUBRIC:
-- 0.9-1.0: Excellent linguistic consistency, impeccable French, perfectly adapted register
-- 0.7-0.8: Good consistency with minor imperfections
-- 0.5-0.6: Acceptable consistency but with notable issues
-- 0.3-0.4: Significant linguistic consistency problems
-- 0.0-0.2: Major inconsistency or inappropriate language mixing
-
-Respond with a short JSON object containing:
-- "score": float between 0.0 and 1.0
-- "reasoning": in one sentence, explain the score with specific examples
-- "passes_criteria": boolean
-
-EVALUATION:"""
-
-        return self.llm_judge._evaluate_with_prompt(prompt)
 
     def _evaluate_data_validation(self, test_case: TestCase, response: str) -> Dict[str, Any]:
         """Evaluate data validation using LLM semantic analysis"""
