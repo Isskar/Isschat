@@ -53,6 +53,7 @@ htmlcov/
 data/
 db/
 evaluation_results/
+rag_evaluation/config/test_datasets/
 
 # Temporary files
 *.tmp
