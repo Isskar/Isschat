@@ -12,66 +12,6 @@ from langchain_core.utils.utils import convert_to_secret_str
 class LLMJudge:
     """LLM-based evaluation judge for Isschat responses"""
 
-    # Prompt templates
-    CONVERSATIONAL_PROMPT = """You are an expert evaluator for conversational AI systems.
-
-CONVERSATION CONTEXT: {context}
-CURRENT QUESTION: {question}
-ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {expected}
-
-EVALUATION CRITERIA:
-- Does the response globally maintain conversation context?
-- Does it demonstrate conversational memory?
-- Is the response coherent with the conversation flow?
-
-Respond with a JSON object containing:
-- "score": float between 0.0 and 1.0
-- "reasoning": brief explanation of the score
-- "passes_criteria": boolean indicating if it meets expectations
-
-EVALUATION:"""
-
-    PERFORMANCE_PROMPT = """You are an expert evaluator for AI system performance and quality.
-
-QUESTION: {question}
-ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {expected}
-RESPONSE TIME: {response_time}s
-COMPLEXITY LEVEL: {complexity}
-
-EVALUATION CRITERIA:
-- Relevance: Does the response directly address the question?
-- Accuracy: Is the information provided correct and factual?
-- Completeness: Does it provide sufficient information?
-- Quality: Is the response well-structured and clear?
-
-Respond with a JSON object containing:
-- "score": float between 0.0 and 1.0
-- "reasoning": brief explanation of the score
-- "passes_criteria": boolean indicating if it meets expectations
-
-EVALUATION:"""
-
-    FEEDBACK_PROMPT = """You are an expert evaluator for AI system feedback mechanisms.
-
-QUESTION: {question}
-ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {expected}
-FEEDBACK TYPE: {feedback_type}
-
-EVALUATION CRITERIA:
-- Appropriateness: Is the response appropriate for the feedback type?
-- Helpfulness: Does it provide useful information or guidance?
-- Tone: Is the tone appropriate and professional?
-
-Respond with a JSON object containing:
-- "score": float between 0.0 and 1.0
-- "reasoning": brief explanation of the score
-- "passes_criteria": boolean indicating if it meets expectations
-
-EVALUATION:"""
-
     def __init__(self, config: Any):
         """Initialize LLM judge with configuration"""
         self.config = config
@@ -92,7 +32,7 @@ EVALUATION:"""
 
         # Initialize LLM
         self.llm = ChatOpenAI(
-            model_name="anthropic/claude-3-sonnet",
+            model_name=config.judge_model,
             temperature=config.judge_temperature,
             max_tokens=config.judge_max_tokens,
             openai_api_key=api_key,
@@ -129,11 +69,14 @@ EVALUATION:"""
         try:
             result = self.llm.invoke(prompt).content.strip()
 
+            # FIXME: Clean up JSON response from markdown artifacts
+            cleaned_result = self._clean_json_response(result)
+
             # Try to parse as JSON
             import json
 
             try:
-                evaluation = json.loads(result)
+                evaluation = json.loads(cleaned_result)
 
                 # Validate required fields
                 if not all(key in evaluation for key in ["score", "reasoning", "passes_criteria"]):
@@ -153,6 +96,32 @@ EVALUATION:"""
 
         except Exception as e:
             return {"score": 0.0, "reasoning": f"Evaluation error: {str(e)}", "passes_criteria": False}
+
+    def _clean_json_response(self, response: str) -> str:
+        """Clean JSON response from markdown formatting and other artifacts"""
+        import re
+        import json
+
+        response = re.sub(r"```json\s*", "", response)
+        response = re.sub(r"```\s*$", "", response)
+        response = response.strip()
+        start_idx = response.find("{")
+        end_idx = response.rfind("}")
+
+        if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+            response = response[start_idx : end_idx + 1]
+
+        # FIXME: Handle common JSON formatting issues
+        try:
+            json.loads(response)
+            return response
+        except json.JSONDecodeError:
+            # Add missing closing quote and brace if needed
+            if response.count('"') % 2 == 1:
+                response += '"'
+            if response.count("{") > response.count("}"):
+                response += "}"
+            return response
 
     def _fallback_evaluation(self, result: str) -> Dict[str, Any]:
         """Fallback evaluation when JSON parsing fails - uses simplified LLM retry"""

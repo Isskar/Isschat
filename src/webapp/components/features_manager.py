@@ -4,10 +4,8 @@ Features manager for advanced chatbot functionality.
 
 import streamlit as st
 from streamlit_feedback import streamlit_feedback
-import os
 import logging
 import time
-import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
@@ -62,71 +60,60 @@ class ConversationAnalyzer:
 class FeedbackSystem:
     """Feedback system with thumbs (👍/👎) using streamlit_feedback"""
 
+    def __init__(self, storage_service=None, feedback_file: Optional[str] = None):
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
+
+        if feedback_file is None:
+            # Create a filename with current date
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            feedback_file = f"logs/feedback/feedback_{date_str}.json"
+        self.feedback_file = feedback_file
+        self._ensure_feedback_file_exists()
+
+    def _ensure_feedback_file_exists(self):
+        """Ensure that the feedback file exists using storage service"""
+        # Create directory using storage service
+        directory_path = "/".join(self.feedback_file.split("/")[:-1])
+        if directory_path and hasattr(self.storage_service._storage, "create_directory"):
+            self.storage_service._storage.create_directory(directory_path)
+
+        # Create empty file if it doesn't exist
+        if not self.storage_service.file_exists(self.feedback_file):
+            self.storage_service.save_json_data(self.feedback_file, [])
+
     def _load_feedback_data(self):
         """Load feedback data from data_manager (JSONL format)"""
-        from datetime import datetime, timedelta
         import logging
 
         logger = logging.getLogger(__name__)
         all_feedback = []
 
         try:
-            from ...core.data_manager import DataManager
+            from src.core.data_manager import get_data_manager
 
-            data_manager = DataManager()
+            data_manager = get_data_manager()
 
-            # Calculate the last 30 days
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
+            # Use data_manager to get feedback data directly
+            logger.info("Loading feedbacks from data_manager")
+            all_feedback = data_manager.get_feedback_data()
 
-            logger.info(f"Loading feedbacks from {start_date.date()} to {end_date.date()}")
-
-            current_date = start_date
-            files_found = 0
-
-            while current_date <= end_date:
-                try:
-                    date_str = current_date.strftime("%Y%m%d")
-                    feedback_file = data_manager.feedback_dir / f"feedback_{date_str}.jsonl"
-
-                    if feedback_file.exists():
-                        files_found += 1
-                        logger.info(f"Feedback file found: {feedback_file}")
-
-                        with open(feedback_file, "r") as f:
-                            daily_count = 0
-                            for line in f:
-                                if line.strip():
-                                    entry = json.loads(line.strip())
-                                    # Convert to old format for compatibility
-                                    old_format_entry = {
-                                        "user_id": entry.get("user_id", ""),
-                                        "question": entry.get("metadata", {}).get("question", ""),
-                                        "answer": entry.get("metadata", {}).get("answer", ""),
-                                        "sources": entry.get("metadata", {}).get("sources", ""),
-                                        "feedback": entry.get("metadata", {}).get("original_feedback", {}),
-                                        "timestamp": entry.get("timestamp", ""),
-                                        "rating": entry.get("rating", 0),
-                                        "comment": entry.get("comment", ""),
-                                    }
-                                    all_feedback.append(old_format_entry)
-                                    daily_count += 1
-
-                        logger.info(f"Loaded {daily_count} feedbacks from {feedback_file}")
-                    else:
-                        logger.debug(f"File not found: {feedback_file}")
-
-                except Exception as e:
-                    logger.debug(f"Could not load feedback for {date_str}: {e}")
-
-                current_date += timedelta(days=1)
-
-            logger.info(f"Total: {files_found} files found, {len(all_feedback)} feedbacks loaded from data_manager")
+            logger.info(f"Total: {len(all_feedback)} feedbacks loaded from data_manager")
             return all_feedback
 
         except Exception as e:
-            logger.error(f"Error loading feedback from data_manager: {e}")
+            logger.error(f"Error loading feedback data from data_manager: {e}")
             return []
+
+    def _save_feedback_data(self, data):
+        """Save feedback data to file using storage service"""
+        self.storage_service.save_json_data(self.feedback_file, data)
 
     def render_feedback_widget(
         self, user_id: str, question: str, answer: str, sources: str, key_suffix: str = ""
@@ -174,7 +161,7 @@ class FeedbackSystem:
 
                 # Sauvegarder dans le data manager d'abord
                 try:
-                    from ...core.data_manager import get_data_manager
+                    from src.core.data_manager import get_data_manager
 
                     data_manager = get_data_manager()
 
@@ -297,7 +284,7 @@ class FeedbackSystem:
         """
         # Try data manager first
         try:
-            from ...core.data_manager import get_data_manager
+            from src.core.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             feedback_data = data_manager.get_feedback_data(limit=1000)
@@ -523,15 +510,24 @@ class QueryHistory:
 class FeaturesManager:
     """Central manager for all advanced chatbot features."""
 
-    def __init__(self, user_id: str = "anonymous"):
+    def __init__(self, user_id: str = "anonymous", storage_service=None):
         """Initialize and integrate all features."""
         self.user_id = user_id
 
-        # Create necessary folders if they don't exist
-        os.makedirs("./logs", exist_ok=True)
-        os.makedirs("./logs/feedback", exist_ok=True)
-        os.makedirs("./data", exist_ok=True)
-        os.makedirs("./cache", exist_ok=True)
+        # Get storage service from config if not provided
+        if storage_service is None:
+            from src.core.config import _ensure_config_initialized
+
+            config_manager = _ensure_config_initialized()
+            self.storage_service = config_manager.get_storage_service()
+        else:
+            self.storage_service = storage_service
+
+        # Create necessary directories using storage service
+        directories = ["logs", "logs/feedback", "data", "cache"]
+        for directory in directories:
+            if hasattr(self.storage_service._storage, "create_directory"):
+                self.storage_service._storage.create_directory(directory)
 
         # Configure logging
         logging.basicConfig(
@@ -546,12 +542,12 @@ class FeaturesManager:
         self.logger = logging.getLogger("features_manager")
         self.logger.info(f"Initializing features manager for user {user_id}")
 
-        # Initialize feature components
+        # Initialize feature components with storage service
         self.analyzer = ConversationAnalyzer()
         self.response_tracker = ResponseTracker()
         self.performance_tracker = PerformanceTracker()
         self.query_history = QueryHistory()
-        self.feedback_system = FeedbackSystem()  # Nouveau système de feedback avec pouces
+        self.feedback_system = FeedbackSystem(storage_service=self.storage_service)
 
         # Initialize session state for features
         if "features_data" not in st.session_state:
@@ -573,7 +569,7 @@ class FeaturesManager:
 
         # Save to data manager
         try:
-            from ...core.data_manager import get_data_manager
+            from src.core.data_manager import get_data_manager
 
             data_manager = get_data_manager()
 

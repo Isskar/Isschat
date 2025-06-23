@@ -1,5 +1,5 @@
 """
-Performance comparison evaluator for Isschat vs Human efficiency
+Business Value Evaluator for measuring Isschat's business impact and efficiency
 """
 
 import time
@@ -8,9 +8,8 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.base_evaluator import BaseEvaluator, EvaluationResult, TestCase, EvaluationStatus
-from ..core.isschat_client import IsschatClient
-from ..core.llm_judge import LLMJudge
+from rag_evaluation.core import BaseEvaluator, LLMJudge, IsschatClient
+from rag_evaluation.core.base_evaluator import TestCase, EvaluationResult, EvaluationStatus
 
 
 @dataclass
@@ -20,13 +19,14 @@ class PerformanceMetrics:
     response_time: float
     efficiency_ratio: float  # human_time / isschat_time
     relevance_score: float
+    quality_comparison: Dict[str, float]  # Comparaison des métriques de qualité
 
 
-class PerformanceComparisonEvaluator(BaseEvaluator):
-    """Evaluator for comparing Isschat performance against human benchmarks"""
+class BusinessValueEvaluator(BaseEvaluator):
+    """Business Value Evaluator for measuring Isschat's business impact and efficiency"""
 
     def __init__(self, config: Any):
-        """Initialize performance comparison evaluator"""
+        """Initialize business value evaluator"""
         super().__init__(config)
         self.isschat_client = IsschatClient()
         self.llm_judge = LLMJudge(config)
@@ -41,19 +41,19 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
 
     def get_category(self) -> str:
         """Get the category this evaluator handles"""
-        return "performance_comparison"
+        return "business_value"
 
     def _load_test_dataset(self) -> List[Dict[str, Any]]:
-        """Load performance comparison test dataset"""
-        dataset_path = Path(__file__).parent.parent / "config" / "test_datasets" / "performance_comparison_tests.json"
+        """Load business value test dataset"""
+        dataset_path = Path(__file__).parent.parent / "config" / "test_datasets" / "bva_tests.json"
 
         try:
             with open(dataset_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except FileNotFoundError:
-            raise FileNotFoundError(f"Performance comparison test dataset not found at {dataset_path}")
+            raise FileNotFoundError(f"Business value test dataset not found at {dataset_path}")
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in performance comparison test dataset: {e}")
+            raise ValueError(f"Invalid JSON in business value test dataset: {e}")
 
     def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
         """Evaluate a single test case"""
@@ -63,15 +63,15 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
             response, response_time, sources = self.isschat_client.query(test_case.question)
             actual_response_time = time.time() - start_time
 
-            # Get human estimate from test metadata
-            human_estimate_str = test_case.metadata.get("human_estimate", "30s")
-            human_estimate = self._parse_time_estimate(human_estimate_str)
+            # Get human estimate and response from test metadata
+            human_estimate = test_case.metadata.get("human_estimate", 30)
+            human_response = test_case.metadata.get("human_response", {"content": "", "quality_metrics": {}})
 
             # Calculate efficiency ratio
             efficiency_ratio = human_estimate / actual_response_time if actual_response_time > 0 else 0
 
-            # Evaluate quality using LLM judge
-            quality_evaluation = self.llm_judge.evaluate_performance(
+            # Evaluate Isschat response quality using LLM judge
+            isschat_quality = self.llm_judge.evaluate_performance(
                 question=test_case.question,
                 response=response,
                 expected=test_case.expected_behavior,
@@ -79,11 +79,22 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
                 complexity=test_case.metadata.get("complexity", "medium"),
             )
 
-            relevance_score = quality_evaluation.get("score", 0.5)
+            # Compare quality metrics between Isschat and human
+            quality_comparison = self._compare_quality_metrics(
+                isschat_metrics={
+                    "relevance": isschat_quality.get("score", 0.0),
+                    "accuracy": isschat_quality.get("accuracy", 0.0),
+                    "completeness": isschat_quality.get("completeness", 0.0),
+                    "clarity": isschat_quality.get("clarity", 0.0),
+                },
+                human_metrics=human_response.get("quality_metrics", {}),
+            )
 
-            # Check if test passed based on response time threshold
+            # Check if test passed based on response time and quality comparison
             complexity = test_case.metadata.get("complexity", "medium")
-            passed = self._check_performance_threshold(actual_response_time, complexity)
+            time_passed = self._check_performance_threshold(actual_response_time, complexity)
+            quality_passed = self._check_quality_threshold(quality_comparison)
+            passed = time_passed and quality_passed
 
             # Create evaluation result
             evaluation_result = EvaluationResult(
@@ -94,12 +105,22 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
                 response=response,
                 expected_behavior=test_case.expected_behavior,
                 status=EvaluationStatus.PASSED if passed else EvaluationStatus.FAILED,
-                score=relevance_score,
+                score=isschat_quality.get("score", 0.0),
                 evaluation_details={
                     "response_time": actual_response_time,
                     "human_estimate": human_estimate,
                     "efficiency_ratio": efficiency_ratio,
-                    "reasoning": f"Response time: {actual_response_time:.2f}s, Efficiency: {efficiency_ratio:.1f}x",
+                    "quality_comparison": quality_comparison,
+                    "time_passed": time_passed,
+                    "quality_passed": quality_passed,
+                    "reasoning": self._format_detailed_comparison(
+                        actual_response_time,
+                        human_estimate,
+                        efficiency_ratio,
+                        quality_comparison,
+                        isschat_quality,
+                        human_response,
+                    ),
                 },
                 response_time=actual_response_time,
                 sources=sources,
@@ -108,8 +129,12 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
                     "human_estimate": human_estimate,
                     "efficiency_ratio": efficiency_ratio,
                     "complexity": complexity,
+                    "quality_comparison": quality_comparison,
                 },
             )
+
+            # Display detailed results
+            self._display_evaluation_results(evaluation_result, response, isschat_quality)
 
             return evaluation_result
 
@@ -127,9 +152,71 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
                 metadata={"error": str(e)},
             )
 
-    def evaluate_performance_comparison(self, complexity_filter: Optional[str] = None) -> Dict[str, Any]:
-        """Evaluate performance comparison across all complexity levels"""
-        print("🚀 Starting Performance Comparison Evaluation")
+    def _compare_quality_metrics(
+        self, isschat_metrics: Dict[str, float], human_metrics: Dict[str, float]
+    ) -> Dict[str, Any]:
+        """Compare quality metrics between Isschat and human responses"""
+        comparison = {}
+
+        # Compare each metric
+        for metric in ["relevance", "accuracy", "completeness", "clarity"]:
+            isschat_score = isschat_metrics.get(metric, 0.0)
+            human_score = human_metrics.get(metric, 0.0)
+
+            if human_score > 0:  # Only compare if human score is available
+                difference = isschat_score - human_score
+                comparison[metric] = {
+                    "isschat_score": isschat_score,
+                    "human_score": human_score,
+                    "difference": difference,
+                    "relative_performance": (isschat_score / human_score) if human_score > 0 else 0,
+                }
+            else:
+                comparison[metric] = {
+                    "isschat_score": isschat_score,
+                    "human_score": None,
+                    "difference": None,
+                    "relative_performance": None,
+                }
+
+        # Calculate overall comparison
+        comparison["overall"] = {
+            "average_difference": sum(c["difference"] for c in comparison.values() if c["difference"] is not None)
+            / len([c for c in comparison.values() if c["difference"] is not None])
+            if any(c["difference"] is not None for c in comparison.values())
+            else None,
+            "better_than_human": sum(
+                1 for c in comparison.values() if c["difference"] is not None and c["difference"] > 0
+            ),
+            "equal_to_human": sum(
+                1 for c in comparison.values() if c["difference"] is not None and c["difference"] == 0
+            ),
+            "worse_than_human": sum(
+                1 for c in comparison.values() if c["difference"] is not None and c["difference"] < 0
+            ),
+        }
+
+        return comparison
+
+    def _check_quality_threshold(self, quality_comparison: Dict[str, Any]) -> bool:
+        """Check if quality metrics meet thresholds"""
+        if not quality_comparison.get("overall"):
+            return True  # Si pas de comparaison possible (pas de référence humaine), on considère que c'est passé
+
+        # Le test passe si Isschat est meilleur ou égal à l'humain dans au moins 50% des métriques
+        metrics_with_comparison = (
+            quality_comparison["overall"]["better_than_human"] + quality_comparison["overall"]["equal_to_human"]
+        )
+        total_metrics_compared = metrics_with_comparison + quality_comparison["overall"]["worse_than_human"]
+
+        if total_metrics_compared == 0:
+            return True
+
+        return (metrics_with_comparison / total_metrics_compared) >= 0.5
+
+    def evaluate_business_value(self, complexity_filter: Optional[str] = None) -> Dict[str, Any]:
+        """Evaluate business value across all complexity levels"""
+        print("🚀 Starting Business Value Evaluation")
         print("=" * 60)
 
         results = []
@@ -161,7 +248,7 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
         overall_summary = self._calculate_overall_summary(results)
 
         return {
-            "category": "performance_comparison",
+            "category": "business_value",
             "results": results,
             "summary": overall_summary,
             "timestamp": time.time(),
@@ -215,19 +302,6 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
 
         return results
 
-    def _parse_time_estimate(self, time_str: str) -> float:
-        """Parse human time estimate string to seconds"""
-        time_str = time_str.lower().strip()
-
-        if "min" in time_str:
-            minutes = float(time_str.replace("min", "").strip())
-            return minutes * 60
-        elif "s" in time_str:
-            seconds = float(time_str.replace("s", "").strip())
-            return seconds
-        else:
-            return float(time_str)
-
     def _check_performance_threshold(self, response_time: float, complexity: str) -> bool:
         """Check if response time meets threshold for complexity level"""
         if complexity == "easy" and response_time <= self.easy_threshold:
@@ -248,18 +322,29 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
 
         response_times = [r.metadata.get("response_time", 0) for r in results if "response_time" in r.metadata]
         efficiency_ratios = [r.metadata.get("efficiency_ratio", 0) for r in results if "efficiency_ratio" in r.metadata]
-        relevance_scores = [r.score for r in results]
+
+        # Collect quality comparisons
+        quality_stats = {"better_than_human": 0, "equal_to_human": 0, "worse_than_human": 0}
+
+        for r in results:
+            if "quality_comparison" in r.metadata:
+                comparison = r.metadata["quality_comparison"].get("overall", {})
+                quality_stats["better_than_human"] += comparison.get("better_than_human", 0)
+                quality_stats["equal_to_human"] += comparison.get("equal_to_human", 0)
+                quality_stats["worse_than_human"] += comparison.get("worse_than_human", 0)
 
         avg_response_time = sum(response_times) / len(response_times) if response_times else 0.0
         avg_efficiency_ratio = sum(efficiency_ratios) / len(efficiency_ratios) if efficiency_ratios else 0.0
-        avg_relevance_score = sum(relevance_scores) / len(relevance_scores) if relevance_scores else 0.0
 
         print(f"\n📊 {complexity.upper()} COMPLEXITY SUMMARY:")
         print("-" * 40)
         print(f"Tests: {passed_count}/{total_tests} passed ({passed_count / total_tests:.1%})")
         print(f"Avg Response Time: {avg_response_time:.2f}s")
         print(f"Avg Efficiency Ratio: {avg_efficiency_ratio:.1f}x")
-        print(f"Avg Relevance Score: {avg_relevance_score:.2f}")
+        print("\nQuality Comparison with Human:")
+        print(f"Better than human: {quality_stats['better_than_human']}")
+        print(f"Equal to human: {quality_stats['equal_to_human']}")
+        print(f"Worse than human: {quality_stats['worse_than_human']}")
 
     def _calculate_overall_summary(self, results: List[EvaluationResult]) -> Dict[str, Any]:
         """Calculate overall summary statistics"""
@@ -268,7 +353,16 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
 
         response_times = [r.metadata.get("response_time", 0) for r in results if "response_time" in r.metadata]
         efficiency_ratios = [r.metadata.get("efficiency_ratio", 0) for r in results if "efficiency_ratio" in r.metadata]
-        relevance_scores = [r.score for r in results]
+
+        # Aggregate quality comparisons
+        quality_stats = {"better_than_human": 0, "equal_to_human": 0, "worse_than_human": 0}
+
+        for r in results:
+            if "quality_comparison" in r.metadata:
+                comparison = r.metadata["quality_comparison"].get("overall", {})
+                quality_stats["better_than_human"] += comparison.get("better_than_human", 0)
+                quality_stats["equal_to_human"] += comparison.get("equal_to_human", 0)
+                quality_stats["worse_than_human"] += comparison.get("worse_than_human", 0)
 
         return {
             "total_tests": total_tests,
@@ -277,5 +371,10 @@ class PerformanceComparisonEvaluator(BaseEvaluator):
             "overall_pass_rate": total_passed / total_tests if total_tests > 0 else 0.0,
             "avg_response_time": sum(response_times) / len(response_times) if response_times else 0.0,
             "avg_efficiency_ratio": sum(efficiency_ratios) / len(efficiency_ratios) if efficiency_ratios else 0.0,
-            "avg_relevance_score": sum(relevance_scores) / len(relevance_scores) if relevance_scores else 0.0,
+            "quality_comparison": {
+                "better_than_human": quality_stats["better_than_human"],
+                "equal_to_human": quality_stats["equal_to_human"],
+                "worse_than_human": quality_stats["worse_than_human"],
+                "total_comparisons": sum(quality_stats.values()),
+            },
         }
