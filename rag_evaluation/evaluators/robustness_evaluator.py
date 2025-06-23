@@ -6,13 +6,13 @@ Uses LLM-based semantic evaluation instead of hard-coded keywords
 import sys
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, List
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from rag_evaluation.core.base_evaluator import TestCase, EvaluationStatus
-from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator, EvaluationResult
+from rag_evaluation.core.base_evaluator import TestCase
+from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,81 +31,20 @@ class RobustnessEvaluator(BaseEvaluator):
         """Get the category this evaluator handles"""
         return "robustness"
 
-    def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
-        """Evaluate a single robustness test case"""
-        try:
-            # Query Isschat
-            response, response_time, sources = self.isschat_client.query(test_case.question)
+    def _query_system(self, test_case: TestCase) -> Tuple[str, float, List[str]]:
+        """Query the system - simple query for robustness tests"""
+        return self.isschat_client.query(test_case.question)
 
-            # Check for errors
-            if response.startswith("ERROR:"):
-                return EvaluationResult(
-                    test_id=test_case.test_id,
-                    category=test_case.category,
-                    test_name=test_case.test_name,
-                    question=test_case.question,
-                    response=response,
-                    expected_behavior=test_case.expected_behavior,
-                    status=EvaluationStatus.ERROR,
-                    score=0.0,
-                    response_time=response_time,
-                    error_message=response,
-                    sources=sources,
-                )
-
-            # Evaluate with LLM judge using semantic evaluation
-            evaluation = self._evaluate_robustness_semantically(test_case, response)
-
-            # Determine status based on evaluation
-            status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED  # noqa
-
-            # Get test type for better logging
-            test_type = test_case.metadata.get("test_type", "generic")
-            reasoning = evaluation.get("reasoning", "No reasoning provided")
-
-            logger.info(
-                f"Test {test_case.test_id} ({test_type}): LLM evaluation score={evaluation['score']}, passes={evaluation['passes_criteria']}"  # noqa : E501
-            )
-            logger.info(f"LLM Judge Comment: {reasoning}")
-
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response=response,
-                expected_behavior=test_case.expected_behavior,
-                status=status,
-                score=evaluation["score"],
-                evaluation_details=evaluation,
-                response_time=response_time,
-                sources=sources,
-                metadata=test_case.metadata,
-            )
-
-        except Exception as e:
-            logger.error(f"Error evaluating test {test_case.test_id}: {str(e)}")
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response="",
-                expected_behavior=test_case.expected_behavior,
-                status=EvaluationStatus.ERROR,
-                score=0.0,
-                error_message=str(e),
-                metadata=test_case.metadata,
-            )
+    def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
+        """Evaluate response semantically using robustness-specific logic"""
+        return self._evaluate_robustness_semantically(test_case, response)
 
     def _evaluate_robustness_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
         """Evaluate robustness using semantic LLM analysis based on test type"""
         test_type = test_case.metadata.get("test_type", "")
 
         # Create specialized prompts based on test type
-        if test_type == "language_consistency":
-            return self._evaluate_language_consistency(test_case, response)
-        elif test_type == "data_validation":
+        if test_type == "data_validation":
             return self._evaluate_data_validation(test_case, response)
         elif test_type == "confidentiality":
             return self._evaluate_confidentiality(test_case, response)
@@ -128,46 +67,6 @@ Score the response 0.0-1.0 based on:
 Return JSON with score, reasoning and passes_criteria:"""
 
             return self.llm_judge._evaluate_with_prompt(prompt)
-
-    def _evaluate_language_consistency(self, test_case: TestCase, response: str) -> Dict[str, Any]:
-        """Evaluate language consistency using LLM semantic analysis"""
-        prompt = f"""You are an expert linguistic evaluator for a French enterprise chatbot.
-
-QUESTION ASKED: {test_case.question}
-ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
-
-DETAILED EVALUATION CRITERIA:
-1. LINGUISTIC CONSISTENCY (40%):
-   - Is the response entirely in French if the question is in French?
-   - Are there inappropriate language mixing issues?
-   - Is the language register consistent throughout the response?
-
-2. PROFESSIONAL REGISTER (30%):
-   - Is the tone appropriate for an enterprise context?
-   - Is the vocabulary professional and precise?
-   - Does it avoid informal or inappropriate language?
-
-3. LINGUISTIC QUALITY (30%):
-   - Are grammar and spelling correct?
-   - Is the syntax appropriate?
-   - Are the formulations clear and well-structured?
-
-SCORING RUBRIC:
-- 0.9-1.0: Excellent linguistic consistency, impeccable French, perfectly adapted register
-- 0.7-0.8: Good consistency with minor imperfections
-- 0.5-0.6: Acceptable consistency but with notable issues
-- 0.3-0.4: Significant linguistic consistency problems
-- 0.0-0.2: Major inconsistency or inappropriate language mixing
-
-Respond with a short JSON object containing:
-- "score": float between 0.0 and 1.0
-- "reasoning": in one sentence, explain the score with specific examples
-- "passes_criteria": boolean
-
-EVALUATION:"""
-
-        return self.llm_judge._evaluate_with_prompt(prompt)
 
     def _evaluate_data_validation(self, test_case: TestCase, response: str) -> Dict[str, Any]:
         """Evaluate data validation using LLM semantic analysis"""

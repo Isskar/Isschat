@@ -5,10 +5,10 @@ Retrieval evaluator for testing document retrieval performance
 import time
 import logging
 import math
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional
 
-from rag_evaluation.core.base_evaluator import TestCase, EvaluationStatus
-from rag_evaluation.core import IsschatClient, BaseEvaluator, EvaluationResult
+from rag_evaluation.core.base_evaluator import TestCase, EvaluationStatus, EvaluationResult
+from rag_evaluation.core import IsschatClient, BaseEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,8 @@ class RetrievalEvaluator(BaseEvaluator):
     def get_category(self) -> str:
         return "retrieval"
 
-    def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
+    def _query_system(self, test_case: TestCase) -> Tuple[str, float, List[str]]:
+        """Query the system and return response, response_time, and sources"""
         start_time = time.time()
 
         try:
@@ -34,51 +35,74 @@ class RetrievalEvaluator(BaseEvaluator):
             # Extract retrieved documents
             _, _, retrieved_docs = response
 
-            metrics = self._calculate_retrieval_metrics(
-                test_case.metadata.get("expected_documents", []), retrieved_docs
-            )
+            # Convert retrieved docs to string response
+            response_str = str(retrieved_docs)
 
-            # Only use pass/fail in CI mode, otherwise just measure metrics
-            if self.config.ci_mode:
-                status = (
-                    EvaluationStatus.PASSED
-                    if metrics["overall_score"] >= self.config.ci_threshold
-                    else EvaluationStatus.FAILED
-                )
-            else:
-                status = EvaluationStatus.MEASURED
+            # Extract sources
+            sources = [doc.get("url", "") for doc in retrieved_docs]
 
-            logger.info(f"Test {test_case.test_id}: score={metrics['overall_score']:.3f}, status={status.value}")
+            # Store retrieved docs in metadata for evaluation
+            self._retrieved_docs = retrieved_docs
 
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response=str(retrieved_docs),
-                expected_behavior=test_case.expected_behavior,
-                status=status,
-                score=metrics["overall_score"],
-                evaluation_details=metrics,
-                response_time=response_time,
-                sources=[doc.get("url", "") for doc in retrieved_docs],
-                metadata=test_case.metadata,
-            )
+            return response_str, response_time, sources
 
         except Exception as e:
-            logger.error(f"Error evaluating {test_case.test_id}: {e}")
-            return EvaluationResult(
-                test_id=test_case.test_id,
-                category=test_case.category,
-                test_name=test_case.test_name,
-                question=test_case.question,
-                response="",
-                expected_behavior=test_case.expected_behavior,
-                status=EvaluationStatus.ERROR,
-                score=0.0,
-                error_message=str(e),
-                response_time=(time.time() - start_time) * 1000,
-            )
+            response_time = (time.time() - start_time) * 1000
+            return f"ERROR: {str(e)}", response_time, []
+
+    def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
+        """Evaluate retrieval performance using metrics"""
+        # Get retrieved docs from the stored metadata
+        retrieved_docs = getattr(self, "_retrieved_docs", [])
+
+        # Calculate retrieval metrics
+        metrics = self._calculate_retrieval_metrics(test_case.metadata.get("expected_documents", []), retrieved_docs)
+
+        # Determine if test passes criteria based on CI mode
+        if hasattr(self.config, "ci_mode") and self.config.ci_mode:
+            ci_threshold = getattr(self.config, "ci_threshold", 0.5)
+            passes_criteria = metrics["overall_score"] >= ci_threshold
+        else:
+            # In non-CI mode, we just measure metrics without pass/fail
+            passes_criteria = True  # Always passes for measurement mode
+
+        return {
+            "passes_criteria": passes_criteria,
+            "score": metrics["overall_score"],
+            "reasoning": f"Retrieval metrics calculated: overall_score={metrics['overall_score']:.3f}",
+            **metrics,
+        }
+
+    def _create_success_result(
+        self,
+        test_case: TestCase,
+        response: str,
+        evaluation: Dict[str, Any],
+        response_time: float,
+        sources: Optional[List[str]] = None,
+    ) -> EvaluationResult:
+        """Create a successful evaluation result with MEASURED status support"""
+        # Determine status based on CI mode
+        if hasattr(self.config, "ci_mode") and self.config.ci_mode:
+            status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED
+        else:
+            # In non-CI mode, use MEASURED status for metrics collection
+            status = EvaluationStatus.MEASURED
+
+        return EvaluationResult(
+            test_id=test_case.test_id,
+            category=test_case.category,
+            test_name=test_case.test_name,
+            question=test_case.question,
+            response=response,
+            expected_behavior=test_case.expected_behavior,
+            status=status,
+            score=evaluation["score"],
+            evaluation_details=evaluation,
+            response_time=response_time,
+            sources=sources or [],
+            metadata=test_case.metadata,
+        )
 
     def _calculate_retrieval_metrics(self, expected_docs: List[Dict], retrieved_docs: List[Dict]) -> Dict[str, Any]:
         """Calculate comprehensive retrieval performance metrics"""

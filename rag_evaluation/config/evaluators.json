@@ -8,11 +8,11 @@
     "weight": 1.0,
     "enabled": true
   },
-  "conversational": {
-    "class_name": "ConversationalEvaluator",
-    "module": "rag_evaluation.evaluators.conversational_evaluator",
-    "name": "Conversational Tests",
-    "description": "Tests for conversational abilities and context handling",
+  "generation": {
+    "class_name": "GenerationEvaluator",
+    "module": "rag_evaluation.evaluators.generation_evaluator",
+    "name": "Generation Tests",
+    "description": "Tests for conversational generation capabilities and context handling",
     "dataset": "config/test_datasets/conversational_tests.json",
     "weight": 1.0,
     "enabled": true

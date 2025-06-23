@@ -83,7 +83,9 @@ class RAGPipeline:
 
         print("✅ RAG Pipeline initialized successfully")
 
-    def process_query(self, query: str, top_k: Optional[int] = None, verbose: bool = True) -> Tuple[str, str]:
+    def process_query(
+        self, query: str, top_k: Optional[int] = None, verbose: bool = True, history: str = ""
+    ) -> Tuple[str, str]:
         """
         Process a query through the RAG pipeline.
 
@@ -91,6 +93,7 @@ class RAGPipeline:
             query: User query
             top_k: Number of documents to retrieve (uses config default if None)
             verbose: Whether to print verbose output
+            history: Conversation history as a formatted string
 
         Returns:
             Tuple of (answer, sources)
@@ -142,7 +145,7 @@ class RAGPipeline:
                     print()
 
             # Step 2: Generate answer using original query for context
-            generation_result = self.generator.generate(query, retrieval_result)
+            generation_result = self.generator.generate(query, retrieval_result, history=history)
 
             if verbose:
                 print(f"⚡ Generation completed in {generation_result.generation_time:.2f}s")

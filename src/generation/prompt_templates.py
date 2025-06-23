@@ -15,6 +15,11 @@ class PromptTemplates:
         You are a professional and friendly virtual assistant named "ISSCHAT".
         Your mission is to help users find information in the Confluence documentation.
 
+        Here is the conversation so far:
+        -----
+        {history}
+        -----
+
         Based on these text excerpts from the documentation:
         -----
         {context}

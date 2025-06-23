@@ -239,15 +239,22 @@ class EvaluationManager:
                 continue
 
             total = summary.get("total_tests", 0)
+            passed = summary.get("passed", 0)
+            measured = summary.get("measured", 0)
 
             if self.config.ci_mode:
-                passed = summary.get("passed", 0)
                 pass_rate = summary.get("pass_rate", 0.0)
-                print(f"{category.upper()}: {passed}/{total} ({pass_rate:.1%})")
+                print(f"{category.upper()}: {passed}/{total} tests (pass rate: {pass_rate:.1%})")
             else:
-                passed = summary.get("passed", 0)
-                avg_score = summary.get("average_score", 0.0)
-                print(f"{category.upper()}: {passed}/{total} tests (avg score: {avg_score:.3f})")
+                # Only show pass/fail ratio for categories with LLM as a judge
+                if measured == total and passed == 0:
+                    # This category only has measured tests (no LLM judge)
+                    avg_score = summary.get("average_score", 0.0)
+                    print(f"{category.upper()}: {total} tests measured (avg score: {avg_score:.3f})")
+                else:
+                    # This category has LLM judge evaluation
+                    avg_score = summary.get("average_score", 0.0)
+                    print(f"{category.upper()}: {passed}/{total} tests (avg score: {avg_score:.3f})")
 
             # Show detailed metrics if evaluator supports it
             if category in self.evaluators:
