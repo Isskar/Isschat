@@ -1,6 +1,7 @@
 """
 LLM-based judge for evaluating Isschat responses
 """
+
 import json
 import logging
 import re
@@ -40,8 +41,6 @@ class LLMJudge:
             openai_api_key=api_key,
             openai_api_base="https://openrouter.ai/api/v1",
         )
-
-
 
     def evaluate_conversational(self, question: str, response: str, expected: str, context: str = "") -> Dict[str, Any]:
         """Evaluate conversational test response"""
@@ -109,21 +108,21 @@ class LLMJudge:
             The extracted JSON object as a string, or an empty dict string if not found.
         """
         # Find the start of the JSON object
-        start_brace_index = response.find('{')
+        start_brace_index = response.find("{")
         if start_brace_index == -1:
             return "{}"  # No JSON object found
 
         # Find the end of the JSON object by matching braces
         open_braces = 0
         for i in range(start_brace_index, len(response)):
-            if response[i] == '{':
+            if response[i] == "{":
                 open_braces += 1
-            elif response[i] == '}':
+            elif response[i] == "}":
                 open_braces -= 1
                 if open_braces == 0:
                     # Found the matching closing brace
                     end_brace_index = i
-                    return response[start_brace_index:end_brace_index + 1]
+                    return response[start_brace_index : end_brace_index + 1]
 
         return "{}"  # No valid JSON object found
 

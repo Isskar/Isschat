@@ -26,6 +26,7 @@ class PerformanceMetrics:
 
 logger = logging.getLogger(__name__)
 
+
 class BusinessValueEvaluator(BaseEvaluator):
     BVA_PROMPT = """Tu es un évaluateur expert et strict. Ta tâche est de comparer la "Réponse d'Isschat" à la "Réponse parfaite" en te basant sur la "Question" de l'utilisateur.
 
@@ -180,9 +181,7 @@ Overall BVA: <overall_summary_of_the_comparison>
             "efficiency_ratio": efficiency_ratio,
             "complexity": complexity,
             "quality_scores": {
-                k: v["score"]
-                for k, v in evaluation["bva_details"].items()
-                if isinstance(v, dict) and "score" in v
+                k: v["score"] for k, v in evaluation["bva_details"].items() if isinstance(v, dict) and "score" in v
             },
         }
 
