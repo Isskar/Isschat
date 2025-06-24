@@ -4,7 +4,6 @@ Business Value Evaluator for measuring Isschat's business impact and efficiency
 
 import time
 import json
-import re
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
@@ -28,37 +27,46 @@ logger = logging.getLogger(__name__)
 
 
 class BusinessValueEvaluator(BaseEvaluator):
-    BVA_PROMPT = (
-        "Tu es un évaluateur expert de la valeur métier des réponses d'un chatbot IA. "
-        "Ton objectif est d'évaluer si la réponse d'Isschat est utile, précise et "
-        "pertinente pour un utilisateur métier.\n"
-        'Tu dois comparer la "Réponse d\'Isschat" à la "Réponse parfaite" en te basant '
-        'sur la "Question" de l\'utilisateur.\n\n'
-        "Évalue la réponse sur les quatre critères suivants :\n"
-        "1.  **Relevance** : La réponse d'Isschat est-elle pertinente par rapport à la "
-        "question de l'utilisateur ?\n"
-        "2.  **Accuracy** : La réponse d'Isschat est-elle factuellement exacte et "
-        "cohérente avec la réponse parfaite ?\n"
-        "3.  **Completeness** : La réponse d'Isschat couvre-t-elle tous les aspects "
-        "clés de la réponse parfaite ?\n"
-        "4.  **Clarity** : La réponse d'Isschat est-elle claire, concise et facile à "
-        "comprendre pour un utilisateur métier ?\n\n"
-        "Question : {question}\n"
-        "Réponse d'Isschat : {isschat_response}\n"
-        "Réponse parfaite : {perfect_answer}\n\n"
-        "Fournis ton évaluation dans le format suivant, sans texte d'introduction ni "
-        "formatage supplémentaire. Chaque score DOIT être un float entre 0.0 et 1.0. "
-        "Ne réponds qu'avec le format ci-dessous :\n"
-        "Relevance Score: <float_between_0.0_and_1.0>\n"
-        "Relevance Reasoning: <one_sentence_reasoning>\n"
-        "Accuracy Score: <float_between_0.0_and_1.0>\n"
-        "Accuracy Reasoning: <one_sentence_reasoning>\n"
-        "Completeness Score: <float_between_0.0_and_1.0>\n"
-        "Completeness Reasoning: <one_sentence_reasoning>\n"
-        "Clarity Score: <float_between_0.0_and_1.0>\n"
-        "Clarity Reasoning: <one_sentence_reasoning>\n"
-        "Overall BVA: <overall_assessment_of_business_value>"
-    )
+    BVA_PROMPT = """You are an expert evaluator for business value assessment of AI chatbot responses.
+
+QUESTION ASKED: {question}
+ISSCHAT RESPONSE: {isschat_response}
+EXPECTED BEHAVIOR: {perfect_answer}
+
+DETAILED EVALUATION CRITERIA:
+1. RELEVANCE (25%):
+   - Is the Isschat response relevant to the user's question?
+   - Does it address the core intent of the question?
+   - Is the response on-topic and focused?
+
+2. ACCURACY (25%):
+   - Is the Isschat response factually correct?
+   - Is it consistent with the expected behavior/perfect answer?
+   - Are there any factual errors or inconsistencies?
+
+3. COMPLETENESS (25%):
+   - Does the response cover all key aspects from the perfect answer?
+   - Are important details missing or incomplete?
+   - Is the level of detail appropriate for the question?
+
+4. CLARITY (25%):
+   - Is the response clear, concise and easy to understand?
+   - Is it well-structured and professionally written?
+   - Would a business user find it helpful and actionable?
+
+SCORING RUBRIC:
+- 0.9-1.0: Excellent business value, exceeds expectations
+- 0.7-0.8: Good business value, meets most requirements
+- 0.5-0.6: Adequate business value, meets basic requirements
+- 0.3-0.4: Poor business value, significant issues
+- 0.0-0.2: Very poor business value, major problems
+
+PASS CRITERIA: The response passes if the overall score is >= 0.7
+
+Respond with ONLY a JSON object in this exact format:
+{{"score": 0.0, "reasoning": "explanation here", "passes_criteria": false}}
+
+JSON:"""
     """Business Value Evaluator for measuring Isschat's business impact and efficiency"""
 
     def __init__(self, config: Any):
@@ -70,10 +78,7 @@ class BusinessValueEvaluator(BaseEvaluator):
         # Load test dataset
         self.test_dataset = self._load_test_dataset()
 
-        # Performance thresholds (seconds)
-        self.easy_threshold = 2.0
-        self.intermediate_threshold = 5.0
-        self.hard_threshold = 15.0
+        # Thresholds removed as requested - only quality determines success
 
     def get_category(self) -> str:
         """Get the category this evaluator handles"""
@@ -99,64 +104,34 @@ class BusinessValueEvaluator(BaseEvaluator):
         return response, response_time, sources
 
     def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
-        """Evaluate the response semantically using a structured text prompt."""
-        perfect_answer = test_case.metadata.get("perfect_answer", {}).get("content", "")
+        """Evaluate the response semantically using LLM judge."""
+        # Extract perfect answer from expected_behavior or metadata
+        perfect_answer = ""
+        if hasattr(test_case.expected_behavior, "get") and isinstance(test_case.expected_behavior, dict):
+            perfect_answer = test_case.expected_behavior.get("content", "")  # ty : ignore
+        elif isinstance(test_case.expected_behavior, str):
+            perfect_answer = test_case.expected_behavior
+        else:
+            perfect_answer = (
+                test_case.metadata.get("perfect_answer", {}).get("content", "") if test_case.metadata else ""
+            )
+
         prompt = self.BVA_PROMPT.format(
             question=test_case.question,
             isschat_response=response,
             perfect_answer=perfect_answer,
         )
 
-        llm_response = self.llm_judge.llm.invoke(prompt).content.strip()
-        logger.info(f"LLM BVA raw response for {test_case.test_id}:\n{llm_response}")
+        # Use LLMJudge's standard evaluation method
+        evaluation = self.llm_judge._evaluate_with_prompt(prompt)
 
-        bva_details = self._parse_bva_response(llm_response)
+        # DEBUG: Log evaluation details
+        logger.info(f"🔍 EVALUATION DEBUG for {test_case.test_id}:")
+        logger.info(f"  Score: {evaluation.get('score', 'N/A')}")
+        logger.info(f"  Passes criteria: {evaluation.get('passes_criteria', 'N/A')}")
+        logger.info(f"  Reasoning: {evaluation.get('reasoning', 'N/A')[:100]}...")
 
-        scores = [
-            bva_details["relevance"]["score"],
-            bva_details["accuracy"]["score"],
-            bva_details["completeness"]["score"],
-            bva_details["clarity"]["score"],
-        ]
-        average_score = sum(scores) / len(scores) if scores else 0.0
-
-        return {
-            "score": average_score,
-            "reasoning": bva_details.get("overall_bva", "No overall BVA provided"),
-            "bva_details": bva_details,
-            "passes_criteria": average_score >= 0.7,
-        }
-
-    def _parse_bva_response(self, response: str) -> Dict[str, Any]:
-        """Parse the structured text response from the LLM for BVA evaluation."""
-        parsed = {
-            "relevance": {"score": 0.0, "reasoning": "Parsing failed"},
-            "accuracy": {"score": 0.0, "reasoning": "Parsing failed"},
-            "completeness": {"score": 0.0, "reasoning": "Parsing failed"},
-            "clarity": {"score": 0.0, "reasoning": "Parsing failed"},
-            "overall_bva": "Parsing failed",
-        }
-
-        # Handle overall BVA first to capture multi-line reasoning
-        overall_bva_match = re.search(r"Overall BVA:(.*)", response, re.DOTALL)
-        if overall_bva_match:
-            parsed["overall_bva"] = overall_bva_match.group(1).strip()
-
-        lines = response.splitlines()
-        for line in lines:
-            for metric in ["Relevance", "Accuracy", "Completeness", "Clarity"]:
-                if line.startswith(f"{metric} Score:"):
-                    score_str = line.split(f"{metric} Score:")[1].strip()
-                    try:
-                        score = float(score_str)
-                        parsed[metric.lower()]["score"] = max(0.0, min(1.0, score))
-                    except (ValueError, IndexError):
-                        parsed[metric.lower()]["score"] = 0.0
-                elif line.startswith(f"{metric} Reasoning:"):
-                    reasoning = line.split(f"{metric} Reasoning:")[1].strip()
-                    parsed[metric.lower()]["reasoning"] = reasoning
-
-        return parsed
+        return evaluation
 
     def _create_success_result(
         self,
@@ -171,7 +146,6 @@ class BusinessValueEvaluator(BaseEvaluator):
         complexity = test_case.metadata.get("complexity", "medium")
 
         efficiency_ratio = human_estimate / response_time if response_time > 0 else 0
-        time_passed = self._check_performance_threshold(response_time, complexity)
         quality_passed = evaluation["passes_criteria"]
 
         status = EvaluationStatus.PASSED if quality_passed else EvaluationStatus.FAILED
@@ -180,7 +154,6 @@ class BusinessValueEvaluator(BaseEvaluator):
         evaluation["response_time"] = response_time
         evaluation["human_estimate"] = human_estimate
         evaluation["efficiency_ratio"] = efficiency_ratio
-        evaluation["time_passed"] = time_passed
         evaluation["quality_passed"] = quality_passed
 
         metadata = {
@@ -188,9 +161,6 @@ class BusinessValueEvaluator(BaseEvaluator):
             "human_estimate": human_estimate,
             "efficiency_ratio": efficiency_ratio,
             "complexity": complexity,
-            "quality_scores": {
-                k: v["score"] for k, v in evaluation["bva_details"].items() if isinstance(v, dict) and "score" in v
-            },
         }
 
         perfect_answer = test_case.metadata.get("perfect_answer", "")
@@ -307,16 +277,6 @@ class BusinessValueEvaluator(BaseEvaluator):
                 results.append(error_result)
 
         return results
-
-    def _check_performance_threshold(self, response_time: float, complexity: str) -> bool:
-        """Check if response time meets threshold for complexity level"""
-        if complexity == "easy" and response_time <= self.easy_threshold:
-            return True
-        elif complexity == "intermediate" and response_time <= self.intermediate_threshold:
-            return True
-        elif complexity == "hard" and response_time <= self.hard_threshold:
-            return True
-        return False
 
     def _print_complexity_summary(self, complexity: str, results: List[EvaluationResult]):
         """Print summary for a complexity level"""
