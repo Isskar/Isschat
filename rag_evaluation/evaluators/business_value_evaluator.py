@@ -20,7 +20,7 @@ class PerformanceMetrics:
     response_time: float
     efficiency_ratio: float  # human_time / isschat_time
     relevance_score: float
-    quality_bva: Dict[str, float]  # Comparaison des métriques de qualité
+    quality_bva: Dict[str, float]  # comparison of quality metrics
 
 
 logger = logging.getLogger(__name__)
@@ -75,10 +75,7 @@ JSON:"""
         self.isschat_client = IsschatClient()
         self.llm_judge = LLMJudge(config)
 
-        # Load test dataset
         self.test_dataset = self._load_test_dataset()
-
-        # Thresholds removed as requested - only quality determines success
 
     def get_category(self) -> str:
         """Get the category this evaluator handles"""
@@ -124,12 +121,6 @@ JSON:"""
 
         # Use LLMJudge's standard evaluation method
         evaluation = self.llm_judge._evaluate_with_prompt(prompt)
-
-        # DEBUG: Log evaluation details
-        logger.info(f"🔍 EVALUATION DEBUG for {test_case.test_id}:")
-        logger.info(f"  Score: {evaluation.get('score', 'N/A')}")
-        logger.info(f"  Passes criteria: {evaluation.get('passes_criteria', 'N/A')}")
-        logger.info(f"  Reasoning: {evaluation.get('reasoning', 'N/A')[:100]}...")
 
         return evaluation
 
