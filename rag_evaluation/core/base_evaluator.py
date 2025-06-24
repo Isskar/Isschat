@@ -137,7 +137,7 @@ class TestCase:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TestCase":
         """Create from dictionary"""
-        expected = data.get("expected_behavior", data.get("perfect_answer", ""))
+        expected = data.get("expected_behavior", data.get("perfect_answer", ""))  # fixme
 
         return cls(
             test_id=data["test_id"],
