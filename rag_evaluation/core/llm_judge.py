@@ -2,16 +2,11 @@
 LLM-based judge for evaluating Isschat responses
 """
 
-import json
-import logging
-import re
 from typing import Dict, Any
 
 from src.core.config import get_config
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
-
-logger = logging.getLogger(__name__)
 
 
 class LLMJudge:
@@ -31,13 +26,15 @@ class LLMJudge:
             raise ValueError(f"Failed to get API key: {e}")
 
         # Configure logging to suppress httpx INFO logs
+        import logging
+
         logging.getLogger("httpx").setLevel(logging.WARNING)
 
         # Initialize LLM
         self.llm = ChatOpenAI(
             model_name=config.judge_model,
             temperature=config.judge_temperature,
-            max_tokens=512,  # Increased token limit
+            max_tokens=config.judge_max_tokens,
             openai_api_key=api_key,
             openai_api_base="https://openrouter.ai/api/v1",
         )
@@ -76,6 +73,8 @@ class LLMJudge:
             cleaned_result = self._clean_json_response(result)
 
             # Try to parse as JSON
+            import json
+
             try:
                 evaluation = json.loads(cleaned_result)
 
@@ -99,32 +98,30 @@ class LLMJudge:
             return {"score": 0.0, "reasoning": f"Evaluation error: {str(e)}", "passes_criteria": False}
 
     def _clean_json_response(self, response: str) -> str:
-        """Extracts a JSON object from a string, even if it's embedded in other text.
+        """Clean JSON response from markdown formatting and other artifacts"""
+        import re
+        import json
 
-        Args:
-            response: The string containing the JSON object.
+        response = re.sub(r"```json\s*", "", response)
+        response = re.sub(r"```\s*$", "", response)
+        response = response.strip()
+        start_idx = response.find("{")
+        end_idx = response.rfind("}")
 
-        Returns:
-            The extracted JSON object as a string, or an empty dict string if not found.
-        """
-        # Find the start of the JSON object
-        start_brace_index = response.find("{")
-        if start_brace_index == -1:
-            return "{}"  # No JSON object found
+        if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+            response = response[start_idx : end_idx + 1]
 
-        # Find the end of the JSON object by matching braces
-        open_braces = 0
-        for i in range(start_brace_index, len(response)):
-            if response[i] == "{":
-                open_braces += 1
-            elif response[i] == "}":
-                open_braces -= 1
-                if open_braces == 0:
-                    # Found the matching closing brace
-                    end_brace_index = i
-                    return response[start_brace_index : end_brace_index + 1]
-
-        return "{}"  # No valid JSON object found
+        # FIXME: Handle common JSON formatting issues
+        try:
+            json.loads(response)
+            return response
+        except json.JSONDecodeError:
+            # Add missing closing quote and brace if needed
+            if response.count('"') % 2 == 1:
+                response += '"'
+            if response.count("{") > response.count("}"):
+                response += "}"
+            return response
 
     def _fallback_evaluation(self, result: str) -> Dict[str, Any]:
         """Fallback evaluation when JSON parsing fails - uses simplified LLM retry"""
@@ -135,6 +132,7 @@ class LLMJudge:
             simple_result = self.llm.invoke(simple_prompt).content.strip()
 
             # Extract numeric score
+            import re
 
             score_match = re.search(r"(\d+\.?\d*)", simple_result)
             if score_match:

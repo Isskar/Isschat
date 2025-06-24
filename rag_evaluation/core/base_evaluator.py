@@ -33,6 +33,7 @@ class EvaluationResult:
     # Test data
     question: str
     response: str
+    expected_behavior: str
 
     # Evaluation results
     status: EvaluationStatus
@@ -71,6 +72,7 @@ class EvaluationResult:
             "test_name": self.test_name,
             "question": self.question,
             "response": self.response,
+            "expected_behavior": self.expected_behavior,
             "status": self.status.value,
             "score": self.score,
             "evaluation_details": self.evaluation_details,
@@ -90,6 +92,7 @@ class EvaluationResult:
             test_name=data["test_name"],
             question=data["question"],
             response=data["response"],
+            expected_behavior=data["expected_behavior"],
             status=EvaluationStatus(data["status"]),
             score=data["score"],
             evaluation_details=data.get("evaluation_details", {}),
@@ -109,6 +112,7 @@ class TestCase:
     category: str
     test_name: str
     question: str
+    expected_behavior: str
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     # Optional context for conversational tests
@@ -124,6 +128,7 @@ class TestCase:
             "category": self.category,
             "test_name": self.test_name,
             "question": self.question,
+            "expected_behavior": self.expected_behavior,
             "metadata": self.metadata,
             "conversation_context": self.conversation_context,
             "complexity_level": self.complexity_level,
@@ -132,11 +137,14 @@ class TestCase:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TestCase":
         """Create from dictionary"""
+        expected = data.get("expected_behavior", data.get("perfect_answer", ""))
+
         return cls(
             test_id=data["test_id"],
             category=data["category"],
             test_name=data["test_name"],
             question=data["question"],
+            expected_behavior=expected,
             metadata=data.get("metadata", {}),
             conversation_context=data.get("conversation_context", []),
             complexity_level=data.get("complexity_level", "medium"),
@@ -198,6 +206,7 @@ class BaseEvaluator(ABC):
             test_name=test_case.test_name,
             question=test_case.question,
             response=response,
+            expected_behavior=test_case.expected_behavior,
             status=EvaluationStatus.ERROR,
             score=0.0,
             response_time=response_time,
@@ -221,6 +230,7 @@ class BaseEvaluator(ABC):
             test_name=test_case.test_name,
             question=test_case.question,
             response=response,
+            expected_behavior=test_case.expected_behavior,
             status=status,
             score=evaluation["score"],
             evaluation_details=evaluation,
@@ -238,6 +248,7 @@ class BaseEvaluator(ABC):
             test_name=test_case.test_name,
             question=test_case.question,
             response="",
+            expected_behavior=test_case.expected_behavior,
             status=EvaluationStatus.ERROR,
             score=0.0,
             error_message=str(exception),
@@ -279,6 +290,7 @@ class BaseEvaluator(ABC):
                     test_name=test_case.test_name,
                     question=test_case.question,
                     response="",
+                    expected_behavior=test_case.expected_behavior,
                     status=EvaluationStatus.ERROR,
                     score=0.0,
                     error_message=str(e),

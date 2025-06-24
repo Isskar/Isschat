@@ -193,12 +193,14 @@ class BusinessValueEvaluator(BaseEvaluator):
             },
         }
 
+        perfect_answer = test_case.metadata.get("perfect_answer", "")
         return EvaluationResult(
             test_id=test_case.test_id,
             category=self.get_category(),
             test_name=test_case.test_name,
             question=test_case.question,
             response=response,
+            expected_behavior=perfect_answer,
             status=status,
             score=evaluation["score"],
             evaluation_details=evaluation,
@@ -251,13 +253,24 @@ class BusinessValueEvaluator(BaseEvaluator):
         """Evaluate tests for a specific complexity level"""
         results = []
 
-        for test in tests:
-            print(f"  📝 Testing: {test['test_name']}")
+        for i, test_data in enumerate(tests):
+            print(f"  📝 Testing: {test_data['test_name']}")
+
+            # Convert test dict to TestCase
+            test_case = TestCase(
+                test_id=f"bva_{complexity}_{i}",
+                category=self.get_category(),
+                test_name=test_data["test_name"],
+                question=test_data["question"],
+                expected_behavior=test_data["perfect_answer"],
+                metadata={
+                    "complexity": complexity,
+                    "perfect_answer": test_data["perfect_answer"],
+                    "human_estimate": test_data["human_estimate"],
+                },
+            )
 
             try:
-                # Convert test dict to TestCase
-                test_case = TestCase.from_dict(test)
-
                 # Evaluate the test case
                 result = self.evaluate_single(test_case)
                 results.append(result)
@@ -280,11 +293,12 @@ class BusinessValueEvaluator(BaseEvaluator):
             except Exception as e:
                 print(f"    ❌ Error: {str(e)}")
                 error_result = EvaluationResult(
-                    test_id=test["test_id"],
-                    category=test["category"],
-                    test_name=test["test_name"],
-                    question=test["question"],
+                    test_id=test_case.test_id,
+                    category=test_case.category,
+                    test_name=test_case.test_name,
+                    question=test_case.question,
                     response="",
+                    expected_behavior=test_case.expected_behavior,
                     status=EvaluationStatus.ERROR,
                     score=0.0,
                     error_message=str(e),

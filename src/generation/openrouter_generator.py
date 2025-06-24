@@ -48,7 +48,7 @@ class OpenRouterGenerator(BaseGenerator):
                 raise ValueError("OPENROUTER_API_KEY not found in configuration")
 
             self._llm = ChatOpenAI(
-                model_name="anthropic/claude-sonnet-4",
+                model_name=self.model_name,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
                 openai_api_key=api_key,
