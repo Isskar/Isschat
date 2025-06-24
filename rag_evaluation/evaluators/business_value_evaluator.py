@@ -28,29 +28,37 @@ logger = logging.getLogger(__name__)
 
 
 class BusinessValueEvaluator(BaseEvaluator):
-    BVA_PROMPT = """Tu es un évaluateur expert et strict. Ta tâche est de comparer la "Réponse d'Isschat" à la "Réponse parfaite" en te basant sur la "Question" de l'utilisateur.
-
-Évalue la réponse sur les critères suivants :
-- Relevance (pertinence par rapport à la question)
-- Accuracy (précision et exactitude des informations)
-- Completeness (exhaustivité de la réponse)
-- Clarity (clarté et structure de la réponse)
-
-Question : {question}
-Réponse d'Isschat : {isschat_response}
-Réponse parfaite : {perfect_answer}
-
-Fournis ton évaluation dans le format suivant, sans texte d'introduction ni formatage supplémentaire. Chaque score DOIT être un float entre 0.0 et 1.0. Ne réponds qu'avec le format ci-dessous :
-Relevance Score: <float_between_0.0_and_1.0>
-Relevance Reasoning: <one_sentence_reasoning>
-Accuracy Score: <float_between_0.0_and_1.0>
-Accuracy Reasoning: <one_sentence_reasoning>
-Completeness Score: <float_between_0.0_and_1.0>
-Completeness Reasoning: <one_sentence_reasoning>
-Clarity Score: <float_between_0.0_and_1.0>
-Clarity Reasoning: <one_sentence_reasoning>
-Overall BVA: <overall_summary_of_the_comparison>
-"""
+    BVA_PROMPT = (
+        "Tu es un évaluateur expert de la valeur métier des réponses d'un chatbot IA. "
+        "Ton objectif est d'évaluer si la réponse d'Isschat est utile, précise et "
+        "pertinente pour un utilisateur métier.\n"
+        'Tu dois comparer la "Réponse d\'Isschat" à la "Réponse parfaite" en te basant '
+        'sur la "Question" de l\'utilisateur.\n\n'
+        "Évalue la réponse sur les quatre critères suivants :\n"
+        "1.  **Relevance** : La réponse d'Isschat est-elle pertinente par rapport à la "
+        "question de l'utilisateur ?\n"
+        "2.  **Accuracy** : La réponse d'Isschat est-elle factuellement exacte et "
+        "cohérente avec la réponse parfaite ?\n"
+        "3.  **Completeness** : La réponse d'Isschat couvre-t-elle tous les aspects "
+        "clés de la réponse parfaite ?\n"
+        "4.  **Clarity** : La réponse d'Isschat est-elle claire, concise et facile à "
+        "comprendre pour un utilisateur métier ?\n\n"
+        "Question : {question}\n"
+        "Réponse d'Isschat : {isschat_response}\n"
+        "Réponse parfaite : {perfect_answer}\n\n"
+        "Fournis ton évaluation dans le format suivant, sans texte d'introduction ni "
+        "formatage supplémentaire. Chaque score DOIT être un float entre 0.0 et 1.0. "
+        "Ne réponds qu'avec le format ci-dessous :\n"
+        "Relevance Score: <float_between_0.0_and_1.0>\n"
+        "Relevance Reasoning: <one_sentence_reasoning>\n"
+        "Accuracy Score: <float_between_0.0_and_1.0>\n"
+        "Accuracy Reasoning: <one_sentence_reasoning>\n"
+        "Completeness Score: <float_between_0.0_and_1.0>\n"
+        "Completeness Reasoning: <one_sentence_reasoning>\n"
+        "Clarity Score: <float_between_0.0_and_1.0>\n"
+        "Clarity Reasoning: <one_sentence_reasoning>\n"
+        "Overall BVA: <overall_assessment_of_business_value>"
+    )
     """Business Value Evaluator for measuring Isschat's business impact and efficiency"""
 
     def __init__(self, config: Any):

@@ -148,7 +148,7 @@ class GenerationEvaluator(BaseEvaluator):
 
 QUESTION ASKED: {test_case.question}
 ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
+EXPECTED BEHAVIOR: {test_case.metadata.get("expected_behavior", "")}
 CONVERSATION CONTEXT: {test_case.conversation_context}
 
 DETAILED EVALUATION CRITERIA:
@@ -189,7 +189,7 @@ EVALUATION:"""
 
 QUESTION ASKED: {test_case.question}
 ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
+EXPECTED BEHAVIOR: {test_case.metadata.get("expected_behavior", "")}
 CONVERSATION CONTEXT: {test_case.conversation_context}
 
 DETAILED EVALUATION CRITERIA:
@@ -230,7 +230,7 @@ EVALUATION:"""
 
 QUESTION ASKED: {test_case.question}
 ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
+EXPECTED BEHAVIOR: {test_case.metadata.get("expected_behavior", "")}
 CONVERSATION CONTEXT: {test_case.conversation_context}
 
 DETAILED EVALUATION CRITERIA:
@@ -271,7 +271,7 @@ EVALUATION:"""
 
 QUESTION ASKED: {test_case.question}
 ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
+EXPECTED BEHAVIOR: {test_case.metadata.get("expected_behavior", "")}
 CONVERSATION CONTEXT: {test_case.conversation_context}
 
 DETAILED EVALUATION CRITERIA:
@@ -312,7 +312,7 @@ EVALUATION:"""
 
 QUESTION ASKED: {test_case.question}
 ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
+EXPECTED BEHAVIOR: {test_case.metadata.get("expected_behavior", "")}
 CONVERSATION CONTEXT: {test_case.conversation_context}
 
 DETAILED EVALUATION CRITERIA:
@@ -353,7 +353,7 @@ EVALUATION:"""
 
 QUESTION ASKED: {test_case.question}
 ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
+EXPECTED BEHAVIOR: {test_case.metadata.get("expected_behavior", "")}
 CONVERSATION CONTEXT: {test_case.conversation_context}
 
 DETAILED EVALUATION CRITERIA:
@@ -394,7 +394,7 @@ EVALUATION:"""
 
 QUESTION ASKED: {test_case.question}
 ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
+EXPECTED BEHAVIOR: {test_case.metadata.get("expected_behavior", "")}
 
 DETAILED EVALUATION CRITERIA:
 1. LANGUAGE CONSISTENCY (40%):
@@ -434,7 +434,7 @@ EVALUATION:"""
 
 QUESTION ASKED: {test_case.question}
 ISSCHAT RESPONSE: {response}
-EXPECTED BEHAVIOR: {test_case.expected_behavior}
+EXPECTED BEHAVIOR: {test_case.metadata.get("expected_behavior", "")}
 
 DETAILED EVALUATION CRITERIA:
 1. RESPONSE RELEVANCE (40%):
