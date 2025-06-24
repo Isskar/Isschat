@@ -102,16 +102,8 @@ JSON:"""
 
     def _evaluate_semantically(self, test_case: TestCase, response: str) -> Dict[str, Any]:
         """Evaluate the response semantically using LLM judge."""
-        # Extract perfect answer from expected_behavior or metadata
-        perfect_answer = ""
-        if hasattr(test_case.expected_behavior, "get") and isinstance(test_case.expected_behavior, dict):
-            perfect_answer = test_case.expected_behavior.get("content", "")  # ty : ignore
-        elif isinstance(test_case.expected_behavior, str):
-            perfect_answer = test_case.expected_behavior
-        else:
-            perfect_answer = (
-                test_case.metadata.get("perfect_answer", {}).get("content", "") if test_case.metadata else ""
-            )
+        # Extract perfect answer from expected_behavior (now always a string)
+        perfect_answer = test_case.expected_behavior
 
         prompt = self.BVA_PROMPT.format(
             question=test_case.question,
@@ -223,11 +215,10 @@ JSON:"""
                 category=self.get_category(),
                 test_name=test_data["test_name"],
                 question=test_data["question"],
-                expected_behavior=test_data["perfect_answer"],
+                expected_behavior=test_data["expected_behavior"],
                 metadata={
                     "complexity": complexity,
-                    "perfect_answer": test_data["perfect_answer"],
-                    "human_estimate": test_data["human_estimate"],
+                    "human_estimate": test_data.get("metadata", {}).get("human_estimate", 30),
                 },
             )
 
@@ -335,3 +326,57 @@ JSON:"""
                 "total_bvas": sum(quality_stats.values()),
             },
         }
+
+    def format_detailed_summary(self) -> str:
+        """Format detailed business value metrics summary"""
+        if not self.results:
+            return ""
+
+        results = self.results
+        total_tests = len(results)
+        passed_tests = sum(1 for r in results if r.status.value == "passed")
+
+        # Calculate average scores and response times
+        scores = [r.score for r in results]
+        response_times = [r.response_time for r in results]
+
+        avg_score = sum(scores) / len(scores) if scores else 0.0
+        avg_response_time = sum(response_times) / len(response_times) if response_times else 0.0
+
+        # Group by complexity if metadata available
+        complexity_stats = {}
+        for result in results:
+            complexity = (
+                result.metadata.get("complexity", "unknown")
+                if hasattr(result, "metadata") and result.metadata
+                else "unknown"
+            )
+            if complexity not in complexity_stats:
+                complexity_stats[complexity] = {"total": 0, "passed": 0, "scores": []}
+
+            complexity_stats[complexity]["total"] += 1
+            if result.status.value == "passed":
+                complexity_stats[complexity]["passed"] += 1
+            complexity_stats[complexity]["scores"].append(result.score)
+
+        # Format detailed summary
+        summary_lines = []
+        summary_lines.append("    📊 Detailed Metrics:")
+        summary_lines.append(f"       • Average Score: {avg_score:.3f}")
+        summary_lines.append(f"       • Average Response Time: {avg_response_time:.2f}s")
+        summary_lines.append(
+            f"       • Success Rate: {passed_tests}/{total_tests} ({passed_tests / total_tests * 100:.1f}%)"
+        )
+
+        if len(complexity_stats) > 1:
+            summary_lines.append("    🎯 By Complexity:")
+            for complexity, stats in complexity_stats.items():
+                avg_complexity_score = sum(stats["scores"]) / len(stats["scores"]) if stats["scores"] else 0.0
+                # Split long line to fix E501
+                complexity_line = (
+                    f"       • {complexity.title()}: {stats['passed']}/{stats['total']} "
+                    f"(avg: {avg_complexity_score:.3f})"
+                )
+                summary_lines.append(complexity_line)
+
+        return "\n".join(summary_lines)
