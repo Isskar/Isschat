@@ -143,6 +143,7 @@ class TestCase:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TestCase":
         """Create from dictionary"""
+
         return cls(
             test_id=data["test_id"],
             category=data["category"],
