@@ -114,6 +114,7 @@ class TestCase:
     question: str
     expected_behavior: str
     metadata: Dict[str, Any] = field(default_factory=dict)
+    ground_truth: Optional[str] = None
 
     # Optional context for conversational tests
     conversation_context: List[Dict[str, str]] = field(default_factory=list)
@@ -130,6 +131,7 @@ class TestCase:
             "question": self.question,
             "expected_behavior": self.expected_behavior,
             "metadata": self.metadata,
+            "ground_truth": self.ground_truth,
             "conversation_context": self.conversation_context,
             "complexity_level": self.complexity_level,
         }
@@ -144,6 +146,7 @@ class TestCase:
             question=data["question"],
             expected_behavior=data["expected_behavior"],
             metadata=data.get("metadata", {}),
+            ground_truth=data.get("ground_truth"),
             conversation_context=data.get("conversation_context", []),
             complexity_level=data.get("complexity_level", "medium"),
         )

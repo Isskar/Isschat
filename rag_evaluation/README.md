@@ -6,13 +6,13 @@ A streamlined evaluation system for testing Isschat's performance with automatic
 
 ```bash
 # Run all evaluations
-uv run rag_evaluation/run_evaluation.py
+uv run --extra evaluation rag_evaluation/run_evaluation.py
 
 # Run specific categories
-uv run rag_evaluation/run_evaluation.py --categories robustness generation
+uv run --extra evaluation rag_evaluation/run_evaluation.py --categories robustness generation
 
 # CI mode (critical tests only)
-uv run rag_evaluation/run_evaluation.py --ci
+uv run --extra evaluation rag_evaluation/run_evaluation.py --ci
 ```
 
 ## 📊 Available Evaluators
@@ -21,11 +21,10 @@ uv run rag_evaluation/run_evaluation.py --ci
 - Internal Isschat knowledge tests
 - Data validation (invalid dates)
 - Confidentiality handling
-- Language consistency (French)
 
 ### Conversational (`generation`)
 - Context continuity
-- Pronoun resolution
+- Language consistency (French)
 - Memory recall
 - Topic transitions
 
@@ -68,7 +67,7 @@ uv run rag_evaluation/run_evaluation.py --ci
 
 2. **Added test datasets to DVC**:
    ```bash
-   dvc add rag_evaluation/config/test_datasets
+   dvc add --no-scm rag_evaluation/config/test_datasets
    ```
 
 3. **Configured Azure remote**:
