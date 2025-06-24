@@ -80,6 +80,10 @@ class EvaluationManager:
             return {"category": category, "results": [], "summary": {}}
 
         # Get evaluator
+        if category not in self.evaluators:
+            print(f"❌ Evaluator for category '{category}' not found. Available: {list(self.evaluators.keys())}")
+            return {"category": category, "results": [], "summary": {"error": f"Evaluator not found for {category}"}}
+
         evaluator = self.evaluators[category]
 
         # Run evaluation
@@ -119,6 +123,7 @@ class EvaluationManager:
             "total_passed": 0,
             "total_failed": 0,
             "total_errors": 0,
+            "total_measured": 0,
             "category_results": {},
         }
 
@@ -134,6 +139,7 @@ class EvaluationManager:
                 overall_stats["total_passed"] += summary.get("passed", 0)
                 overall_stats["total_failed"] += summary.get("failed", 0)
                 overall_stats["total_errors"] += summary.get("errors", 0)
+                overall_stats["total_measured"] += summary.get("measured", 0)
                 overall_stats["category_results"][category] = summary
 
             except Exception as e:
@@ -213,8 +219,13 @@ class EvaluationManager:
         print("EVALUATION SUMMARY")
         print(f"{'=' * 60}")
         print(f"Total Tests: {overall_stats.get('total_tests', 0)}")
-        print(f"Passed: {overall_stats.get('total_passed', 0)} ({overall_stats.get('overall_pass_rate', 0):.1%})")
-        print(f"Failed: {overall_stats.get('total_failed', 0)}")
+
+        if self.config.ci_mode:
+            print(f"Passed: {overall_stats.get('total_passed', 0)} ({overall_stats.get('overall_pass_rate', 0):.1%})")
+            print(f"Failed: {overall_stats.get('total_failed', 0)}")
+        else:
+            print(f"Measured: {overall_stats.get('total_measured', 0)}")
+
         print(f"Errors: {overall_stats.get('total_errors', 0)}")
 
         # Category breakdown
@@ -229,9 +240,27 @@ class EvaluationManager:
 
             total = summary.get("total_tests", 0)
             passed = summary.get("passed", 0)
-            pass_rate = summary.get("pass_rate", 0.0)
+            measured = summary.get("measured", 0)
 
-            print(f"{category.upper()}: {passed}/{total} ({pass_rate:.1%})")
+            if self.config.ci_mode:
+                pass_rate = summary.get("pass_rate", 0.0)
+                print(f"{category.upper()}: {passed}/{total} tests (pass rate: {pass_rate:.1%})")
+            else:
+                # Only show pass/fail ratio for categories with LLM as a judge
+                if measured == total and passed == 0:
+                    # This category only has measured tests (no LLM judge)
+                    avg_score = summary.get("average_score", 0.0)
+                    print(f"{category.upper()}: {total} tests measured (avg score: {avg_score:.3f})")
+                else:
+                    # This category has LLM judge evaluation
+                    avg_score = summary.get("average_score", 0.0)
+                    print(f"{category.upper()}: {passed}/{total} tests (avg score: {avg_score:.3f})")
+
+            # Show detailed metrics if evaluator supports it
+            if category in self.evaluators:
+                detailed_summary = self.evaluators[category].format_detailed_summary()
+                if detailed_summary:
+                    print(detailed_summary)
 
         # CI threshold check (only in CI mode)
         if self.config.ci_mode:
