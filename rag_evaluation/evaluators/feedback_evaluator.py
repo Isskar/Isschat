@@ -79,11 +79,15 @@ class FeedbackClassifier:
 
     def _init_camembert(self, model_name: str):
         """Initialize CamemBERT model"""
-        from transformers import AutoTokenizer
+        from transformers import AutoTokenizer, pipeline
 
         # Use a lightweight French model for classification
         self.model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+
+        # Initialize classification pipeline once during initialization
+        self.classifier_pipeline = pipeline("zero-shot-classification", model=self.model_name, tokenizer=self.tokenizer)
+
         # TODO: Fine-tune CamemBERT on feedback data
         logger.info("CamemBERT classifier initialized")
 
@@ -93,11 +97,6 @@ class FeedbackClassifier:
 
     def _classify_camembert(self, feedback: FeedbackEntry) -> str:
         """CamemBERT-based classification"""
-        from transformers import pipeline
-
-        # Initialize classification pipeline
-        classifier = pipeline("zero-shot-classification", model=self.model_name, tokenizer=self.tokenizer)
-
         # Prepare candidate labels
         candidate_labels = [topic.name for topic in self.topics]
 
@@ -111,9 +110,9 @@ class FeedbackClassifier:
             else:
                 text_to_classify = f"Commentaire: {feedback.comment}"
 
-        # Classify feedback text
+        # Classify feedback text using pre-initialized pipeline
         if text_to_classify:
-            result = classifier(text_to_classify, candidate_labels)
+            result = self.classifier_pipeline(text_to_classify, candidate_labels)
             # Get the topic name with highest score
             best_topic_name = max(zip(result["labels"], result["scores"]), key=lambda x: x[1])[0]
 
