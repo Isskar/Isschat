@@ -12,9 +12,6 @@ from datetime import datetime, timedelta
 import uuid
 from typing import Optional
 
-# Add the parent directory to the Python search path
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
 from src.core.config import get_config
 
 # Set tokenizers parallelism to false to avoid deadlocks

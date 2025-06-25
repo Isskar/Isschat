@@ -3,13 +3,8 @@ Generation evaluator for testing conversational generation capabilities
 Uses LLM-based semantic evaluation for conversation flow and context handling
 """
 
-import sys
 import logging
-from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
-
-# Add parent directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
 
 from rag_evaluation.core.base_evaluator import TestCase
 from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator

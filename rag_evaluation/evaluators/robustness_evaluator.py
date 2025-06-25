@@ -3,13 +3,9 @@ Robustness evaluator for testing model knowledge, data validation, and context h
 Uses LLM-based semantic evaluation instead of hard-coded keywords
 """
 
-import sys
 import logging
-from pathlib import Path
 from typing import Dict, Any, Tuple, List
 
-# Add parent directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
 
 from rag_evaluation.core.base_evaluator import TestCase
 from rag_evaluation.core import IsschatClient, LLMJudge, BaseEvaluator

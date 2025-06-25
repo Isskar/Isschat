@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-import sys
 import os
-from pathlib import Path
-
-# Add the parent directory to the Python search path
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
+import sys
 import click
 from src.rag_system.rag_pipeline import RAGPipelineFactory
 

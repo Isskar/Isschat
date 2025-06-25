@@ -3,12 +3,7 @@ Client interface for interacting with Isschat system
 """
 
 import time
-import sys
-from pathlib import Path
 from typing import List, Tuple, Dict, Optional
-
-# Add src to path to import RAGPipeline
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.rag_system.rag_pipeline import RAGPipelineFactory
 
