@@ -16,7 +16,7 @@ class EvaluationConfig:
     ci_threshold: float = 0.7
 
     # LLM Judge configuration
-    judge_model: str = "anthropic/claude-sonnet-4"
+    judge_model: str = "nousresearch/deephermes-3-llama-3-8b-preview:free"
     judge_temperature: float = 0.3
     judge_max_tokens: int = 150
 
