@@ -523,9 +523,9 @@ class HTMLReportGenerator:
         <!-- Tab Navigation -->
         <div class="tab-navigation">
             <button class="tab-button active" onclick="showTab('summary')">📊 Résumé</button>
-            {% if category_results.robustness %}
-            <button class="tab-button" onclick="showTab('robustness')">🔧 Tests Robustesse</button>
-            {% endif %}
+            {% for cat in category_results.keys() if cat != 'retrieval' %}
+            <button class="tab-button" onclick="showTab('{{ cat }}')">{{ cat|replace('_',' ')|title }}</button>
+            {% endfor %}
             {% if retrieval_data %}
             <button class="tab-button" onclick="showTab('retrieval')">🔍 Métriques Retrieval</button>
             {% endif %}
@@ -595,19 +595,28 @@ class HTMLReportGenerator:
                             <strong>Score Moyen:</strong> {{ "%.3f"|format(summary.average_score) }}
                         </div>
                         {% endif %}
+                        {% if summary.pass_rate is defined %}
+                        <div class="category-stat">
+                            <strong>Taux de Réussite:</strong> {{ "%.1f"|format(summary.pass_rate * 100) }}%
+                        </div>
+                        {% endif %}
+                        {% if summary.average_response_time is defined %}
+                        <div class="category-stat">
+                            <strong>Temps Moyen de Réponse:</strong> {{ "%.2f"|format(summary.average_response_time) }}s
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
         
-        <!-- Robustness Tab -->
-        {% if category_results.robustness %}
-        <div id="robustness" class="tab-content">
-            {% set category_data = category_results.robustness %}
+        <!-- Category Tabs -->
+        {% for category, category_data in category_results.items() if category != 'retrieval' %}
+        <div id="{{ category }}" class="tab-content">
             <div class="category-section">
                 <div class="category-header">
-                    <h3>🔧 Tests de Robustesse</h3>
+                    <h3>{{ category|replace('_',' ')|title }}</h3>
                     <div class="category-stats">
                         {% set summary = category_data.summary %}
                         <div class="category-stat">
@@ -624,6 +633,16 @@ class HTMLReportGenerator:
                         {% if summary.average_score is defined %}
                         <div class="category-stat">
                             <strong>Score Moyen:</strong> {{ "%.3f"|format(summary.average_score) }}
+                        </div>
+                        {% endif %}
+                        {% if summary.pass_rate is defined %}
+                        <div class="category-stat">
+                            <strong>Taux de Réussite:</strong> {{ "%.1f"|format(summary.pass_rate * 100) }}%
+                        </div>
+                        {% endif %}
+                        {% if summary.average_response_time is defined %}
+                        <div class="category-stat">
+                            <strong>Temps Moyen de Réponse:</strong> {{ "%.2f"|format(summary.average_response_time) }}s
                         </div>
                         {% endif %}
                     </div>
@@ -721,7 +740,7 @@ class HTMLReportGenerator:
                 {% endif %}
             </div>
         </div>
-        {% endif %}
+        {% endfor %}
         
         <!-- Retrieval Metrics Tab -->
         {% if retrieval_data %}
