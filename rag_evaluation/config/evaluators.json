@@ -34,6 +34,14 @@
     "dataset": "config/test_datasets/feedback_tests.json",
     "weight": 1.0,
     "enabled": true,
-    "requires_test_cases": false
+    "requires_test_cases": false},
+  "business_value": {
+    "class_name": "BusinessValueEvaluator",
+    "module": "rag_evaluation.evaluators.business_value_evaluator",
+    "name": "Business Value Tests",
+    "description": "Tests for measuring Isschat's business impact and efficiency",
+    "dataset": "config/test_datasets/bva_tests.json",
+    "weight": 1.0,
+    "enabled": true
   }
 }

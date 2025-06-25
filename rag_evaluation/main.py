@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from rag_evaluation.config.evaluation_config import EvaluationConfig
+from rag_evaluation.config import EvaluationConfig
 from rag_evaluation.core.base_evaluator import TestCase
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
