@@ -132,7 +132,6 @@ class FeedbackClassifier:
         # Classify feedback text
         if text_to_classify:
             result = classifier(text_to_classify, candidate_labels)
-            breakpoint()
             # Return the topic with highest score
             return max(zip(result["labels"], result["scores"]), key=lambda x: x[1])[0]
         else:
