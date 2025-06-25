@@ -58,6 +58,7 @@ rag_evaluation/config/test_datasets/
 # DVC config with sensitive info
 .dvc/config
 .dvc/config.local
+.dvc/
 
 # Temporary files
 *.tmp
