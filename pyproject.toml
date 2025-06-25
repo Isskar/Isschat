@@ -46,7 +46,6 @@ dependencies = [
     "streamlit-feedback>=0.1.4",
     "psutil>=7.0.0",
     "einops>=0.8.1",
-    "sentencepiece[evaluation]>=0.2.0",
 ]
 
 [build-system]
@@ -76,7 +75,8 @@ evaluation = [
     "datasets>=2.14.0",
     "accelerate>=0.20.0",
     "evaluate>=0.4.0",
-    "scikit-learn>=1.2.0"
+    "scikit-learn>=1.2.0",
+    "sentencepiece[evaluation]>=0.2.0",
 ]
 
 [project.scripts]
