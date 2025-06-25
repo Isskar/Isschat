@@ -55,6 +55,10 @@ db/
 evaluation_results/
 rag_evaluation/config/test_datasets/
 
+# DVC config with sensitive info
+.dvc/config
+.dvc/config.local
+
 # Temporary files
 *.tmp
 *.bak

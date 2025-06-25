@@ -63,6 +63,10 @@ test = [
     "pytest-cov>=4.0.0"
 ]
 
+evaluation = [
+    "dvc[azure]>=3.0.0",
+]
+
 cli = [
     "click>=8.0.0"
 ]
@@ -91,4 +95,3 @@ addopts = [
     "--strict-markers",
     "--disable-warnings"
 ]
-
