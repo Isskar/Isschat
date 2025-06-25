@@ -69,6 +69,7 @@ cli = [
 ]
 
 evaluation = [
+    "dvc[azure]>=3.0.0",
     "transformers>=4.30.0",
     "torch>=2.0.0,<=2.7.0",
     "tokenizers>=0.15.0",
@@ -102,4 +103,3 @@ addopts = [
     "--strict-markers",
     "--disable-warnings"
 ]
-

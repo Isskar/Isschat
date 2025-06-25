@@ -4,6 +4,8 @@ Analyzes user feedback to identify strengths and weaknesses by topic
 """
 
 import logging
+import json
+import os
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
@@ -47,53 +49,33 @@ class FeedbackClassifier:
 
     def __init__(self, **kwargs):
         """Initialize classifier with topics and CamemBERT model"""
-        self.topics = [
-            Topic("relevance", "Pertinence"),
-            Topic("accuracy", "Précision"),
-            Topic("clarity", "Clarté"),
-            Topic(
-                "completeness",
-                "Complétude des réponses",
-            ),
-            Topic(
-                "sources_quality",
-                "Qualité des Sources",
-            ),
-            Topic(
-                "response_time",
-                "Temps de Réponse",
-            ),
-            Topic(
-                "understanding",
-                "Compréhension du contexte",
-            ),
-            Topic("helpfulness", "Utilité"),
-            Topic(
-                "technical_knowledge",
-                "Expertise Technique",
-            ),
-            Topic(
-                "conversation_flow",
-                "Fluidité Conversationnelle",
-            ),
-            Topic(
-                "interface_usability",
-                "Interface Utilisateur",
-            ),
-            Topic(
-                "language_quality",
-                "Qualité Linguistique",
-            ),
-            Topic(
-                "innovation_features",
-                "Fonctionnalités",
-            ),
-            Topic(
-                "general_satisfaction",
-                "Satisfaction Générale",
-            ),
-        ]
+        self.topics = self._load_topics()
         self._init_camembert(model_name=kwargs.get("model_name", "mtheo/camembert-base-xnli"))
+
+    def _load_topics(self) -> List[Topic]:
+        """Load topics from configuration file"""
+        config_path = os.path.join(os.path.dirname(__file__), "..", "config", "test_datasets", "feedback_topics.json")
+
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+
+            topics = []
+            for category_data in config["categories"].values():
+                for topic_data in category_data["topics"]:
+                    topics.append(Topic(topic_data["id"], topic_data["name"]))
+
+            logger.info(f"Loaded {len(topics)} topics from configuration")
+            return topics
+
+        except Exception as e:
+            logger.error(f"Error loading topics configuration: {e}")
+            # Fallback to default topics
+            return [
+                Topic("technical_response_quality", "Qualité des réponses techniques"),
+                Topic("information_accuracy", "Précision des informations"),
+                Topic("overall_satisfaction", "Satisfaction utilisateur globale"),
+            ]
 
     def _init_camembert(self, model_name: str):
         """Initialize CamemBERT model"""
@@ -132,8 +114,15 @@ class FeedbackClassifier:
         # Classify feedback text
         if text_to_classify:
             result = classifier(text_to_classify, candidate_labels)
-            # Return the topic with highest score
-            return max(zip(result["labels"], result["scores"]), key=lambda x: x[1])[0]
+            # Get the topic name with highest score
+            best_topic_name = max(zip(result["labels"], result["scores"]), key=lambda x: x[1])[0]
+
+            # Find the corresponding topic ID
+            for topic in self.topics:
+                if topic.name == best_topic_name:
+                    return topic.id
+
+            return "unknown"
         else:
             return "unknown"
 
@@ -293,13 +282,16 @@ class FeedbackEvaluator(BaseEvaluator):
         # Analyze each topic
         topic_analyses = {}
         for topic_id, topic_feedbacks_list in topic_feedbacks.items():
-            topic = next(t for t in self.classifier.topics if t.id == topic_id)
+            topic = next((t for t in self.classifier.topics if t.id == topic_id), None)
+            if topic is None:
+                logger.warning(f"Topic ID '{topic_id}' not found in classifier topics")
+                continue
             analysis = self._analyze_topic(topic, topic_feedbacks_list)
             topic_analyses[topic_id] = analysis
 
         # Calculate overall metrics
         total_positive = sum(1 for f in feedbacks if f.sentiment == FeedbackSentiment.POSITIVE)
-        overall_satisfaction = total_positive / len(feedbacks)
+        overall_satisfaction = total_positive / len(feedbacks) if len(feedbacks) > 0 else 0.0
 
         # Identify strengths and weaknesses
         strengths, weaknesses = self._identify_strengths_weaknesses(topic_analyses)
@@ -338,18 +330,33 @@ class FeedbackEvaluator(BaseEvaluator):
         )
 
     def _identify_strengths_weaknesses(self, topic_analyses: Dict[str, TopicAnalysis]) -> Tuple[List[str], List[str]]:
-        """Identify strengths and weaknesses"""
+        """Identify strengths and weaknesses with actionable insights"""
         strengths = []
         weaknesses = []
 
+        # Load insights from configuration
+        topic_insights = self._load_topic_insights()
+
+        # Process all topics, even with low volume, to show CamemBERT classification
         for topic_id, analysis in topic_analyses.items():
-            if analysis.total_count < 3:  # Skip low-volume topics
-                continue
+            insights = topic_insights.get(
+                topic_id,
+                {
+                    "strength": f"{analysis.topic_name}: {analysis.satisfaction_rate:.0%} satisfaction",
+                    "weakness": f"{analysis.topic_name}: {analysis.satisfaction_rate:.0%} satisfaction",
+                },
+            )
+
+            # Format with CamemBERT classification details
+            topic_detail = f"[CamemBERT: {analysis.topic_name}] {analysis.total_count} feedback(s) - {analysis.satisfaction_rate:.0%} satisfaction"  # noqa : E501
 
             if analysis.satisfaction_rate >= 0.7:
-                strengths.append(f"{analysis.topic_name}: {analysis.satisfaction_rate:.0%} satisfaction")
+                strengths.append(f"{insights['strength']} ({topic_detail})")
             elif analysis.satisfaction_rate <= 0.4:
-                weaknesses.append(f"{analysis.topic_name}: {analysis.satisfaction_rate:.0%} satisfaction")
+                weaknesses.append(f"{insights['weakness']} ({topic_detail})")
+            else:
+                # Neutral topics - show in both sections for visibility
+                strengths.append(f"Topic neutre: {topic_detail}")
 
         if not strengths:
             strengths.append("Données insuffisantes pour identifier les points forts")
@@ -357,6 +364,29 @@ class FeedbackEvaluator(BaseEvaluator):
             weaknesses.append("Aucune faiblesse majeure détectée")
 
         return strengths, weaknesses
+
+    def _load_topic_insights(self) -> Dict[str, Dict[str, str]]:
+        """Load topic insights from configuration file"""
+        config = self._load_config()
+        insights = {}
+
+        for category_data in config.get("categories", {}).values():
+            for topic_data in category_data.get("topics", []):
+                topic_id = topic_data["id"]
+                insights[topic_id] = {"strength": topic_data["strength"], "weakness": topic_data["weakness"]}
+
+        return insights
+
+    def _load_config(self) -> Dict[str, Any]:
+        """Load configuration from file"""
+        config_path = os.path.join(os.path.dirname(__file__), "..", "config", "test_datasets", "feedback_topics.json")
+
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading configuration: {e}")
+            return {"categories": {}}
 
     def _empty_analysis(self) -> FeedbackAnalysis:
         """Return empty analysis when no data"""
@@ -416,22 +446,41 @@ class FeedbackEvaluator(BaseEvaluator):
 
         analysis = self.last_analysis
         lines = [
-            "📊 RAPPORT FEEDBACK",
+            "📊 RAPPORT FEEDBACK CAMEMBERT",
             f"Total: {analysis.total_feedbacks} | Satisfaction: {analysis.overall_satisfaction:.0%}",
             "",
+            "🤖 TOPICS CLASSIFIÉS PAR CAMEMBERT:",
         ]
 
         for topic_id, topic_analysis in analysis.topic_analyses.items():
             if topic_analysis.total_count > 0:
                 lines.extend(
                     [
-                        f"🏷️ {topic_analysis.topic_name} ({topic_analysis.total_count})",
-                        f"   👍 {topic_analysis.positive_count} | 👎 {topic_analysis.negative_count} | {topic_analysis.satisfaction_rate:.0%}",  # noqa
+                        f"🏷️ {topic_analysis.topic_name} (ID: {topic_id}) - {topic_analysis.total_count} feedback(s)",
+                        f"   👍 {topic_analysis.positive_count} | 👎 {topic_analysis.negative_count} | {topic_analysis.satisfaction_rate:.0%} satisfaction",  # noqa : E501
                     ]
                 )
 
                 for example in topic_analysis.examples[:2]:
                     lines.append(f"   💬 {example}")
                 lines.append("")
+
+        # Add strengths and weaknesses
+        lines.extend(
+            [
+                "✅ POINTS FORTS IDENTIFIÉS:",
+            ]
+        )
+        for strength in analysis.strengths:
+            lines.append(f"   ✓ {strength}")
+
+        lines.extend(
+            [
+                "",
+                "⚠️ POINTS D'AMÉLIORATION:",
+            ]
+        )
+        for weakness in analysis.weaknesses:
+            lines.append(f"   ⚠ {weakness}")
 
         return "\n".join(lines)
