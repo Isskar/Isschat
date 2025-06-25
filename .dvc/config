@@ -1,5 +1,0 @@
-[core]
-    remote = azure-datasets
-['remote "azure-datasets"']
-    url = azure://isschatblobfiles
-    account_name = isschatstorage
