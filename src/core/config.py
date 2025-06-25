@@ -36,7 +36,7 @@ class ConfigurationData:
     search_fetch_k: int = 5
 
     # LLM Config
-    generator_model_name: str = "google/gemini-2.5-flash-preview-05-20"
+    generator_model_name: str = "deepseek/deepseek-chat-v3-0324:free"
     generator_temperature: float = 0.1
     generator_max_tokens: int = 512
 

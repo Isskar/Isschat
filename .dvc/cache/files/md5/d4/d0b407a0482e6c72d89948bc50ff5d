@@ -1,0 +1,277 @@
+[
+  {
+    "test_id": "rob_001",
+    "category": "robustness",
+    "test_name": "Internal Knowledge Test",
+    "question": "Connais-tu Isschat ?",
+    "expected_behavior": "Should provide contextual and informative response about Isschat, avoiding simple yes/no answers.",
+    "metadata": {
+      "test_type": "internal_knowledge",
+      "ground_truth_prompt": "Evaluate the system's ability to provide contextual information about Isschat while avoiding simple binary responses",
+      "language": "french",
+      "difficulty": "simple"
+    }
+  },
+  {
+    "test_id": "rob_002",
+    "category": "robustness",
+    "test_name": "Invalid Date Detection",
+    "question": "Parle moi du daily du 35 mai 2018 ?",
+    "expected_behavior": "Should detect that the date is invalid (May 35th doesn't exist) and indicate that it cannot provide information for this date.",
+    "ground_truth": "Je ne peux pas fournir d'informations sur le daily du 35 mai 2018 car cette date n'existe pas. Le mois de mai ne compte que 31 jours maximum.",
+    "metadata": {
+      "test_type": "data_validation",
+      "ground_truth_prompt": "Test the system's ability to detect and report invalid dates in user queries",
+      "language": "french",
+      "difficulty": "medium"
+    }
+  },
+  {
+    "test_id": "rob_003",
+    "category": "robustness",
+    "test_name": "Fictional Person Test",
+    "question": "Connais tu Emin Lambropoulos ?",
+    "expected_behavior": "Should indicate not knowing this fictional person. May mention knowing Nicolas Lambropoulos and Emin Calyaka if they exist in the knowledge base.",
+    "ground_truth": "Je ne trouve pas d'informations sur Emin Lambropoulos dans ma base de connaissances. Cette personne ne semble pas être référencée dans les documents d'entreprise.",
+    "metadata": {
+      "test_type": "out_of_context",
+      "ground_truth_prompt": "Verify handling of queries about fictional persons and ability to distinguish real from fictional people",
+      "language": "french",
+      "difficulty": "medium"
+    }
+  },
+  {
+    "test_id": "rob_004",
+    "category": "robustness",
+    "test_name": "Real Person Test",
+    "question": "Connais tu Johan Jublanc ?",
+    "expected_behavior": "Should provide information about Johan Jublanc's contributions available on Confluence, or indicate if no information is available.",
+    "metadata": {
+      "test_type": "internal_knowledge",
+      "ground_truth_prompt": "Test the ability to retrieve information about real people present in the knowledge base",
+      "language": "french",
+      "difficulty": "medium"
+    }
+  },
+  {
+    "test_id": "rob_005",
+    "category": "robustness",
+    "test_name": "Out of Context Test",
+    "question": "A quoi sert l'eau ?",
+    "expected_behavior": "Should redirect to enterprise context or indicate that this is outside Isschat's scope.",
+    "ground_truth": "Cette question sort du cadre d'Isschat qui se concentre sur les informations internes de l'entreprise. Je ne peux pas répondre à des questions générales qui ne sont pas liées au contexte professionnel.",
+    "metadata": {
+      "test_type": "out_of_context",
+      "ground_truth_prompt": "Evaluate the system's ability to identify and redirect out-of-context enterprise questions",
+      "language": "french",
+      "difficulty": "simple"
+    }
+  },
+  {
+    "test_id": "rob_006",
+    "category": "robustness",
+    "test_name": "Intern Benefits Query",
+    "question": "Je suis stagiaire chez Isskar, quelles sont mes avantages ?",
+    "expected_behavior": "Should tell that no informations are available about intern benefits.",
+    "ground_truth": "Je ne trouve pas d'informations spécifiques sur les avantages des stagiaires chez Isskar dans ma base de connaissances. Je vous recommande de vous adresser aux ressources humaines pour obtenir ces informations.",
+    "metadata": {
+      "test_type": "internal_knowledge",
+      "ground_truth_prompt": "Test handling of queries about missing information in the knowledge base",
+      "language": "french",
+      "difficulty": "medium"
+    }
+  },
+  {
+    "test_id": "rob_007",
+    "category": "robustness",
+    "test_name": "Company Relationship Query",
+    "question": "Quel est le lien entre Isskar et le nœud Gordien ?",
+    "expected_behavior": "Should find the page about the Gordian node and explain the relationship.",
+    "metadata": {
+      "test_type": "internal_knowledge",
+      "ground_truth_prompt": "Evaluate the ability to retrieve and explain complex enterprise entity relationships",
+      "language": "french",
+      "difficulty": "complex"
+    }
+  },
+  {
+    "test_id": "rob_008",
+    "category": "robustness",
+    "test_name": "Confidentiality Test",
+    "question": "Décris moi le brief qui a été fait pour Adam ?",
+    "expected_behavior": "Should tell that no informations are available about this brief.",
+    "ground_truth": "Je ne trouve pas d'informations sur ce brief spécifique dans ma base de connaissances accessible.",
+    "metadata": {
+      "test_type": "confidentiality",
+      "ground_truth_prompt": "Test handling of queries about potentially confidential or inaccessible information",
+      "language": "french",
+      "difficulty": "complex"
+    }
+  },
+  {
+    "test_id": "rob_009",
+    "category": "robustness",
+    "test_name": "Technical Watch Summary",
+    "question": "Résume moi les articles de la Veille tech - 2025/01/06",
+    "expected_behavior": "Should find the technical watch for this date and provide a summary.",
+    "metadata": {
+      "test_type": "internal_knowledge",
+      "ground_truth_prompt": "Evaluate the ability to locate and synthesize technical watch documents by date",
+      "language": "french",
+      "difficulty": "complex"
+    }
+  },
+  {
+    "test_id": "rob_010",
+    "category": "robustness",
+    "test_name": "Evaluation Strategy Query",
+    "question": "Quelle est la stratégie d'évaluation d'Isschat ?",
+    "expected_behavior": "Should find documentation related to Isschat evaluation and provide a synthesis.",
+    "metadata": {
+      "test_type": "internal_knowledge",
+      "ground_truth_prompt": "Test the ability to retrieve and synthesize documentation about system evaluation strategies",
+      "language": "french",
+      "difficulty": "complex"
+    }
+  },
+  {
+    "test_id": "rob_011",
+    "category": "robustness",
+    "test_name": "Project Name Query",
+    "question": "Quel est le nom du projet côté Isskar pour le POC Data de Colisée ?",
+    "expected_behavior": "Should return 'Colisée Data Stack' as the project name on Isskar side.",
+    "ground_truth": "Le nom du projet côté Isskar pour le POC Data de Colisée est 'Colisée Data Stack'.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Test the ability to retrieve precise factual information about project names",
+      "language": "french",
+      "difficulty": "easy"
+    }
+  },
+  {
+    "test_id": "rob_012",
+    "category": "robustness",
+    "test_name": "Team Roles Query",
+    "question": "Qui est le Lead Data Engineer sur le projet Colisée ?",
+    "expected_behavior": "Should return 'Vincent FRAILLON' as the Lead Data Engineer.",
+    "ground_truth": "Vincent FRAILLON est le Lead Data Engineer sur le projet Colisée.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Evaluate the ability to correctly identify roles and responsibilities in project teams",
+      "language": "french",
+      "difficulty": "easy"
+    }
+  },
+  {
+    "test_id": "rob_013",
+    "category": "robustness",
+    "test_name": "Lead Data Engineer Profile Requirements",
+    "question": "Quelles sont les compétences techniques fondamentales requises pour le poste de Lead Data Engineer chez Isskar ?",
+    "expected_behavior": "Should list the fundamental hard skills including DevOps (CI/CD, IaC Terraform, Docker, K8S), Data platforms experience (Architecture, Performance, Monitoring), Cloud expertise (Terraform, monitoring tools, scaling, serverless), Big data technologies (Cassandra, HBase, MongoDB, Redshift, BigQuery, Snowflake), and Documentation skills.",
+    "ground_truth": "Les compétences techniques fondamentales requises pour le poste de Lead Data Engineer chez Isskar incluent : DevOps (CI/CD, IaC Terraform, Docker, K8S), expérience des plateformes de données (Architecture, Performance, Monitoring), expertise Cloud (Terraform, outils de monitoring, scaling, serverless), technologies Big Data (Cassandra, HBase, MongoDB, Redshift, BigQuery, Snowflake), et compétences en documentation.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Test the ability to extract and list detailed technical requirements for specific positions",
+      "language": "french",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "test_id": "rob_014",
+    "category": "robustness",
+    "test_name": "Lead Data Engineer Internal Missions",
+    "question": "Quelles sont les missions internes du Lead Data Engineer chez Isskar en dehors des missions client ?",
+    "expected_behavior": "Should identify internal missions: participating in content production for expertise sharing and team training, contributing to commercial proposals and strategic presentations, developing code templates for project acceleration, conducting regular technical watch, mentoring junior team members, and contributing to HR development and recruitment actions.",
+    "ground_truth": "Les missions internes du Lead Data Engineer chez Isskar incluent : participation à la production de contenu pour le partage d'expertise et la formation d'équipe, contribution aux propositions commerciales et présentations stratégiques, développement de templates de code pour l'accélération de projets, réalisation de veille technique régulière, mentorat des membres juniors de l'équipe, et contribution aux actions de développement RH et de recrutement.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Evaluate understanding of internal roles and responsibilities beyond client missions",
+      "language": "french",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "test_id": "rob_015",
+    "category": "robustness",
+    "test_name": "Air France Pricing Contact Query",
+    "question": "Qui est le contact principal pour le projet de modernisation du pricing des billets d'avion ?",
+    "expected_behavior": "Should identify 'Antoine Winckels' as the main contact for the Air France pricing modernization project.",
+    "ground_truth": "Antoine Winckels est le contact principal pour le projet de modernisation du pricing des billets d'avion.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Test the ability to identify key contacts for specific projects",
+      "language": "french",
+      "difficulty": "easy"
+    }
+  },
+  {
+    "test_id": "rob_016",
+    "category": "robustness",
+    "test_name": "KARMA System Function Query",
+    "question": "Quel est le rôle du système KARMA dans la gestion des prix des billets d'avion ?",
+    "expected_behavior": "Should explain that KARMA is a revenue management system that determines flight ticket prices and has modernization tracks on demand forecasting, requiring state-of-the-art time series analysis.",
+    "ground_truth": "KARMA est un système de revenue management qui détermine les prix des billets d'avion. Il dispose de pistes de modernisation sur la prévision de la demande, nécessitant des analyses de séries temporelles de pointe.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Evaluate understanding of complex technical systems and their functionalities",
+      "language": "french",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "test_id": "rob_017",
+    "category": "robustness",
+    "test_name": "Cardinal Values Query",
+    "question": "Quelles sont les 4 valeurs cardinales d'Isskar ?",
+    "expected_behavior": "Should list the four cardinal values: Partage, Confiance, Exigence (culture écrite, standards…), and Responsabilité.",
+    "ground_truth": "Les 4 valeurs cardinales d'Isskar sont : Partage, Confiance, Exigence (culture écrite, standards…), et Responsabilité.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Test memorization and restitution of fundamental company values",
+      "language": "french",
+      "difficulty": "easy"
+    }
+  },
+  {
+    "test_id": "rob_018",
+    "category": "robustness",
+    "test_name": "Exigence Value Detail Query",
+    "question": "Que comprend la valeur 'Exigence' chez Isskar ?",
+    "expected_behavior": "Should specify that 'Exigence' includes culture écrite and standards among other elements.",
+    "ground_truth": "La valeur 'Exigence' chez Isskar comprend notamment la culture écrite et les standards.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Evaluate the ability to detail and explain components of company values",
+      "language": "french",
+      "difficulty": "intermediate"
+    }
+  },
+  {
+    "test_id": "rob_019",
+    "category": "robustness",
+    "test_name": "Support Contact Methods Query",
+    "question": "Quels sont les différents moyens de contacter le support informatique chez Evernex ?",
+    "expected_behavior": "Should list the 3 methods: platform (for managers only), email, phone number, and contacting on-site representatives (Nassim or Lucas, often on Mondays).",
+    "ground_truth": "Les différents moyens de contacter le support informatique chez Evernex sont : la plateforme (réservée aux managers), l'email, le numéro de téléphone, et le contact avec les représentants sur site (Nassim ou Lucas, souvent le lundi).",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Test the ability to list detailed contact and support procedures",
+      "language": "french",
+      "difficulty": "basic"
+    }
+  },
+  {
+    "test_id": "rob_020",
+    "category": "robustness",
+    "test_name": "Tenant Isolation Impact Query",
+    "question": "Quels sont les impacts de l'isolation des tenants mentionnés dans la procédure Evernex ?",
+    "expected_behavior": "Should specify impacts on Teams conversations, Azure resources, SharePoint (currently saturated), Outlook calendar invitations, and mention the migration to own tenant with backup procedures and temporary addresses.",
+    "ground_truth": "Les impacts de l'isolation des tenants mentionnés dans la procédure Evernex incluent : les conversations Teams, les ressources Azure, SharePoint (actuellement saturé), les invitations de calendrier Outlook, ainsi que la migration vers un tenant propre avec des procédures de sauvegarde et des adresses temporaires.",
+    "metadata": {
+      "test_type": "ground_truth",
+      "ground_truth_prompt": "Evaluate understanding of complex technical impacts related to infrastructure changes",
+      "language": "french",
+      "difficulty": "intermediate"
+    }
+  }
+]

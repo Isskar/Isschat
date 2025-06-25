@@ -1,0 +1,119 @@
+{
+  "categories": {
+    "technical": {
+      "name": "Qualité Technique",
+      "topics": [
+        {
+          "id": "technical_response_quality",
+          "name": "Qualité des réponses techniques",
+          "strength": "Excellente expertise technique - les réponses sont précises et fiables",
+          "weakness": "Améliorer la qualité technique - revoir la formation sur les sujets spécialisés"
+        },
+        {
+          "id": "information_accuracy",
+          "name": "Précision des informations",
+          "strength": "Informations très précises et fiables",
+          "weakness": "Informations imprécises - vérifier la qualité des données sources"
+        },
+        {
+          "id": "source_relevance",
+          "name": "Pertinence des sources citées",
+          "strength": "Sources très pertinentes - excellente sélection documentaire",
+          "weakness": "Sources peu pertinentes - améliorer l'algorithme de récupération"
+        }
+      ]
+    },
+    "understanding": {
+      "name": "Compréhension",
+      "topics": [
+        {
+          "id": "complex_query_understanding",
+          "name": "Compréhension des questions complexes",
+          "strength": "Excellente compréhension des questions complexes",
+          "weakness": "Difficulté avec les questions complexes - améliorer le parsing des requêtes"
+        },
+        {
+          "id": "user_intent_recognition",
+          "name": "Reconnaissance de l'intention utilisateur",
+          "strength": "Excellente reconnaissance des intentions utilisateur",
+          "weakness": "Mauvaise compréhension des intentions - améliorer l'analyse sémantique"
+        },
+        {
+          "id": "context_awareness",
+          "name": "Compréhension du contexte métier",
+          "strength": "Excellente compréhension du contexte métier",
+          "weakness": "Manque de contexte métier - enrichir la base de connaissances"
+        }
+      ]
+    },
+    "communication": {
+      "name": "Communication",
+      "topics": [
+        {
+          "id": "explanation_clarity",
+          "name": "Clarté des explications",
+          "strength": "Explications très claires et compréhensibles",
+          "weakness": "Explications confuses - simplifier le langage utilisé"
+        },
+        {
+          "id": "response_completeness",
+          "name": "Exhaustivité des réponses",
+          "strength": "Réponses complètes et exhaustives",
+          "weakness": "Réponses incomplètes - enrichir le contenu des réponses"
+        },
+        {
+          "id": "conversational_coherence",
+          "name": "Cohérence conversationnelle",
+          "strength": "Excellente cohérence conversationnelle",
+          "weakness": "Perte de contexte - améliorer la mémoire conversationnelle"
+        }
+      ]
+    },
+    "performance": {
+      "name": "Performance & UX",
+      "topics": [
+        {
+          "id": "response_speed",
+          "name": "Rapidité de réponse",
+          "strength": "Temps de réponse optimal - performance excellente",
+          "weakness": "Lenteur des réponses - optimiser les performances"
+        },
+        {
+          "id": "interface_usability",
+          "name": "Facilité d'utilisation de l'interface",
+          "strength": "Interface très intuitive et facile d'utilisation",
+          "weakness": "Interface peu intuitive - revoir l'expérience utilisateur"
+        },
+        {
+          "id": "error_handling",
+          "name": "Gestion des erreurs",
+          "strength": "Excellente gestion des erreurs",
+          "weakness": "Mauvaise gestion d'erreur - améliorer les messages d'erreur"
+        }
+      ]
+    },
+    "scope": {
+      "name": "Périmètre & Support",
+      "topics": [
+        {
+          "id": "out_of_scope_handling",
+          "name": "Gestion des questions hors domaine",
+          "strength": "Bonne gestion des questions hors domaine",
+          "weakness": "Mauvaise gestion hors domaine - améliorer la détection des limites"
+        },
+        {
+          "id": "multilingual_support",
+          "name": "Support multilingue",
+          "strength": "Excellent support multilingue",
+          "weakness": "Support multilingue défaillant - améliorer les modèles linguistiques"
+        },
+        {
+          "id": "overall_satisfaction",
+          "name": "Satisfaction utilisateur globale",
+          "strength": "Très haute satisfaction utilisateur globale",
+          "weakness": "Satisfaction globale faible - revoir l'approche générale"
+        }
+      ]
+    }
+  }
+}

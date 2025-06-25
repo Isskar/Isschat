@@ -1,0 +1,327 @@
+[
+  {
+    "test_id": "ret_001",
+    "category": "retrieval",
+    "test_name": "Simple Query Test",
+    "question": "Isschat",
+    "expected_behavior": "Should retrieve documents specifically about Isschat with high relevance scores.",
+    "metadata": {
+      "test_type": "simple_query",
+      "language": "french",
+      "difficulty": "simple",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/650182657",
+          "title": "Isschat",
+          "relevance_score": 1.0
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733005",
+          "title": "Isschat Introduction",
+          "relevance_score": 0.9
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_002",
+    "category": "retrieval",
+    "test_name": "Complex Query Test",
+    "question": "projet Cedrus technologies utilisées",
+    "expected_behavior": "Should retrieve all relevant documents about Cedrus project and its technologies.",
+    "metadata": {
+      "test_type": "complex_query",
+      "language": "french",
+      "difficulty": "medium",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/614596636",
+          "title": "Cedrus & Partners - GenAut",
+          "relevance_score": 1.0
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732996",
+          "title": "Project Cedrus Overview",
+          "relevance_score": 0.9
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732997",
+          "title": "Cedrus Technical Specifications",
+          "relevance_score": 0.95
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_003",
+    "category": "retrieval",
+    "test_name": "Semantic Similarity Test",
+    "question": "réunions quotidiennes équipe",
+    "expected_behavior": "Should retrieve documents about daily meetings using semantic understanding.",
+    "metadata": {
+      "test_type": "semantic_similarity",
+      "language": "french",
+      "difficulty": "medium",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/636321793",
+          "title": "Dailys",
+          "relevance_score": 1.0
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732999",
+          "title": "Daily Meeting Guidelines",
+          "relevance_score": 0.85
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_004",
+    "category": "retrieval",
+    "test_name": "Ranking Test",
+    "question": "Vincent Fraillon missions",
+    "expected_behavior": "Should rank documents about Vincent Fraillon's missions in order of relevance.",
+    "metadata": {
+      "test_type": "ranking",
+      "language": "french",
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/692584452",
+          "title": "Suivi des mission en régie",
+          "relevance_score": 1.0,
+          "expected_rank": 1
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733017",
+          "title": "Team Mission Overview",
+          "relevance_score": 0.7,
+          "expected_rank": 2
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_005",
+    "category": "retrieval",
+    "test_name": "Person Query Test",
+    "question": "Johan Jublanc",
+    "expected_behavior": "Should find the most relevant document about Johan Jublanc as first result.",
+    "metadata": {
+      "test_type": "person_query",
+      "language": "french",
+      "difficulty": "simple",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/717258769",
+          "title": "Johan Jublanc",
+          "relevance_score": 1.0,
+          "expected_rank": 1
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_006",
+    "category": "retrieval",
+    "test_name": "Fictional Entity Test",
+    "question": "Emin Lambropoulos",
+    "expected_behavior": "Should return no results or very low relevance scores for fictional person.",
+    "metadata": {
+      "test_type": "fictional_entity",
+      "language": "french",
+      "difficulty": "medium",
+      "expected_documents": []
+    }
+  },
+  {
+    "test_id": "ret_007",
+    "category": "retrieval",
+    "test_name": "Multi-term Query Test",
+    "question": "veille technologique janvier 2025",
+    "expected_behavior": "Should retrieve tech watch documents from January 2025 with good term matching.",
+    "metadata": {
+      "test_type": "multi_term_query",
+      "language": "french",
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/457801729",
+          "title": "Veille tech - 2025/01/06",
+          "relevance_score": 1.0
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733025",
+          "title": "Tech Watch Articles January 2025",
+          "relevance_score": 0.85
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_008",
+    "category": "retrieval",
+    "test_name": "Complex System Query Test",
+    "question": "système évaluation RAG Isschat métriques performance",
+    "expected_behavior": "Should handle complex query efficiently while maintaining relevance.",
+    "metadata": {
+      "test_type": "complex_system_query",
+      "language": "french",
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/673218562",
+          "title": "Stratégies d'évaluation pour Isschat",
+          "relevance_score": 1.0
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/~712020ac11a6fbc42a4601a7cc1db877ac528c/pages/684785711",
+          "title": "Système d'évaluation RAG - Isschat",
+          "relevance_score": 0.95
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_009",
+    "category": "retrieval",
+    "test_name": "Project Leadership Query Test",
+    "question": "CIBTP projet lead",
+    "expected_behavior": "Should handle variations in query terms and find CIBTP project information.",
+    "metadata": {
+      "test_type": "project_query",
+      "language": "french",
+      "difficulty": "medium",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/291078146",
+          "title": "CIBTP - Coaching -",
+          "relevance_score": 1.0
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733021",
+          "title": "CIBTP Project Overview",
+          "relevance_score": 0.9
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_010",
+    "category": "retrieval",
+    "test_name": "Invalid Date Query Test",
+    "question": "daily 35 mai 2018",
+    "expected_behavior": "Should handle invalid date gracefully and potentially suggest valid alternatives.",
+    "metadata": {
+      "test_type": "invalid_date",
+      "language": "french",
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/636321793",
+          "title": "Dailys",
+          "relevance_score": 0.6
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_011",
+    "category": "retrieval",
+    "test_name": "Missing Information Query Test",
+    "question": "avantages stagiaire Isskar",
+    "expected_behavior": "Should retrieve documents related to internship benefits or indicate lack of information.",
+    "metadata": {
+      "test_type": "missing_information",
+      "language": "french",
+      "difficulty": "medium",
+      "expected_documents": []
+    }
+  },
+  {
+    "test_id": "ret_012",
+    "category": "retrieval",
+    "test_name": "Company Relationship Query Test",
+    "question": "Isskar nœud Gordien relation",
+    "expected_behavior": "Should find documents explaining the relationship between Isskar and Gordian node.",
+    "metadata": {
+      "test_type": "relationship_query",
+      "language": "french",
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/447250451",
+          "title": "COPIL - 27/12/2024",
+          "relevance_score": 0.8
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733018",
+          "title": "Gordian Node Partnership",
+          "relevance_score": 0.9
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_013",
+    "category": "retrieval",
+    "test_name": "English Query Test",
+    "question": "Tell me about Cedrus project",
+    "expected_behavior": "Should retrieve relevant documents regardless of query language.",
+    "metadata": {
+      "test_type": "english_query",
+      "language": "english",
+      "difficulty": "medium",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/614596636",
+          "title": "Cedrus & Partners - GenAut",
+          "relevance_score": 1.0
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235732996",
+          "title": "Project Cedrus Overview",
+          "relevance_score": 0.9
+        }
+      ]
+    }
+  },
+  {
+    "test_id": "ret_014",
+    "category": "retrieval",
+    "test_name": "Confidential Information Query Test",
+    "question": "brief Adam confidential",
+    "expected_behavior": "Should handle queries about potentially confidential information appropriately.",
+    "metadata": {
+      "test_type": "confidential_query",
+      "language": "french",
+      "difficulty": "complex",
+      "expected_documents": []
+    }
+  },
+  {
+    "test_id": "ret_015",
+    "category": "retrieval",
+    "test_name": "Specific Document Query Test",
+    "question": "articles veille tech 2025/01/06 résumé",
+    "expected_behavior": "Should retrieve the specific tech watch document for synthesis.",
+    "metadata": {
+      "test_type": "specific_document",
+      "language": "french",
+      "difficulty": "complex",
+      "expected_documents": [
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/457801729",
+          "title": "Veille tech - 2025/01/06",
+          "relevance_score": 1.0
+        },
+        {
+          "url": "https://kanbios.atlassian.net/wiki/spaces/ISSKAR/pages/235733025",
+          "title": "Tech Watch Articles January 2025",
+          "relevance_score": 0.8
+        }
+      ]
+    }
+  }
+]
