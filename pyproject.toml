@@ -67,6 +67,18 @@ cli = [
     "click>=8.0.0"
 ]
 
+evaluation = [
+    "dvc[azure]>=3.0.0",
+    "transformers>=4.30.0",
+    "torch>=2.0.0,<=2.7.0",
+    "tokenizers>=0.15.0",
+    "datasets>=2.14.0",
+    "accelerate>=0.20.0",
+    "evaluate>=0.4.0",
+    "scikit-learn>=1.2.0",
+    "sentencepiece[evaluation]>=0.2.0",
+]
+
 [project.scripts]
 isschat-cli = "src.cli.main:main"
 
@@ -91,4 +103,3 @@ addopts = [
     "--strict-markers",
     "--disable-warnings"
 ]
-
