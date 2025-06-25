@@ -168,6 +168,10 @@ class BaseEvaluator(ABC):
         """Get the category this evaluator handles"""
         pass
 
+    def requires_test_cases(self) -> bool:
+        """Check if this evaluator requires test cases to be loaded"""
+        return True
+
     def evaluate_single(self, test_case: TestCase) -> EvaluationResult:
         """Template method for evaluation - implements common flow"""
         try:

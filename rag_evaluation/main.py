@@ -24,27 +24,37 @@ class EvaluationManager:
     def __init__(self, config: EvaluationConfig):
         """Initialize evaluation manager"""
         self.config = config
-        self.evaluators = {}
+        self.evaluator_classes = {}  # Store classes, not instances
+        self.evaluators = {}  # Cache for instantiated evaluators
         self.results = {}
-        self._load_evaluators()
+        self._load_evaluator_classes()
 
-    def _load_evaluators(self):
-        """Dynamically load evaluators based on configuration"""
+    def _load_evaluator_classes(self):
+        """Dynamically load evaluator classes (but don't instantiate them yet)"""
         for category in self.config.get_all_categories():
             evaluator_config = self.config.get_evaluator_config(category)
 
             try:
-                # Import the module
                 module = importlib.import_module(evaluator_config["module"])
 
-                # Get the class
                 evaluator_class = getattr(module, evaluator_config["class_name"])
 
-                # Create instance
-                self.evaluators[category] = evaluator_class(self.config)
+                self.evaluator_classes[category] = evaluator_class
 
             except Exception as e:
-                print(f"Warning: Could not load evaluator {category}: {e}")
+                print(f"Warning: Could not load evaluator class {category}: {e}")
+
+    def _get_evaluator(self, category: str):
+        """Get evaluator instance, creating it lazily if needed"""
+        if category not in self.evaluators:
+            if category not in self.evaluator_classes:
+                raise ValueError(f"Evaluator class for category '{category}' not found")
+
+            # Lazy instantiation - only create when needed
+            print(f"🔧 Initializing {category} evaluator...")
+            self.evaluators[category] = self.evaluator_classes[category](self.config)
+
+        return self.evaluators[category]
 
     def load_test_cases(self, category: str) -> List[TestCase]:
         """Load test cases for a specific category"""
@@ -74,20 +84,35 @@ class EvaluationManager:
         """Run evaluation for a specific category"""
         print(f"\nStarting {category} evaluation...")
 
-        # Load test cases
-        test_cases = self.load_test_cases(category)
-        if not test_cases:
-            return {"category": category, "results": [], "summary": {}}
+        try:
+            evaluator = self._get_evaluator(category)
+        except ValueError as e:
+            print(f"❌ {e}. Available: {list(self.evaluator_classes.keys())}")
+            return {"category": category, "results": [], "summary": {"error": str(e)}}
 
-        # Get evaluator
-        if category not in self.evaluators:
-            print(f"❌ Evaluator for category '{category}' not found. Available: {list(self.evaluators.keys())}")
-            return {"category": category, "results": [], "summary": {"error": f"Evaluator not found for {category}"}}
+        # Check if this evaluator requires test cases
+        if evaluator.requires_test_cases():
+            test_cases = self.load_test_cases(category)
+            if not test_cases:
+                return {"category": category, "results": [], "summary": {}}
 
-        evaluator = self.evaluators[category]
-
-        # Run evaluation
-        results = evaluator.evaluate_batch(test_cases)
+            # Run evaluation with test cases
+            results = evaluator.evaluate_batch(test_cases)
+        else:
+            # For evaluators that don't need test cases
+            print(f"Running {category} evaluation, no test cases needed...")
+            if hasattr(evaluator, "evaluate_without_test_cases"):
+                results = evaluator.evaluate_without_test_cases()
+            else:
+                # Fallback: create a dummy test case for compatibility
+                dummy_test_case = TestCase(
+                    test_id=f"{category}_analysis_001",
+                    category=category,
+                    test_name=f"{category.title()} Analysis",
+                    question=f"Perform {category} analysis",
+                    expected_behavior=f"Complete {category} analysis",
+                )
+                results = [evaluator.evaluate_single(dummy_test_case)]
 
         # Get summary
         summary = evaluator.get_summary_stats()
@@ -257,10 +282,15 @@ class EvaluationManager:
                     print(f"{category.upper()}: {passed}/{total} tests (avg score: {avg_score:.3f})")
 
             # Show detailed metrics if evaluator supports it
-            if category in self.evaluators:
-                detailed_summary = self.evaluators[category].format_detailed_summary()
-                if detailed_summary:
-                    print(detailed_summary)
+            if category in self.evaluator_classes:
+                try:
+                    evaluator = self._get_evaluator(category)
+                    detailed_summary = evaluator.format_detailed_summary()
+                    if detailed_summary:
+                        print(detailed_summary)
+                except Exception:
+                    # Skip detailed summary if evaluator can't be instantiated
+                    pass
 
         # CI threshold check (only in CI mode)
         if self.config.ci_mode:
