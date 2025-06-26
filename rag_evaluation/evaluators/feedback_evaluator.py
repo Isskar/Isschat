@@ -6,13 +6,13 @@ Analyzes user feedback to identify strengths and weaknesses by topic
 import logging
 import json
 import os
+import glob
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
 from rag_evaluation.core.base_evaluator import BaseEvaluator, TestCase, EvaluationResult, EvaluationStatus
-from src.core.data_manager import get_data_manager, JSONLDataStore
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -126,93 +126,89 @@ class FeedbackClassifier:
 
 class FeedbackDataLoader:
     def __init__(self, limit: Optional[int] = None):
-        """Initialize data loader with debugging capabilities"""
-        self.feedback_data_store: JSONLDataStore = get_data_manager().feedback_store
+        """Initialize data loader"""
         self.limit = limit
         self.base_feedback_path = "/Users/ecalyaka/Desktop/projects/Isschat/data/logs/feedback/"
-        self._used_fallback = False
         logger.info(f"FeedbackDataLoader initialized with limit: {limit}")
-        logger.info(f"Data store file path: {self.feedback_data_store.file_path}")
-
-    def _count_lines_in_files(self, files: List[str]) -> int:
-        """Count total lines in feedback files"""
-        total_lines = 0
-        for file in files:
-            try:
-                with open(file, "r", encoding="utf-8") as f:
-                    lines = sum(1 for line in f if line.strip())
-                    total_lines += lines
-                    logger.info(f"  {file}: {lines} lines")
-            except Exception as e:
-                logger.error(f"Error reading {file}: {e}")
-
-        logger.info(f"Total feedback entries in files: {total_lines}")
-        return total_lines
+        logger.info(f"Base feedback path: {self.base_feedback_path}")
 
     def load_feedbacks(self) -> Optional[List[FeedbackEntry]]:
         logger.info("=== FEEDBACK LOADING START ===")
 
         try:
-            # Try normal loading first
-            logger.info("Attempting normal data manager loading...")
-            raw_feedbacks = self.feedback_data_store.load_entries(limit=self.limit)
+            # Find all feedback files
+            pattern = f"{self.base_feedback_path}feedback_*.jsonl"
+            files = glob.glob(pattern)
 
-            if raw_feedbacks and len(raw_feedbacks) > 0:
-                logger.info(f"✓ Normal loading successful: {len(raw_feedbacks)} raw feedbacks")
-                self._used_fallback = False
+            if not files:
+                logger.warning(f"No feedback files found at {pattern}")
+                return None
 
-                # Convert to evaluator format
-                converted_feedbacks = []
-                for raw_feedback in raw_feedbacks:
-                    # Extract question and answer from metadata
-                    metadata = raw_feedback.get("metadata", {})
-                    question = metadata.get("question", "")
-                    answer = metadata.get("answer", "")
+            logger.info(f"Found {len(files)} feedback files:")
+            for file in files:
+                size = os.path.getsize(file)
+                logger.info(f"  - {file} ({size} bytes)")
 
-                    # Map data manager format to evaluator format
-                    sentiment = (
-                        FeedbackSentiment.POSITIVE if raw_feedback.get("rating", 0) >= 3 else FeedbackSentiment.NEGATIVE
-                    )
+            # Load and convert feedbacks
+            converted_feedbacks = []
+            loaded_count = 0
 
-                    converted_feedback = FeedbackEntry(
-                        question=question,
-                        answer=answer,
-                        sentiment=sentiment,
-                        comment=raw_feedback.get("comment", ""),
-                        timestamp=datetime.fromisoformat(raw_feedback.get("timestamp", datetime.now().isoformat())),
-                    )
-                    converted_feedbacks.append(converted_feedback)
+            for file_path in files:
+                logger.info(f"Loading feedback from: {file_path}")
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        for line_num, line in enumerate(f, 1):
+                            if not line.strip():
+                                continue
 
-                logger.info(f"✓ Conversion successful: {len(converted_feedbacks)} converted feedbacks")
-                return converted_feedbacks
-            else:
-                logger.warning("✗ Normal loading returned no data")
+                            try:
+                                raw_feedback = json.loads(line.strip())
+                                loaded_count += 1
 
-                # Try fallback method
-                logger.info("Attempting fallback loading method...")
-                self._used_fallback = True
-                fallback_result = self._load_feedbacks_fallback()
+                                # Extract question and answer from metadata
+                                metadata = raw_feedback.get("metadata", {})
+                                question = metadata.get("question", "")
+                                answer = metadata.get("answer", "")
 
-                if fallback_result:
-                    logger.info(f"✓ Fallback loading successful: {len(fallback_result)} feedbacks")
-                    return fallback_result
-                else:
-                    logger.error("✗ Fallback loading also failed")
-                    return None
+                                # Map data manager format to evaluator format
+                                sentiment = (
+                                    FeedbackSentiment.POSITIVE
+                                    if raw_feedback.get("rating", 0) >= 3
+                                    else FeedbackSentiment.NEGATIVE
+                                )
+
+                                converted_feedback = FeedbackEntry(
+                                    question=question,
+                                    answer=answer,
+                                    sentiment=sentiment,
+                                    comment=raw_feedback.get("comment", ""),
+                                    timestamp=datetime.fromisoformat(
+                                        raw_feedback.get("timestamp", datetime.now().isoformat())
+                                    ),
+                                )
+                                converted_feedbacks.append(converted_feedback)
+
+                                # Apply limit if specified
+                                if self.limit and len(converted_feedbacks) >= self.limit:
+                                    logger.info(f"Reached limit of {self.limit} feedbacks")
+                                    break
+
+                            except json.JSONDecodeError as e:
+                                logger.error(f"JSON decode error in {file_path} line {line_num}: {e}")
+                            except Exception as e:
+                                logger.error(f"Error processing line {line_num} in {file_path}: {e}")
+
+                        if self.limit and len(converted_feedbacks) >= self.limit:
+                            break
+
+                except Exception as e:
+                    logger.error(f"Error loading file {file_path}: {e}")
+
+            logger.info(f"Loading complete: {loaded_count} raw entries, {len(converted_feedbacks)} converted")
+            return converted_feedbacks if converted_feedbacks else None
 
         except Exception as e:
-            logger.error(f"Error in load_feedbacks: {e}")
-            logger.info("Attempting fallback due to exception...")
-
-            try:
-                self._used_fallback = True
-                fallback_result = self._load_feedbacks_fallback()
-                if fallback_result:
-                    logger.info(f"✓ Fallback after exception successful: {len(fallback_result)} feedbacks")
-                    return fallback_result
-            except Exception as fallback_e:
-                logger.error(f"Fallback also failed: {fallback_e}")
-
+            logger.error(f"Error loading feedback data: {e}")
             return None
 
 
@@ -594,15 +590,6 @@ class FeedbackEvaluator(BaseEvaluator):
                     }
                 )
 
-        # Add debug information
-        debug_info = {
-            "loading_method": "fallback"
-            if hasattr(self.data_loader, "_used_fallback") and self.data_loader._used_fallback
-            else "normal",
-            "total_topics_analyzed": len(analysis.topic_analyses),
-            "topics_with_data": len([t for t in analysis.topic_analyses.values() if t.total_count > 0]),
-        }
-
         return {
             "feedback_metrics": {
                 "total_feedbacks": analysis.total_feedbacks,
@@ -610,6 +597,5 @@ class FeedbackEvaluator(BaseEvaluator):
                 "topic_breakdown": topic_breakdown,
                 "top_strengths": top_strengths,
                 "top_weaknesses": top_weaknesses,
-            },
-            "debug_info": debug_info,
+            }
         }
