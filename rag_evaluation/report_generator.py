@@ -17,8 +17,7 @@ class HTMLReportGenerator:
 
     def __init__(self):
         """Initialize the HTML report generator"""
-        # Only exclude conversational, keep retrieval for metrics tab
-        self.excluded_categories = {"conversational"}
+        self.excluded_categories = set()
 
     def generate_report(
         self, results: Dict[str, Any], output_path: Optional[Path] = None, title: str = "Rapport d'Évaluation Isschat"
