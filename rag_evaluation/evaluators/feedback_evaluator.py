@@ -6,7 +6,6 @@ Analyzes user feedback to identify strengths and weaknesses by topic
 import logging
 import json
 import os
-import glob
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
@@ -134,27 +133,6 @@ class FeedbackDataLoader:
         self._used_fallback = False
         logger.info(f"FeedbackDataLoader initialized with limit: {limit}")
         logger.info(f"Data store file path: {self.feedback_data_store.file_path}")
-
-    def _debug_file_system(self) -> List[str]:
-        """Debug method to check actual file system for feedback files"""
-        logger.info("=== DEBUG FILE SYSTEM ===")
-
-        # Check if base directory exists
-        if os.path.exists(self.base_feedback_path):
-            logger.info(f"✓ Base feedback directory exists: {self.base_feedback_path}")
-
-            # Find all feedback files
-            pattern = f"{self.base_feedback_path}feedback_*.jsonl"
-            files = glob.glob(pattern)
-            logger.info(f"Found {len(files)} feedback files:")
-            for file in files:
-                size = os.path.getsize(file)
-                logger.info(f"  - {file} ({size} bytes)")
-
-            return files
-        else:
-            logger.error(f"✗ Base feedback directory does not exist: {self.base_feedback_path}")
-            return []
 
     def _count_lines_in_files(self, files: List[str]) -> int:
         """Count total lines in feedback files"""
