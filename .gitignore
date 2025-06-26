@@ -1,0 +1,78 @@
+# Virtual environments
+.venv
+env/
+venv/
+ENV/
+
+# Sensitive configuration files
+.env
+*.env
+
+# Python configuration files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Data base files
+*.db
+*.sqlite3
+
+# IDE folders
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Cache files
+.cache/
+.coverage
+htmlcov/
+
+# Log files
+*.log
+
+# Dependencies folders
+data/
+db/
+evaluation_results/
+rag_evaluation/config/test_datasets/
+
+# DVC config with sensitive info
+.dvc/config
+.dvc/config.local
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Project specific files
+*.pkl
+*.faiss
+*.pdf
+*.docx
+*.xlsx
+*.csv
+
+*.DS_Store
+*logs
+logs/
