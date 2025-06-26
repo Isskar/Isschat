@@ -120,26 +120,40 @@ class JSONLDataStore(BaseDataStore):
         directory_path = "/".join(self.file_path.split("/")[:-1])
         file_prefix = self.file_path.split("/")[-1].split("_")[0] + "_"  # e.g., "feedback_"
 
+        logging.info(f"JSONLDataStore.load_entries: file_path={self.file_path}")
+        logging.info(f"JSONLDataStore.load_entries: directory_path={directory_path}, file_prefix={file_prefix}")
+
         try:
             # Get all files in directory
             if hasattr(self.storage_service._storage, "list_files"):
+                logging.info(f"Using list_files for directory: {directory_path}")
                 files = self.storage_service._storage.list_files(directory_path)
+                logging.info(f"Files found: {files}")
             else:
                 # Fallback: try to load the specific file
+                logging.info(f"list_files not available, checking file exists: {self.file_path}")
                 if self.storage_service.file_exists(self.file_path):
                     files = [self.file_path.split("/")[-1]]
+                    logging.info(f"File exists, using: {files}")
                 else:
+                    logging.warning(f"File does not exist: {self.file_path}")
                     return entries
 
             # Filter files with the correct prefix
-            relevant_files = [f for f in files if f.startswith(file_prefix)]
+            # Extract just the filename from the full path for filtering
+            relevant_files = [f for f in files if f.split("/")[-1].startswith(file_prefix)]
+            logging.info(f"Relevant files after filtering: {relevant_files}")
 
             # Load content from all relevant files
             for filename in relevant_files:
-                full_path = f"{directory_path}/{filename}"
+                # filename already contains the full path from list_files
+                full_path = filename
+                logging.info(f"Checking file: {full_path}")
                 if self.storage_service.file_exists(full_path):
+                    logging.info(f"File exists, loading content from: {full_path}")
                     content = self.storage_service.load_text_file(full_path)
                     if content:
+                        logging.info(f"Content loaded, length: {len(content)} chars")
                         # Parse JSONL content
                         for line in content.split("\n"):
                             if line.strip():

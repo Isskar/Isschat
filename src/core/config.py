@@ -281,8 +281,11 @@ class ConfigurationManager:
             storage = StorageFactory.create_azure_storage(account_name=storage_account, container_name=container_name)
             logging.info(f"Using Azure Blob Storage: {storage_account}")
         else:
-            storage = StorageFactory.create_local_storage(base_path="./data")
-            logging.info("Using Local Storage")
+            # Use absolute path for data directory
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            data_path = os.path.join(project_root, "data")
+            storage = StorageFactory.create_local_storage(base_path=data_path)
+            logging.info(f"Using Local Storage with base path: {data_path}")
 
         return StorageService(storage)
 
