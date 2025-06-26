@@ -6,6 +6,7 @@ Analyzes user feedback to identify strengths and weaknesses by topic
 import logging
 import json
 import os
+import glob
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
@@ -126,41 +127,114 @@ class FeedbackClassifier:
 
 class FeedbackDataLoader:
     def __init__(self, limit: Optional[int] = None):
-        """Initialize data loader"""
+        """Initialize data loader with debugging capabilities"""
         self.feedback_data_store: JSONLDataStore = get_data_manager().feedback_store
         self.limit = limit
+        self.base_feedback_path = "/Users/ecalyaka/Desktop/projects/Isschat/data/logs/feedback/"
+        self._used_fallback = False
+        logger.info(f"FeedbackDataLoader initialized with limit: {limit}")
+        logger.info(f"Data store file path: {self.feedback_data_store.file_path}")
+
+    def _debug_file_system(self) -> List[str]:
+        """Debug method to check actual file system for feedback files"""
+        logger.info("=== DEBUG FILE SYSTEM ===")
+
+        # Check if base directory exists
+        if os.path.exists(self.base_feedback_path):
+            logger.info(f"✓ Base feedback directory exists: {self.base_feedback_path}")
+
+            # Find all feedback files
+            pattern = f"{self.base_feedback_path}feedback_*.jsonl"
+            files = glob.glob(pattern)
+            logger.info(f"Found {len(files)} feedback files:")
+            for file in files:
+                size = os.path.getsize(file)
+                logger.info(f"  - {file} ({size} bytes)")
+
+            return files
+        else:
+            logger.error(f"✗ Base feedback directory does not exist: {self.base_feedback_path}")
+            return []
+
+    def _count_lines_in_files(self, files: List[str]) -> int:
+        """Count total lines in feedback files"""
+        total_lines = 0
+        for file in files:
+            try:
+                with open(file, "r", encoding="utf-8") as f:
+                    lines = sum(1 for line in f if line.strip())
+                    total_lines += lines
+                    logger.info(f"  {file}: {lines} lines")
+            except Exception as e:
+                logger.error(f"Error reading {file}: {e}")
+
+        logger.info(f"Total feedback entries in files: {total_lines}")
+        return total_lines
 
     def load_feedbacks(self) -> Optional[List[FeedbackEntry]]:
+        logger.info("=== FEEDBACK LOADING START ===")
+
         try:
-            # Load raw feedback data from data manager
+            # Try normal loading first
+            logger.info("Attempting normal data manager loading...")
             raw_feedbacks = self.feedback_data_store.load_entries(limit=self.limit)
 
-            # Convert to evaluator format
-            converted_feedbacks = []
-            for raw_feedback in raw_feedbacks:
-                # Extract question and answer from metadata
-                metadata = raw_feedback.get("metadata", {})
-                question = metadata.get("question", "")
-                answer = metadata.get("answer", "")
+            if raw_feedbacks and len(raw_feedbacks) > 0:
+                logger.info(f"✓ Normal loading successful: {len(raw_feedbacks)} raw feedbacks")
+                self._used_fallback = False
 
-                # Map data manager format to evaluator format
-                sentiment = (
-                    FeedbackSentiment.POSITIVE if raw_feedback.get("rating", 0) >= 3 else FeedbackSentiment.NEGATIVE
-                )
+                # Convert to evaluator format
+                converted_feedbacks = []
+                for raw_feedback in raw_feedbacks:
+                    # Extract question and answer from metadata
+                    metadata = raw_feedback.get("metadata", {})
+                    question = metadata.get("question", "")
+                    answer = metadata.get("answer", "")
 
-                converted_feedback = FeedbackEntry(
-                    question=question,
-                    answer=answer,
-                    sentiment=sentiment,
-                    comment=raw_feedback.get("comment", ""),
-                    timestamp=datetime.fromisoformat(raw_feedback.get("timestamp", datetime.now().isoformat())),
-                )
-                converted_feedbacks.append(converted_feedback)
+                    # Map data manager format to evaluator format
+                    sentiment = (
+                        FeedbackSentiment.POSITIVE if raw_feedback.get("rating", 0) >= 3 else FeedbackSentiment.NEGATIVE
+                    )
 
-            return converted_feedbacks
+                    converted_feedback = FeedbackEntry(
+                        question=question,
+                        answer=answer,
+                        sentiment=sentiment,
+                        comment=raw_feedback.get("comment", ""),
+                        timestamp=datetime.fromisoformat(raw_feedback.get("timestamp", datetime.now().isoformat())),
+                    )
+                    converted_feedbacks.append(converted_feedback)
+
+                logger.info(f"✓ Conversion successful: {len(converted_feedbacks)} converted feedbacks")
+                return converted_feedbacks
+            else:
+                logger.warning("✗ Normal loading returned no data")
+
+                # Try fallback method
+                logger.info("Attempting fallback loading method...")
+                self._used_fallback = True
+                fallback_result = self._load_feedbacks_fallback()
+
+                if fallback_result:
+                    logger.info(f"✓ Fallback loading successful: {len(fallback_result)} feedbacks")
+                    return fallback_result
+                else:
+                    logger.error("✗ Fallback loading also failed")
+                    return None
 
         except Exception as e:
-            logger.error(f"Error loading feedback data: {e}")
+            logger.error(f"Error in load_feedbacks: {e}")
+            logger.info("Attempting fallback due to exception...")
+
+            try:
+                self._used_fallback = True
+                fallback_result = self._load_feedbacks_fallback()
+                if fallback_result:
+                    logger.info(f"✓ Fallback after exception successful: {len(fallback_result)} feedbacks")
+                    return fallback_result
+            except Exception as fallback_e:
+                logger.error(f"Fallback also failed: {fallback_e}")
+
             return None
 
 
@@ -216,6 +290,9 @@ class FeedbackEvaluator(BaseEvaluator):
             response = self._format_analysis(analysis)
             response_time = (datetime.now() - start_time).total_seconds()
 
+            # Create detailed evaluation_details with feedback metrics
+            evaluation_details = self._build_evaluation_details(analysis)
+
             # Create result
             result = EvaluationResult(
                 test_id=test_case.test_id,
@@ -225,8 +302,8 @@ class FeedbackEvaluator(BaseEvaluator):
                 response=response,
                 expected_behavior=test_case.expected_behavior,
                 status=EvaluationStatus.MEASURED,
-                score=0.0,
-                evaluation_details={},
+                score=analysis.overall_satisfaction,
+                evaluation_details=evaluation_details,
                 response_time=response_time,
                 sources=[],
                 metadata=test_case.metadata,
@@ -481,3 +558,80 @@ class FeedbackEvaluator(BaseEvaluator):
             lines.append(f"   ⚠ {weakness}")
 
         return "\n".join(lines)
+
+    def _build_evaluation_details(self, analysis: FeedbackAnalysis) -> Dict[str, Any]:
+        """Build detailed evaluation_details with feedback metrics by topic"""
+        if not analysis or analysis.total_feedbacks == 0:
+            return {
+                "feedback_metrics": {
+                    "total_feedbacks": 0,
+                    "overall_satisfaction": 0.0,
+                    "topic_breakdown": {},
+                    "top_strengths": [],
+                    "top_weaknesses": [],
+                },
+            }
+
+        # Calculate feedback rates by topic
+        topic_breakdown = {}
+        for topic_id, topic_analysis in analysis.topic_analyses.items():
+            topic_breakdown[topic_id] = {
+                "topic_name": topic_analysis.topic_name,
+                "total_count": topic_analysis.total_count,
+                "positive_count": topic_analysis.positive_count,
+                "negative_count": topic_analysis.negative_count,
+                "satisfaction_rate": topic_analysis.satisfaction_rate,
+                "feedback_percentage": (topic_analysis.total_count / analysis.total_feedbacks) * 100
+                if analysis.total_feedbacks > 0
+                else 0,
+            }
+
+        # Get top 3 most frequent topics (points forts)
+        sorted_by_frequency = sorted(analysis.topic_analyses.items(), key=lambda x: x[1].total_count, reverse=True)
+        top_strengths = []
+        for topic_id, topic_analysis in sorted_by_frequency[:3]:
+            if topic_analysis.total_count > 0:
+                top_strengths.append(
+                    {
+                        "topic_id": topic_id,
+                        "topic_name": topic_analysis.topic_name,
+                        "count": topic_analysis.total_count,
+                        "satisfaction_rate": topic_analysis.satisfaction_rate,
+                        "reason": "Topic le plus fréquent",
+                    }
+                )
+
+        # Get top 3 weakest topics (lowest satisfaction rates)
+        sorted_by_satisfaction = sorted(analysis.topic_analyses.items(), key=lambda x: x[1].satisfaction_rate)
+        top_weaknesses = []
+        for topic_id, topic_analysis in sorted_by_satisfaction[:3]:
+            if topic_analysis.total_count > 0 and topic_analysis.satisfaction_rate < 0.7:
+                top_weaknesses.append(
+                    {
+                        "topic_id": topic_id,
+                        "topic_name": topic_analysis.topic_name,
+                        "count": topic_analysis.total_count,
+                        "satisfaction_rate": topic_analysis.satisfaction_rate,
+                        "reason": f"Faible taux de satisfaction ({topic_analysis.satisfaction_rate:.0%})",
+                    }
+                )
+
+        # Add debug information
+        debug_info = {
+            "loading_method": "fallback"
+            if hasattr(self.data_loader, "_used_fallback") and self.data_loader._used_fallback
+            else "normal",
+            "total_topics_analyzed": len(analysis.topic_analyses),
+            "topics_with_data": len([t for t in analysis.topic_analyses.values() if t.total_count > 0]),
+        }
+
+        return {
+            "feedback_metrics": {
+                "total_feedbacks": analysis.total_feedbacks,
+                "overall_satisfaction": analysis.overall_satisfaction,
+                "topic_breakdown": topic_breakdown,
+                "top_strengths": top_strengths,
+                "top_weaknesses": top_weaknesses,
+            },
+            "debug_info": debug_info,
+        }
