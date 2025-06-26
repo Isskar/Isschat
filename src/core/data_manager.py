@@ -113,27 +113,41 @@ class JSONLDataStore(BaseDataStore):
             return False
 
     def load_entries(self, limit: Optional[int] = None) -> List[Any]:
-        """Load entries from JSONL file using storage service."""
+        """Load entries from all JSONL files in directory using storage service."""
         entries = []
 
-        # Check if file exists using storage service
-        if not self.storage_service.file_exists(self.file_path):
-            return entries
+        # Get directory path from file path
+        directory_path = "/".join(self.file_path.split("/")[:-1])
+        file_prefix = self.file_path.split("/")[-1].split("_")[0] + "_"  # e.g., "feedback_"
 
         try:
-            # Load file content using storage service
-            content = self.storage_service.load_text_file(self.file_path)
-            if not content:
-                return entries
+            # Get all files in directory
+            if hasattr(self.storage_service._storage, "list_files"):
+                files = self.storage_service._storage.list_files(directory_path)
+            else:
+                # Fallback: try to load the specific file
+                if self.storage_service.file_exists(self.file_path):
+                    files = [self.file_path.split("/")[-1]]
+                else:
+                    return entries
 
-            # Parse JSONL content
-            for line in content.split("\n"):
-                if line.strip():
-                    try:
-                        data = json.loads(line.strip())
-                        entries.append(data)
-                    except json.JSONDecodeError:
-                        continue  # Skip malformed lines
+            # Filter files with the correct prefix
+            relevant_files = [f for f in files if f.startswith(file_prefix)]
+
+            # Load content from all relevant files
+            for filename in relevant_files:
+                full_path = f"{directory_path}/{filename}"
+                if self.storage_service.file_exists(full_path):
+                    content = self.storage_service.load_text_file(full_path)
+                    if content:
+                        # Parse JSONL content
+                        for line in content.split("\n"):
+                            if line.strip():
+                                try:
+                                    data = json.loads(line.strip())
+                                    entries.append(data)
+                                except json.JSONDecodeError:
+                                    continue  # Skip malformed lines
 
             # Sort by timestamp (most recent first)
             entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
@@ -143,7 +157,7 @@ class JSONLDataStore(BaseDataStore):
 
             return entries
         except Exception as e:
-            logging.error(f"Error loading from {self.file_path}: {e}")
+            logging.error(f"Error loading from {directory_path}: {e}")
             return []
 
     def get_entries_by_user(self, user_id: str, limit: Optional[int] = None) -> List[Any]:
