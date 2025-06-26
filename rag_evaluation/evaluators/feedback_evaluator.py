@@ -6,7 +6,6 @@ Analyzes user feedback to identify strengths and weaknesses by topic
 import logging
 import json
 import os
-import glob
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
@@ -137,76 +136,40 @@ class FeedbackDataLoader:
         logger.info("=== FEEDBACK LOADING START ===")
 
         try:
-            # Find all feedback files
-            pattern = f"{self.base_feedback_path}feedback_*.jsonl"
-            files = glob.glob(pattern)
+            # Load raw feedback data from data manager
+            logger.info("Loading feedback data from data manager...")
+            raw_feedbacks = self.feedback_data_store.load_entries(limit=self.limit)
 
-            if not files:
-                logger.warning(f"No feedback files found at {pattern}")
+            if not raw_feedbacks:
+                logger.warning("No feedback data loaded from data manager")
                 return None
 
-            logger.info(f"Found {len(files)} feedback files:")
-            for file in files:
-                size = os.path.getsize(file)
-                logger.info(f"  - {file} ({size} bytes)")
+            logger.info(f"Loaded {len(raw_feedbacks)} raw feedback entries")
 
-            # Load and convert feedbacks
+            # Convert to evaluator format
             converted_feedbacks = []
-            loaded_count = 0
+            for raw_feedback in raw_feedbacks:
+                # Extract question and answer from metadata
+                metadata = raw_feedback.get("metadata", {})
+                question = metadata.get("question", "")
+                answer = metadata.get("answer", "")
 
-            for file_path in files:
-                logger.info(f"Loading feedback from: {file_path}")
-                try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        for line_num, line in enumerate(f, 1):
-                            if not line.strip():
-                                continue
+                # Map data manager format to evaluator format
+                sentiment = (
+                    FeedbackSentiment.POSITIVE if raw_feedback.get("rating", 0) >= 3 else FeedbackSentiment.NEGATIVE
+                )
 
-                            try:
-                                raw_feedback = json.loads(line.strip())
-                                loaded_count += 1
+                converted_feedback = FeedbackEntry(
+                    question=question,
+                    answer=answer,
+                    sentiment=sentiment,
+                    comment=raw_feedback.get("comment", ""),
+                    timestamp=datetime.fromisoformat(raw_feedback.get("timestamp", datetime.now().isoformat())),
+                )
+                converted_feedbacks.append(converted_feedback)
 
-                                # Extract question and answer from metadata
-                                metadata = raw_feedback.get("metadata", {})
-                                question = metadata.get("question", "")
-                                answer = metadata.get("answer", "")
-
-                                # Map data manager format to evaluator format
-                                sentiment = (
-                                    FeedbackSentiment.POSITIVE
-                                    if raw_feedback.get("rating", 0) >= 3
-                                    else FeedbackSentiment.NEGATIVE
-                                )
-
-                                converted_feedback = FeedbackEntry(
-                                    question=question,
-                                    answer=answer,
-                                    sentiment=sentiment,
-                                    comment=raw_feedback.get("comment", ""),
-                                    timestamp=datetime.fromisoformat(
-                                        raw_feedback.get("timestamp", datetime.now().isoformat())
-                                    ),
-                                )
-                                converted_feedbacks.append(converted_feedback)
-
-                                # Apply limit if specified
-                                if self.limit and len(converted_feedbacks) >= self.limit:
-                                    logger.info(f"Reached limit of {self.limit} feedbacks")
-                                    break
-
-                            except json.JSONDecodeError as e:
-                                logger.error(f"JSON decode error in {file_path} line {line_num}: {e}")
-                            except Exception as e:
-                                logger.error(f"Error processing line {line_num} in {file_path}: {e}")
-
-                        if self.limit and len(converted_feedbacks) >= self.limit:
-                            break
-
-                except Exception as e:
-                    logger.error(f"Error loading file {file_path}: {e}")
-
-            logger.info(f"Loading complete: {loaded_count} raw entries, {len(converted_feedbacks)} converted")
-            return converted_feedbacks if converted_feedbacks else None
+            logger.info(f"Converted {len(converted_feedbacks)} feedback entries")
+            return converted_feedbacks
 
         except Exception as e:
             logger.error(f"Error loading feedback data: {e}")
