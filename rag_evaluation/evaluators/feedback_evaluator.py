@@ -95,7 +95,7 @@ class FeedbackClassifier:
         """Classify feedback into topic"""
         return self._classify_camembert(feedback)
 
-    def _classify_camembert(self, feedback: FeedbackEntry) -> str:
+    def _classify_camembert(self, feedback: FeedbackEntry) -> Optional[str]:
         """CamemBERT-based classification"""
         # Prepare candidate labels
         candidate_labels = [topic.name for topic in self.topics]
@@ -121,21 +121,16 @@ class FeedbackClassifier:
                 if topic.name == best_topic_name:
                     return topic.id
 
-            return "unknown"
-        else:
-            return "unknown"
+            return None
 
 
 class FeedbackDataLoader:
-    """Loads feedback data from data/logs/feedback directory"""
-
     def __init__(self, limit: Optional[int] = None):
         """Initialize data loader"""
         self.feedback_data_store: JSONLDataStore = get_data_manager().feedback_store
         self.limit = limit
 
-    def load_feedbacks(self) -> List[FeedbackEntry]:
-        """Load feedback entries from data store and convert to evaluator format"""
+    def load_feedbacks(self) -> Optional[List[FeedbackEntry]]:
         try:
             # Load raw feedback data from data manager
             raw_feedbacks = self.feedback_data_store.load_entries(limit=self.limit)
@@ -166,7 +161,7 @@ class FeedbackDataLoader:
 
         except Exception as e:
             logger.error(f"Error loading feedback data: {e}")
-            return []
+            return None
 
 
 @dataclass
@@ -200,7 +195,7 @@ class FeedbackEvaluator(BaseEvaluator):
         self.limit = kwargs.get("limit", None)
 
         # Initialize our specific components
-        self.data_loader = FeedbackDataLoader()
+        self.data_loader = FeedbackDataLoader(limit=self.limit)
         classifier_params = kwargs.get("classifier_params", {})
         self.classifier = FeedbackClassifier(**classifier_params)
 
@@ -269,6 +264,9 @@ class FeedbackEvaluator(BaseEvaluator):
         """Main analysis method"""
         # Load feedback data
         feedbacks = self.data_loader.load_feedbacks()
+        if feedbacks is None or len(feedbacks) == 0:
+            logger.warning("No feedback data available for analysis")
+            return self._empty_analysis()
 
         # Classify feedbacks by topic
         topic_feedbacks = {}
