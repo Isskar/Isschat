@@ -26,6 +26,15 @@
     "weight": 1.0,
     "enabled": true
   },
+  "feedback": {
+    "class_name": "FeedbackEvaluator",
+    "module": "rag_evaluation.evaluators.feedback_evaluator",
+    "name": "Feedback Analysis",
+    "description": "Analyzes user feedback using CamemBERT classification to identify strengths and weaknesses",
+    "dataset": "config/test_datasets/feedback_tests.json",
+    "weight": 1.0,
+    "enabled": true,
+    "requires_test_cases": false},
   "business_value": {
     "class_name": "BusinessValueEvaluator",
     "module": "rag_evaluation.evaluators.business_value_evaluator",
