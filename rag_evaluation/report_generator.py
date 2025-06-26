@@ -135,7 +135,7 @@ class HTMLReportGenerator:
             background-color: #f5f5f5;
             color: #333;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -144,26 +144,26 @@ class HTMLReportGenerator:
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
-        
+
         .header {
             text-align: center;
             margin-bottom: 40px;
             padding-bottom: 20px;
             border-bottom: 3px solid #007bff;
         }
-        
+
         .header h1 {
             color: #007bff;
             margin: 0;
             font-size: 2.5em;
         }
-        
+
         .header .timestamp {
             color: #666;
             font-size: 1.1em;
             margin-top: 10px;
         }
-        
+
         /* Tab Navigation */
         .tab-navigation {
             display: flex;
@@ -171,7 +171,7 @@ class HTMLReportGenerator:
             margin-bottom: 30px;
             overflow-x: auto;
         }
-        
+
         .tab-button {
             background: none;
             border: none;
@@ -184,26 +184,26 @@ class HTMLReportGenerator:
             transition: all 0.3s ease;
             white-space: nowrap;
         }
-        
+
         .tab-button:hover {
             color: #007bff;
             background-color: #f8f9fa;
         }
-        
+
         .tab-button.active {
             color: #007bff;
             border-bottom-color: #007bff;
             background-color: #f8f9fa;
         }
-        
+
         .tab-content {
             display: none;
         }
-        
+
         .tab-content.active {
             display: block;
         }
-        
+
         /* Summary Section */
         .summary-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -212,37 +212,37 @@ class HTMLReportGenerator:
             border-radius: 10px;
             margin-bottom: 30px;
         }
-        
+
         .summary-section h2 {
             margin-top: 0;
             font-size: 1.8em;
         }
-        
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
-        
+
         .stat-card {
             background: rgba(255,255,255,0.1);
             padding: 15px;
             border-radius: 8px;
             text-align: center;
         }
-        
+
         .stat-number {
             font-size: 2em;
             font-weight: bold;
             display: block;
         }
-        
+
         .stat-label {
             font-size: 0.9em;
             opacity: 0.9;
         }
-        
+
         /* Metrics Grid for Retrieval */
         .metrics-grid {
             display: grid;
@@ -250,14 +250,14 @@ class HTMLReportGenerator:
             gap: 20px;
             margin-bottom: 30px;
         }
-        
+
         .metric-card {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 8px;
             padding: 20px;
         }
-        
+
         .metric-card h4 {
             margin-top: 0;
             color: #007bff;
@@ -265,20 +265,20 @@ class HTMLReportGenerator:
             border-bottom: 2px solid #007bff;
             padding-bottom: 10px;
         }
-        
+
         .metric-value {
             font-size: 1.5em;
             font-weight: bold;
             color: #28a745;
             margin: 10px 0;
         }
-        
+
         .metric-description {
             color: #6c757d;
             font-size: 0.9em;
             line-height: 1.4;
         }
-        
+
         .metric-explanation {
             background: #e3f2fd;
             border-left: 4px solid #2196f3;
@@ -286,44 +286,44 @@ class HTMLReportGenerator:
             margin-top: 15px;
             border-radius: 0 5px 5px 0;
         }
-        
+
         .metric-explanation h5 {
             margin: 0 0 10px 0;
             color: #1976d2;
         }
-        
+
         /* Category Section */
         .category-section {
             margin-bottom: 40px;
         }
-        
+
         .category-header {
             background: #f8f9fa;
             padding: 20px;
             border-left: 5px solid #007bff;
             margin-bottom: 20px;
         }
-        
+
         .category-header h3 {
             margin: 0;
             color: #007bff;
             font-size: 1.5em;
         }
-        
+
         .category-stats {
             display: flex;
             gap: 20px;
             margin-top: 10px;
             flex-wrap: wrap;
         }
-        
+
         .category-stat {
             background: white;
             padding: 10px 15px;
             border-radius: 5px;
             border: 1px solid #dee2e6;
         }
-        
+
         .test-case {
             background: #fff;
             border: 1px solid #dee2e6;
@@ -331,7 +331,7 @@ class HTMLReportGenerator:
             margin-bottom: 20px;
             overflow: hidden;
         }
-        
+
         .test-header {
             background: #f8f9fa;
             padding: 15px 20px;
@@ -340,17 +340,17 @@ class HTMLReportGenerator:
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .test-id {
             font-weight: bold;
             color: #495057;
         }
-        
+
         .test-name {
             color: #007bff;
             font-weight: 500;
         }
-        
+
         .status-badge {
             padding: 4px 12px;
             border-radius: 20px;
@@ -358,42 +358,42 @@ class HTMLReportGenerator:
             font-weight: bold;
             text-transform: uppercase;
         }
-        
+
         .status-passed {
             background: #d4edda;
             color: #155724;
         }
-        
+
         .status-failed {
             background: #f8d7da;
             color: #721c24;
         }
-        
+
         .status-error {
             background: #fff3cd;
             color: #856404;
         }
-        
+
         .status-measured {
             background: #d1ecf1;
             color: #0c5460;
         }
-        
+
         .test-content {
             padding: 20px;
         }
-        
+
         .question-section, .response-section, .expected-section {
             margin-bottom: 20px;
         }
-        
+
         .section-label {
             font-weight: bold;
             color: #495057;
             margin-bottom: 8px;
             display: block;
         }
-        
+
         .question-text {
             background: #e3f2fd;
             padding: 15px;
@@ -401,7 +401,7 @@ class HTMLReportGenerator:
             border-left: 4px solid #2196f3;
             font-style: italic;
         }
-        
+
         .response-text {
             background: #f1f8e9;
             padding: 15px;
@@ -409,7 +409,7 @@ class HTMLReportGenerator:
             border-left: 4px solid #4caf50;
             white-space: pre-wrap;
         }
-        
+
         .expected-text {
             background: #fff3e0;
             padding: 15px;
@@ -417,39 +417,39 @@ class HTMLReportGenerator:
             border-left: 4px solid #ff9800;
             font-size: 0.9em;
         }
-        
+
         .evaluation-details {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 5px;
             margin-top: 15px;
         }
-        
+
         .score-display {
             display: flex;
             align-items: center;
             gap: 15px;
             margin-bottom: 10px;
         }
-        
+
         .score-value {
             font-size: 1.2em;
             font-weight: bold;
             color: #007bff;
         }
-        
+
         .reasoning {
             font-style: italic;
             color: #666;
         }
-        
+
         .metadata {
             display: flex;
             gap: 15px;
             margin-top: 15px;
             flex-wrap: wrap;
         }
-        
+
         .metadata-item {
             background: #e9ecef;
             padding: 5px 10px;
@@ -457,11 +457,11 @@ class HTMLReportGenerator:
             font-size: 0.85em;
             color: #495057;
         }
-        
+
         .sources {
             margin-top: 15px;
         }
-        
+
         .source-item {
             background: #f8f9fa;
             padding: 8px 12px;
@@ -470,7 +470,7 @@ class HTMLReportGenerator:
             font-size: 0.9em;
             border-left: 3px solid #6c757d;
         }
-        
+
         .error-message {
             background: #f8d7da;
             color: #721c24;
@@ -478,33 +478,33 @@ class HTMLReportGenerator:
             border-radius: 5px;
             border-left: 4px solid #dc3545;
         }
-        
+
         .no-data {
             text-align: center;
             color: #6c757d;
             font-style: italic;
             padding: 40px;
         }
-        
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
             }
-            
+
             .stats-grid, .metrics-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .category-stats {
                 flex-direction: column;
             }
-            
+
             .test-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 10px;
             }
-            
+
             .tab-navigation {
                 flex-direction: column;
             }
@@ -519,7 +519,7 @@ class HTMLReportGenerator:
                 Généré le {{ timestamp[:19].replace('T', ' à ') }}
             </div>
         </div>
-        
+
         <!-- Tab Navigation -->
         <div class="tab-navigation">
             <button class="tab-button active" onclick="showTab('summary')">📊 Résumé</button>
@@ -530,7 +530,7 @@ class HTMLReportGenerator:
             <button class="tab-button" onclick="showTab('retrieval')">🔍 Métriques Retrieval</button>
             {% endif %}
         </div>
-        
+
         <!-- Summary Tab -->
         <div id="summary" class="tab-content active">
             <div class="summary-section">
@@ -566,7 +566,7 @@ class HTMLReportGenerator:
                     {% endif %}
                 </div>
             </div>
-            
+
             <!-- Category Summary -->
             {% for category, category_data in category_results.items() %}
             <div class="category-section">
@@ -610,7 +610,7 @@ class HTMLReportGenerator:
             </div>
             {% endfor %}
         </div>
-        
+
         <!-- Category Tabs -->
         {% for category, category_data in category_results.items() if category != 'retrieval' %}
         <div id="{{ category }}" class="tab-content">
@@ -647,7 +647,7 @@ class HTMLReportGenerator:
                         {% endif %}
                     </div>
                 </div>
-                
+
                 {% if category_data.results %}
                     {% for result in category_data.results %}
                     <div class="test-case">
@@ -660,40 +660,43 @@ class HTMLReportGenerator:
                                 {{ result.status }}
                             </span>
                         </div>
-                        
+
                         <div class="test-content">
                             <div class="question-section">
                                 <span class="section-label">❓ Question:</span>
                                 <div class="question-text">{{ result.question }}</div>
                             </div>
-                            
+
                             {% if result.response and not result.error_message %}
                             <div class="response-section">
                                 <span class="section-label">💬 Réponse d'Isschat:</span>
                                 <div class="response-text">{{ result.response }}</div>
                             </div>
                             {% endif %}
-                            
+
                             {% if result.error_message %}
                             <div class="error-message">
                                 <strong>❌ Erreur:</strong> {{ result.error_message }}
                             </div>
                             {% endif %}
-                            
+
                             <div class="expected-section">
                                 <span class="section-label">🎯 Comportement Attendu:</span>
                                 <div class="expected-text">{{ result.expected_behavior }}</div>
                             </div>
-                            
+
                             {% if result.evaluation_details %}
                             <div class="evaluation-details">
                                 <div class="score-display">
                                     <span class="section-label">📈 Score:</span>
                                     <span class="score-value">{{ "%.3f"|format(result.score) }}</span>
                                     {% if result.evaluation_details.passes_criteria is defined %}
-                                    <span class="status-badge status-{{ 'passed' if result.evaluation_details.passes_criteria else 'failed' }}">
-                                        {{ 'Critères Respectés' if result.evaluation_details.passes_criteria else 'Critères Non Respectés' }}
-                                    </span>
+                                        {% set passes = result.evaluation_details.passes_criteria %}
+                                        {% set status_class = 'passed' if passes else 'failed' %}
+                                        {% set s_text = 'Critères Respectés' if passes else 'Critères Non Respectés' %}
+                                        <span class="status-badge status-{{ status_class }}">
+                                            {{ s_text }}
+                                        </span>
                                     {% endif %}
                                 </div>
                                 {% if result.evaluation_details.reasoning %}
@@ -703,7 +706,7 @@ class HTMLReportGenerator:
                                 {% endif %}
                             </div>
                             {% endif %}
-                            
+
                             {% if result.metadata %}
                             <div class="metadata">
                                 {% for key, value in result.metadata.items() %}
@@ -713,7 +716,7 @@ class HTMLReportGenerator:
                                 {% endfor %}
                             </div>
                             {% endif %}
-                            
+
                             {% if result.sources %}
                             <div class="sources">
                                 <span class="section-label">📚 Sources:</span>
@@ -722,7 +725,7 @@ class HTMLReportGenerator:
                                 {% endfor %}
                             </div>
                             {% endif %}
-                            
+
                             {% if result.response_time %}
                             <div class="metadata">
                                 <span class="metadata-item">
@@ -741,7 +744,7 @@ class HTMLReportGenerator:
             </div>
         </div>
         {% endfor %}
-        
+
         <!-- Retrieval Metrics Tab -->
         {% if retrieval_data %}
         <div id="retrieval" class="tab-content">
@@ -763,7 +766,7 @@ class HTMLReportGenerator:
                         {% endif %}
                     </div>
                 </div>
-                
+
                 <!-- Metrics Grid -->
                 <div class="metrics-grid">
                     <!-- Basic Metrics -->
@@ -786,7 +789,7 @@ class HTMLReportGenerator:
                             <strong>F1-Score:</strong> Moyenne harmonique entre precision et recall.
                         </div>
                     </div>
-                    
+
                     <!-- Precision@K Metrics -->
                     <div class="metric-card">
                         <h4>🎯 Precision@K</h4>
@@ -801,10 +804,12 @@ class HTMLReportGenerator:
                         </div>
                         <div class="metric-explanation">
                             <h5>📝 Explication</h5>
-                            <strong>Precision@K:</strong> Proportion de documents pertinents parmi les K premiers résultats retournés. Mesure la qualité des premiers résultats.
+                            <strong>Precision@K:</strong> Proportion de documents pertinents parmi les K premiers
+                            résultats retournés.<br>
+                            Mesure la qualité des premiers résultats.
                         </div>
                     </div>
-                    
+
                     <!-- Recall@K Metrics -->
                     <div class="metric-card">
                         <h4>🔄 Recall@K</h4>
@@ -819,10 +824,12 @@ class HTMLReportGenerator:
                         </div>
                         <div class="metric-explanation">
                             <h5>📝 Explication</h5>
-                            <strong>Recall@K:</strong> Proportion de documents pertinents trouvés dans les K premiers résultats. Mesure la capacité à retrouver les documents importants rapidement.
+                            <strong>Recall@K:</strong> Proportion de documents pertinents trouvés dans les K
+                            premiers résultats.<br>
+                            Mesure la capacité à retrouver les documents importants rapidement.
                         </div>
                     </div>
-                    
+
                     <!-- Advanced Metrics -->
                     <div class="metric-card">
                         <h4>🚀 Métriques Avancées</h4>
@@ -837,13 +844,18 @@ class HTMLReportGenerator:
                         </div>
                         <div class="metric-explanation">
                             <h5>📝 Explication</h5>
-                            <strong>MRR:</strong> Mean Reciprocal Rank - moyenne de l'inverse du rang du premier document pertinent.<br>
-                            <strong>MAP:</strong> Mean Average Precision - moyenne des précisions à chaque document pertinent trouvé.<br>
-                            <strong>NDCG:</strong> Normalized Discounted Cumulative Gain - mesure la qualité du classement en tenant compte de la position.
+                            <strong>MRR:</strong> Mean Reciprocal Rank - moyenne de l'inverse du rang du premier
+                            document pertinent.
+                            <br>
+                            <strong>MAP:</strong> Mean Average Precision - moyenne des précisions à chaque document
+                            pertinent trouvé.
+                            <br>
+                            <strong>NDCG:</strong> Normalized Discounted Cumulative Gain - mesure la qualité du
+                            classement en tenant compte de la position.
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Individual Test Results -->
                 {% if retrieval_data.results %}
                 <h3>📋 Résultats Détaillés des Tests</h3>
@@ -858,20 +870,20 @@ class HTMLReportGenerator:
                             {{ result.status }}
                         </span>
                     </div>
-                    
+
                     <div class="test-content">
                         <div class="question-section">
                             <span class="section-label">❓ Question:</span>
                             <div class="question-text">{{ result.question }}</div>
                         </div>
-                        
+
                         {% if result.evaluation_details %}
                         <div class="evaluation-details">
                             <div class="score-display">
                                 <span class="section-label">📈 Score Global:</span>
                                 <span class="score-value">{{ "%.3f"|format(result.score) }}</span>
                             </div>
-                            
+
                             <!-- Detailed Metrics -->
                             <div class="metrics-grid">
                                 <div class="metric-card">
@@ -880,21 +892,21 @@ class HTMLReportGenerator:
                                     <div>Recall: {{ "%.3f"|format(result.evaluation_details.recall or 0) }}</div>
                                     <div>F1-Score: {{ "%.3f"|format(result.evaluation_details.f1_score or 0) }}</div>
                                 </div>
-                                
+
                                 <div class="metric-card">
                                     <h4>Precision@K</h4>
                                     <div>P@1: {{ "%.3f"|format(result.evaluation_details.precision_at_1 or 0) }}</div>
                                     <div>P@3: {{ "%.3f"|format(result.evaluation_details.precision_at_3 or 0) }}</div>
                                     <div>P@5: {{ "%.3f"|format(result.evaluation_details.precision_at_5 or 0) }}</div>
                                 </div>
-                                
+
                                 <div class="metric-card">
                                     <h4>Recall@K</h4>
                                     <div>R@1: {{ "%.3f"|format(result.evaluation_details.recall_at_1 or 0) }}</div>
                                     <div>R@3: {{ "%.3f"|format(result.evaluation_details.recall_at_3 or 0) }}</div>
                                     <div>R@5: {{ "%.3f"|format(result.evaluation_details.recall_at_5 or 0) }}</div>
                                 </div>
-                                
+
                                 <div class="metric-card">
                                     <h4>Métriques Avancées</h4>
                                     <div>MRR: {{ "%.3f"|format(result.evaluation_details.mrr or 0) }}</div>
@@ -904,7 +916,7 @@ class HTMLReportGenerator:
                             </div>
                         </div>
                         {% endif %}
-                        
+
                         {% if result.sources %}
                         <div class="sources">
                             <span class="section-label">📚 Documents Récupérés:</span>
@@ -913,7 +925,7 @@ class HTMLReportGenerator:
                             {% endfor %}
                         </div>
                         {% endif %}
-                        
+
                         {% if result.response_time %}
                         <div class="metadata">
                             <span class="metadata-item">
@@ -932,7 +944,7 @@ class HTMLReportGenerator:
             </div>
         </div>
         {% endif %}
-        
+
         {% if not category_results and not retrieval_data %}
         <div class="no-data">
             <h3>Aucune donnée d'évaluation disponible</h3>
@@ -940,7 +952,7 @@ class HTMLReportGenerator:
         </div>
         {% endif %}
     </div>
-    
+
     <script>
         function showTab(tabName) {
             // Hide all tab contents
@@ -948,16 +960,16 @@ class HTMLReportGenerator:
             tabContents.forEach(content => {
                 content.classList.remove('active');
             });
-            
+
             // Remove active class from all tab buttons
             const tabButtons = document.querySelectorAll('.tab-button');
             tabButtons.forEach(button => {
                 button.classList.remove('active');
             });
-            
+
             // Show selected tab content
             document.getElementById(tabName).classList.add('active');
-            
+
             // Add active class to clicked button
             event.target.classList.add('active');
         }
