@@ -129,11 +129,22 @@ class FeedbackDataLoader:
         """Initialize data loader"""
         self.feedback_data_store: JSONLDataStore = get_data_manager().feedback_store
         self.limit = limit
+        logger.info(f"FeedbackDataLoader initialized with limit: {limit}")
+        logger.info(f"Data store file path: {self.feedback_data_store.file_path}")
 
     def load_feedbacks(self) -> Optional[List[FeedbackEntry]]:
+        logger.info("=== FEEDBACK LOADING START ===")
+
         try:
             # Load raw feedback data from data manager
+            logger.info("Loading feedback data from data manager...")
             raw_feedbacks = self.feedback_data_store.load_entries(limit=self.limit)
+
+            if not raw_feedbacks:
+                logger.warning("No feedback data loaded from data manager")
+                return None
+
+            logger.info(f"Loaded {len(raw_feedbacks)} raw feedback entries")
 
             # Convert to evaluator format
             converted_feedbacks = []
@@ -157,6 +168,7 @@ class FeedbackDataLoader:
                 )
                 converted_feedbacks.append(converted_feedback)
 
+            logger.info(f"Converted {len(converted_feedbacks)} feedback entries")
             return converted_feedbacks
 
         except Exception as e:
@@ -216,6 +228,9 @@ class FeedbackEvaluator(BaseEvaluator):
             response = self._format_analysis(analysis)
             response_time = (datetime.now() - start_time).total_seconds()
 
+            # Create detailed evaluation_details with feedback metrics
+            evaluation_details = self._build_evaluation_details(analysis)
+
             # Create result
             result = EvaluationResult(
                 test_id=test_case.test_id,
@@ -225,8 +240,8 @@ class FeedbackEvaluator(BaseEvaluator):
                 response=response,
                 expected_behavior=test_case.expected_behavior,
                 status=EvaluationStatus.MEASURED,
-                score=0.0,
-                evaluation_details={},
+                score=analysis.overall_satisfaction,
+                evaluation_details=evaluation_details,
                 response_time=response_time,
                 sources=[],
                 metadata=test_case.metadata,
@@ -481,3 +496,70 @@ class FeedbackEvaluator(BaseEvaluator):
             lines.append(f"   ⚠ {weakness}")
 
         return "\n".join(lines)
+
+    def _build_evaluation_details(self, analysis: FeedbackAnalysis) -> Dict[str, Any]:
+        """Build detailed evaluation_details with feedback metrics by topic"""
+        if not analysis or analysis.total_feedbacks == 0:
+            return {
+                "feedback_metrics": {
+                    "total_feedbacks": 0,
+                    "overall_satisfaction": 0.0,
+                    "topic_breakdown": {},
+                    "top_strengths": [],
+                    "top_weaknesses": [],
+                },
+            }
+
+        # Calculate feedback rates by topic
+        topic_breakdown = {}
+        for topic_id, topic_analysis in analysis.topic_analyses.items():
+            topic_breakdown[topic_id] = {
+                "topic_name": topic_analysis.topic_name,
+                "total_count": topic_analysis.total_count,
+                "positive_count": topic_analysis.positive_count,
+                "negative_count": topic_analysis.negative_count,
+                "satisfaction_rate": topic_analysis.satisfaction_rate,
+                "feedback_percentage": (topic_analysis.total_count / analysis.total_feedbacks) * 100
+                if analysis.total_feedbacks > 0
+                else 0,
+            }
+
+        # Get top 3 most frequent topics (points forts)
+        sorted_by_frequency = sorted(analysis.topic_analyses.items(), key=lambda x: x[1].total_count, reverse=True)
+        top_strengths = []
+        for topic_id, topic_analysis in sorted_by_frequency[:3]:
+            if topic_analysis.total_count > 0:
+                top_strengths.append(
+                    {
+                        "topic_id": topic_id,
+                        "topic_name": topic_analysis.topic_name,
+                        "count": topic_analysis.total_count,
+                        "satisfaction_rate": topic_analysis.satisfaction_rate,
+                        "reason": "Topic le plus fréquent",
+                    }
+                )
+
+        # Get top 3 weakest topics (lowest satisfaction rates)
+        sorted_by_satisfaction = sorted(analysis.topic_analyses.items(), key=lambda x: x[1].satisfaction_rate)
+        top_weaknesses = []
+        for topic_id, topic_analysis in sorted_by_satisfaction[:3]:
+            if topic_analysis.total_count > 0 and topic_analysis.satisfaction_rate < 0.7:
+                top_weaknesses.append(
+                    {
+                        "topic_id": topic_id,
+                        "topic_name": topic_analysis.topic_name,
+                        "count": topic_analysis.total_count,
+                        "satisfaction_rate": topic_analysis.satisfaction_rate,
+                        "reason": f"Faible taux de satisfaction ({topic_analysis.satisfaction_rate:.0%})",
+                    }
+                )
+
+        return {
+            "feedback_metrics": {
+                "total_feedbacks": analysis.total_feedbacks,
+                "overall_satisfaction": analysis.overall_satisfaction,
+                "topic_breakdown": topic_breakdown,
+                "top_strengths": top_strengths,
+                "top_weaknesses": top_weaknesses,
+            }
+        }
