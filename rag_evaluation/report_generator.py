@@ -485,12 +485,139 @@ class HTMLReportGenerator:
             padding: 40px;
         }
 
+        /* Feedback-specific styles */
+        .feedback-overview {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .feedback-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .feedback-topic-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #007bff;
+        }
+
+        .feedback-topic-card.positive {
+            border-left-color: #28a745;
+            background: #f8fff8;
+        }
+
+        .feedback-topic-card.negative {
+            border-left-color: #dc3545;
+            background: #fff8f8;
+        }
+
+        .feedback-topic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .feedback-topic-name {
+            font-weight: bold;
+            color: #495057;
+            font-size: 1.1em;
+        }
+
+        .satisfaction-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .satisfaction-high {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .satisfaction-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .satisfaction-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .feedback-metrics {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .feedback-metric {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            font-size: 0.9em;
+        }
+
+        .feedback-percentage {
+            font-size: 0.85em;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .strengths-weaknesses {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .strength-weakness-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .strength-weakness-card.strengths {
+            border-left: 4px solid #28a745;
+        }
+
+        .strength-weakness-card.weaknesses {
+            border-left: 4px solid #dc3545;
+        }
+
+        .strength-weakness-item {
+            background: white;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 3px solid #dee2e6;
+        }
+
+        .strength-weakness-item.strength {
+            border-left-color: #28a745;
+        }
+
+        .strength-weakness-item.weakness {
+            border-left-color: #dc3545;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
             }
 
-            .stats-grid, .metrics-grid {
+            .stats-grid, .metrics-grid, .feedback-metrics-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -506,6 +633,15 @@ class HTMLReportGenerator:
 
             .tab-navigation {
                 flex-direction: column;
+            }
+
+            .strengths-weaknesses {
+                grid-template-columns: 1fr;
+            }
+
+            .feedback-metrics {
+                flex-direction: column;
+                gap: 10px;
             }
         }
     </style>
@@ -621,10 +757,12 @@ class HTMLReportGenerator:
                         <div class="category-stat">
                             <strong>Tests:</strong> {{ summary.total_tests or 0 }}
                         </div>
+                        {% if category != 'feedback' %}
                         <div class="category-stat">
                             <strong>Réussis:</strong> {{ summary.passed or 0 }}
                         </div>
-                        {% if summary.failed %}
+                        {% endif %}
+                        {% if summary.failed and category != 'feedback' %}
                         <div class="category-stat">
                             <strong>Échoués:</strong> {{ summary.failed }}
                         </div>
@@ -634,7 +772,7 @@ class HTMLReportGenerator:
                             <strong>Score Moyen:</strong> {{ "%.3f"|format(summary.average_score) }}
                         </div>
                         {% endif %}
-                        {% if summary.pass_rate is defined %}
+                        {% if summary.pass_rate is defined and category != 'feedback' %}
                         <div class="category-stat">
                             <strong>Taux de Réussite:</strong> {{ "%.1f"|format(summary.pass_rate * 100) }}%
                         </div>
@@ -661,6 +799,8 @@ class HTMLReportGenerator:
                         </div>
 
                         <div class="test-content">
+                            <!-- Show question/response only for non-feedback categories -->
+                            {% if category != 'feedback' %}
                             <div class="question-section">
                                 <span class="section-label">❓ Question:</span>
                                 <div class="question-text">{{ result.question }}</div>
@@ -683,6 +823,7 @@ class HTMLReportGenerator:
                                 <span class="section-label">🎯 Comportement Attendu:</span>
                                 <div class="expected-text">{{ result.expected_behavior }}</div>
                             </div>
+                            {% endif %}
 
                             {% if result.evaluation_details %}
                             <div class="evaluation-details">
@@ -702,6 +843,88 @@ class HTMLReportGenerator:
                                 <div class="reasoning">
                                     <strong>💭 Raisonnement:</strong> {{ result.evaluation_details.reasoning }}
                                 </div>
+                                {% endif %}
+
+                                <!-- Feedback-specific metrics display -->
+                                {% if category == 'feedback' and result.evaluation_details.feedback_metrics %}
+                                {% set feedback_metrics = result.evaluation_details.feedback_metrics %}
+                                <div class="feedback-overview">
+                                    <h4>📊 Analyse des Feedbacks</h4>
+                                    <div class="stats-grid">
+                                        <div class="stat-card">
+                                            <span class="stat-number">{{ feedback_metrics.total_feedbacks }}</span>
+                                            <span class="stat-label">Feedbacks Total</span>
+                                        </div>
+                                        <div class="stat-card">
+                                            <span class="stat-number">{{ "%.1f"|format(
+                                                feedback_metrics.overall_satisfaction * 100) }}%</span>
+                                            <span class="stat-label">Satisfaction Globale</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="feedback-metrics-grid">
+                                    {% for topic_id, topic_data in feedback_metrics.topic_breakdown.items() %}
+                                    {% set satisfaction_class = 'high' if topic_data.satisfaction_rate >= 0.7
+                                        else ('medium' if topic_data.satisfaction_rate >= 0.4 else 'low') %}
+                                    {% set card_class = 'positive' if topic_data.satisfaction_rate >= 0.5
+                                        else 'negative' %}
+                                    <div class="feedback-topic-card {{ card_class }}">
+                                        <div class="feedback-topic-header">
+                                            <div class="feedback-topic-name">{{ topic_data.topic_name }}</div>
+                                            <div class="satisfaction-badge satisfaction-{{ satisfaction_class }}">
+                                                {{ "%.0f"|format(topic_data.satisfaction_rate * 100) }}%
+                                            </div>
+                                        </div>
+                                        <div class="feedback-metrics">
+                                            <div class="feedback-metric">
+                                                <strong>Total:</strong> {{ topic_data.total_count }}
+                                            </div>
+                                            <div class="feedback-metric">
+                                                <strong>Positifs:</strong> {{ topic_data.positive_count }}
+                                            </div>
+                                            <div class="feedback-metric">
+                                                <strong>Négatifs:</strong> {{ topic_data.negative_count }}
+                                            </div>
+                                        </div>
+                                        <div class="feedback-percentage">
+                                            {{ "%.1f"|format(topic_data.feedback_percentage) }}% des feedbacks totaux
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                {% if feedback_metrics.top_strengths or feedback_metrics.top_weaknesses %}
+                                <div class="strengths-weaknesses">
+                                    {% if feedback_metrics.top_strengths %}
+                                    <div class="strength-weakness-card strengths">
+                                        <h4>💪 Points Forts</h4>
+                                        {% for strength in feedback_metrics.top_strengths %}
+                                        <div class="strength-weakness-item strength">
+                                            <strong>{{ strength.topic_name }}</strong><br>
+                                            <small>{{ strength.reason }} ({{ strength.count }} feedbacks,
+                                                {{ "%.0f"|format(strength.satisfaction_rate * 100) }}%
+                                                satisfaction)</small>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    {% if feedback_metrics.top_weaknesses %}
+                                    <div class="strength-weakness-card weaknesses">
+                                        <h4>⚠️ Points d'Amélioration</h4>
+                                        {% for weakness in feedback_metrics.top_weaknesses %}
+                                        <div class="strength-weakness-item weakness">
+                                            <strong>{{ weakness.topic_name }}</strong><br>
+                                            <small>{{ weakness.reason }} ({{ weakness.count }} feedbacks,
+                                                {{ "%.0f"|format(weakness.satisfaction_rate * 100) }}%
+                                                satisfaction)</small>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
                                 {% endif %}
                             </div>
                             {% endif %}
