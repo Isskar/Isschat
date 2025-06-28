@@ -15,7 +15,7 @@ from typing import Optional
 # Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from src.core.config import get_config
+from src.config.settings import get_config
 
 # Set tokenizers parallelism to false to avoid deadlocks
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -37,7 +37,7 @@ except Exception as e:
     pass  # Continue even if there's an issue with the event loop
 
 # Import custom modules
-from src.rag_system.rag_pipeline import RAGPipelineFactory
+from src.rag.pipeline import RAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
 
@@ -51,7 +51,7 @@ def get_model(rebuild_db=False):
     # Display a spinner during loading
     with st.spinner("Loading RAG model..."):
         # Check if the index.faiss file exists
-        from src.core.config import get_debug_info
+        from src.config.settings import get_debug_info
 
         # Get debug info
         config = get_config()
@@ -59,42 +59,9 @@ def get_model(rebuild_db=False):
 
         st.sidebar.expander("Debug", expanded=False).write(f"""
                 **Configuration**:
-                - Provider: `{debug_info["provider"]}`
-                - Vector store directory: `{debug_info["persist_directory"]}`
-                - Confluence URL: `{debug_info["confluence_url"]}`
-                - Space key: `{debug_info["space_key"]}`
-                - User: `{debug_info["user_email"]}`
-                - API key: `{debug_info["confluence_api_key"]}`
-                - OpenRouter key: `{debug_info["openrouter_api_key"]}`
-                """)
-
-        persist_path = Path(config.persist_directory)
-        index_file = persist_path / "index.faiss"
-        if not rebuild_db:
-            if not persist_path.exists() or not index_file.exists():
-                st.info("First Launch Detected - Creating Vector DB...")
-                rebuild_db = True
-
-        # Create the model
+                debug_info: {debug_info}""")
         try:
             pipeline = RAGPipelineFactory.create_default_pipeline()
-
-            # 🔧 FIX: Force vector DB construction if needed
-            if rebuild_db:
-                st.info("🚀 Building vector database from Confluence...")
-                # Force initialization of the retriever with rebuild
-                if hasattr(pipeline.retriever, "_initialize_db"):
-                    pipeline.retriever._initialize_db(force_rebuild=True)
-                else:
-                    # Fallback: trigger retrieval to force DB construction
-                    try:
-                        # Use invoke() method which is the correct LangChain retriever API
-                        pipeline.retriever.invoke("test initialization")
-                    except Exception as init_error:
-                        st.error(f"Failed to initialize vector database: {init_error}")
-                        raise
-                st.success("✅ Vector database successfully built!")
-
             return pipeline
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")
@@ -140,7 +107,7 @@ def main():
     if "user" not in st.session_state:
         # Create or retrieve admin user immediately
         config = get_config()
-        email = config.confluence_email_address or "admin@auto.login"
+        email = config.confluence_email or "admin@auto.login"
 
         # Auto-create user session (simplified approach like in reference file)
         st.session_state["user"] = {"email": email, "id": 1, "is_admin": True}
@@ -226,18 +193,18 @@ def main():
                         from src.core.exceptions import StorageAccessError, RebuildError
 
                         if isinstance(e, StorageAccessError):
-                            st.error(f"🚫 **Erreur d'accès au stockage:**\n\n{str(e)}")
+                            st.error(f"🚫 **Storage access error:**\n\n{str(e)}")
                         elif isinstance(e, RebuildError):
-                            st.error(f"🚫 **Erreur de rebuild:**\n\n{str(e)}")
+                            st.error(f"🚫 **Rebuild error:**\n\n{str(e)}")
                         else:
-                            st.error(f"❌ **Erreur inattendue lors du rebuild:**\n\n{str(e)}")
+                            st.error(f"❌ **Unexpected error during rebuild:**\n\n{str(e)}")
                             st.code(traceback.format_exc(), language="python")
 
                         st.info(
-                            "💡 **Conseils de dépannage:**\n"
-                            "- Vérifiez votre configuration Azure (USE_AZURE_STORAGE, AZURE_STORAGE_ACCOUNT)\n"
-                            "- Vérifiez vos permissions Azure Storage\n"
-                            "- Consultez les logs pour plus de détails"
+                            "💡 **Troubleshooting tips:**\n"
+                            "- Check your Azure configuration (USE_AZURE_STORAGE, AZURE_STORAGE_ACCOUNT)\n"
+                            "- Check your Azure Storage permissions\n"
+                            "- Check the logs for more details"
                         )
 
         # Close Button
@@ -310,7 +277,7 @@ def chat_page():
     # Extract first name from email (part before @)
     user_email = st.session_state.get("user", {}).get("email", "")
     first_name = user_email.split("@")[0].split(".")[0].capitalize()
-    welcome_message = f"Bonjour {first_name} ! Comment puis-je vous aider aujourd'hui ?"
+    welcome_message = f"Hello {first_name}! How can I help you today?"
 
     # Initialize message history with welcome message if empty
     if not st.session_state["messages"]:
@@ -324,7 +291,7 @@ def chat_page():
 
     # Helper to format chat history for prompt
     def format_chat_history(conversation_id: str, max_turns=10):
-        from src.core.data_manager import get_data_manager
+        from src.storage.data_manager import get_data_manager
 
         data_manager = get_data_manager()
         # Fetch entries for the current conversation_id
@@ -376,7 +343,7 @@ def chat_page():
             )
             st.session_state["messages"] = []  # Clear messages if we are resuming an old conversation
             # Load existing messages for the resumed conversation
-            from src.core.data_manager import get_data_manager
+            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             existing_messages = data_manager.get_conversation_history(
@@ -546,7 +513,7 @@ def history_page():
 def get_real_performance_data():
     """Get real performance data from data manager"""
     try:
-        from src.core.data_manager import get_data_manager
+        from src.storage.data_manager import get_data_manager
 
         data_manager = get_data_manager()
 
@@ -582,7 +549,7 @@ def dashboard_page():
 
     try:
         # Use the new PerformanceDashboard component
-        from src.core.data_manager import get_data_manager
+        from src.storage.data_manager import get_data_manager
         from src.webapp.components.performance_dashboard import render_performance_dashboard
 
         data_manager = get_data_manager()
@@ -618,7 +585,7 @@ def render_performance_tracking():
                 st.metric("Conversations Today", perf_data.get("conversations_today", 0))
 
             # Get conversation data for charts
-            from src.core.data_manager import get_data_manager
+            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             conversations = data_manager.get_conversation_history(limit=200)
@@ -660,7 +627,7 @@ def render_conversation_analysis():
     """Render conversation analysis section"""
     try:
         # Get real conversation data
-        from src.core.data_manager import get_data_manager
+        from src.storage.data_manager import get_data_manager
 
         data_manager = get_data_manager()
         conversations = data_manager.get_conversation_history(limit=200)

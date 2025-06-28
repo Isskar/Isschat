@@ -42,7 +42,7 @@ class VectorDBCacheManager:
         Configuration hash
         """
         try:
-            from src.core.config import get_config
+            from src.config.settings import get_config
 
             config = get_config()
 
@@ -86,8 +86,8 @@ def get_user_vector_db(_user_email: str, _config_hash: str):
     logger.info(f"Initializing vector DB for user: {_user_email[:10]}...")
 
     try:
-        from src.rag_system.rag_pipeline import RAGPipelineFactory
-        from src.core.config import get_config
+        from src.rag.pipeline import RAGPipelineFactory
+        from src.config.settings import get_config
 
         # Get base configuration
         config = get_config()
@@ -95,7 +95,7 @@ def get_user_vector_db(_user_email: str, _config_hash: str):
         # Create a user-specific persistence directory
         user_persist_dir = VectorDBCacheManager.get_user_persist_directory(_user_email, config.persist_directory)
 
-        # Modifier temporairement la configuration pour cet utilisateur
+        # Temporarily modify configuration for this user
         original_persist_dir = config.persist_directory
         config.persist_directory = user_persist_dir
 
@@ -106,7 +106,7 @@ def get_user_vector_db(_user_email: str, _config_hash: str):
             return pipeline
 
         finally:
-            # Restaurer la configuration originale
+            # Restore original configuration
             config.persist_directory = original_persist_dir
 
     except Exception as e:
@@ -138,7 +138,7 @@ def clear_user_cache(user_email: str):
         user_email: User email
     """
     try:
-        # Effacer le cache Streamlit pour cet utilisateur
+        # Clear Streamlit cache for this user
         cache_key = VectorDBCacheManager.get_user_cache_key(user_email)
 
         # Streamlit doesn't allow easy deletion of specific entries
@@ -147,10 +147,10 @@ def clear_user_cache(user_email: str):
             st.session_state[f"force_reload_{cache_key}"] = 0
 
         st.session_state[f"force_reload_{cache_key}"] += 1
-        logger.info(f"Cache effacé pour l'utilisateur: {user_email[:10]}...")
+        logger.info(f"Cache cleared for user: {user_email[:10]}...")
 
     except Exception as e:
-        logger.error(f"Erreur lors de l'effacement du cache: {e}")
+        logger.error(f"Error clearing cache: {e}")
 
 
 def get_cache_stats() -> dict:

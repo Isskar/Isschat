@@ -63,10 +63,10 @@ class FeedbackSystem:
     def __init__(self, storage_service=None, feedback_file: Optional[str] = None):
         # Get storage service from config if not provided
         if storage_service is None:
-            from src.core.config import _ensure_config_initialized
+            from src.storage.data_manager import get_data_manager
 
-            config_manager = _ensure_config_initialized()
-            self.storage_service = config_manager.get_storage_service()
+            data_manager = get_data_manager()
+            self.storage_service = data_manager.storage
         else:
             self.storage_service = storage_service
 
@@ -82,7 +82,7 @@ class FeedbackSystem:
         all_feedback = []
 
         try:
-            from src.core.data_manager import get_data_manager
+            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
 
@@ -121,7 +121,7 @@ class FeedbackSystem:
             try:
                 # Sauvegarder dans le data manager d'abord
                 try:
-                    from src.core.data_manager import get_data_manager
+                    from src.storage.data_manager import get_data_manager
 
                     data_manager = get_data_manager()
 
@@ -158,13 +158,12 @@ class FeedbackSystem:
             except Exception as e:
                 print(f"Error saving feedback via data_manager: {e}")
 
-            # Force a rerun to update the interface
-            st.rerun()
+            # Note: Removed st.rerun() to prevent callback interruption
 
         try:
             feedback_response = streamlit_feedback(
                 feedback_type="thumbs",
-                optional_text_label="Commentaire (optionnel):",
+                optional_text_label="Comment (optional):",
                 align="flex-start",
                 key=f"feedback_widget_{content_hash}",
                 on_submit=feedback_callback,
@@ -172,7 +171,7 @@ class FeedbackSystem:
 
             return feedback_response
         except Exception as e:
-            st.error(f"Erreur avec le widget de feedback: {e}")
+            st.error(f"Error with feedback widget: {e}")
             return None
 
     def get_feedback_statistics(self, days: int = 30) -> Dict:
@@ -187,7 +186,7 @@ class FeedbackSystem:
         """
         # Try data manager first
         try:
-            from src.core.data_manager import get_data_manager
+            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             feedback_data = data_manager.get_feedback_data(limit=1000)
@@ -419,18 +418,15 @@ class FeaturesManager:
 
         # Get storage service from config if not provided
         if storage_service is None:
-            from src.core.config import _ensure_config_initialized
+            from src.storage.data_manager import get_data_manager
 
-            config_manager = _ensure_config_initialized()
-            self.storage_service = config_manager.get_storage_service()
-        else:
-            self.storage_service = storage_service
+            self.storage_service = get_data_manager()
 
         # Create necessary directories using storage service
         directories = ["logs", "logs/feedback", "data", "cache"]
         for directory in directories:
-            if hasattr(self.storage_service._storage, "create_directory"):
-                self.storage_service._storage.create_directory(directory)
+            if hasattr(self.storage_service, "create_directory"):
+                self.storage_service.create_directory(directory)
 
         # Configure logging - use only console logging to avoid local file creation
         logging.basicConfig(
@@ -471,7 +467,7 @@ class FeaturesManager:
 
         # Save to data manager
         try:
-            from src.core.data_manager import get_data_manager
+            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
 

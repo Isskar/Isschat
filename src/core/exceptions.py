@@ -2,6 +2,8 @@
 Custom exceptions for the RAG system.
 """
 
+from typing import Optional
+
 
 class RAGSystemError(Exception):
     """Base exception for RAG system errors"""
@@ -42,7 +44,7 @@ class VectorStoreError(RAGSystemError):
 class StorageAccessError(RAGSystemError):
     """Raised when storage access fails due to authentication or permission issues"""
 
-    def __init__(self, message: str, storage_type: str | None = None, original_error: Exception | None = None):
+    def __init__(self, message: str, storage_type: Optional[str] = None, original_error: Optional[Exception] = None):
         super().__init__(message)
         self.storage_type = storage_type
         self.original_error = original_error
@@ -77,7 +79,7 @@ def create_azure_access_error(
 class RebuildError(RAGSystemError):
     """Raised when rebuild operations fail due to storage access issues"""
 
-    def __init__(self, message: str, storage_type: str | None = None, requested_storage: str | None = None):
+    def __init__(self, message: str, storage_type: Optional[str] = None, requested_storage: Optional[str] = None):
         super().__init__(message)
         self.storage_type = storage_type
         self.requested_storage = requested_storage

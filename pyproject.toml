@@ -46,6 +46,7 @@ dependencies = [
     "streamlit-feedback>=0.1.4",
     "psutil>=7.0.0",
     "einops>=0.8.1",
+    "qdrant-client>=1.7.0",
 ]
 
 [build-system]

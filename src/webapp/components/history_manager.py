@@ -10,7 +10,7 @@ from typing import List, Dict, Optional
 import plotly.express as px
 from itertools import groupby
 
-from ...core.data_manager import get_data_manager
+from src.storage.data_manager import get_data_manager
 
 
 class ConversationHistoryManager:
