@@ -5,7 +5,7 @@ Uses unified config, centralized embedding service and Qdrant with HNSW.
 
 import logging
 import time
-import uuid
+import hashlib
 from typing import List, Dict, Any
 
 from ..config import get_config, get_path_manager
@@ -44,6 +44,13 @@ class IngestionPipeline:
             "documents_stored": 0,
             "errors": [],
         }
+
+    def _generate_deterministic_id(self, content: str, source_id: str, chunk_index: int) -> str:
+        """Generate deterministic ID based on content and metadata"""
+        # Create a unique identifier using content hash + source info
+        content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+        identifier = f"{source_id}_{chunk_index}_{content_hash}"
+        return identifier
 
     def run_confluence_ingestion(self, force_rebuild: bool = False) -> Dict[str, Any]:
         """
@@ -212,7 +219,7 @@ class IngestionPipeline:
         """Store chunks and embeddings in Qdrant"""
         # Convert chunks to VectorDocument format
         vector_docs = []
-        for i, chunk in enumerate(chunks):
+        for chunk_idx, chunk in enumerate(chunks):
             # Create enriched metadata
             metadata = chunk.metadata.copy()
             metadata.update(
@@ -223,7 +230,12 @@ class IngestionPipeline:
                 }
             )
 
-            vector_doc = VectorDocument(id=str(uuid.uuid4()), content=chunk.page_content, metadata=metadata)
+            # Generate deterministic ID
+            source_id = metadata.get("page_id", metadata.get("doc_id", "unknown"))
+            chunk_index = metadata.get("chunk_index", chunk_idx)
+            doc_id = self._generate_deterministic_id(chunk.page_content, str(source_id), chunk_index)
+
+            vector_doc = VectorDocument(id=doc_id, content=chunk.page_content, metadata=metadata)
             vector_docs.append(vector_doc)
 
         # Store in Qdrant

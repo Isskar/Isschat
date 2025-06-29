@@ -15,6 +15,7 @@ import click
 from .commands.ingest import ingest
 from .commands.chat import chat
 from .commands.status import status
+from .commands.query import query
 
 
 @click.group()
@@ -30,6 +31,7 @@ def cli():
 cli.add_command(ingest)
 cli.add_command(chat)
 cli.add_command(status)
+cli.add_command(query)
 
 
 @cli.command()

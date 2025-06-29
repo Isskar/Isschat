@@ -98,6 +98,23 @@ class QdrantVectorDB(VectorDatabase):
         except Exception as e:
             raise ConnectionError(f"Failed to create Qdrant collection: {e}")
 
+    def document_exists(self, doc_id: str) -> bool:
+        """Check if a document exists in the collection by searching for original_doc_id in payload"""
+        try:
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+
+            # Search by original_doc_id in payload instead of point ID
+            result = self.client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=Filter(must=[FieldCondition(key="original_doc_id", match=MatchValue(value=doc_id))]),
+                limit=1,
+                with_payload=False,
+                with_vectors=False,
+            )
+            return len(result[0]) > 0
+        except Exception:
+            return False
+
     def add_documents(self, documents: List[Document], embeddings: List[List[float]]) -> None:
         """Add documents with embeddings optimized by batch"""
         if len(documents) != len(embeddings):
@@ -106,16 +123,35 @@ class QdrantVectorDB(VectorDatabase):
         if not documents:
             return
 
-        self.logger.info(f"Adding {len(documents)} documents to '{self.collection_name}'")
+        # Filter out existing documents to avoid duplicates
+        new_documents = []
+        new_embeddings = []
+        existing_count = 0
+
+        for doc, embedding in zip(documents, embeddings):
+            if not self.document_exists(doc.id):
+                new_documents.append(doc)
+                new_embeddings.append(embedding)
+            else:
+                existing_count += 1
+
+        if existing_count > 0:
+            self.logger.info(f"Skipped {existing_count} existing documents")
+
+        if not new_documents:
+            self.logger.info("No new documents to add")
+            return
+
+        self.logger.info(f"Adding {len(new_documents)} new documents to '{self.collection_name}'")
 
         # Prepare points for Qdrant
         points = []
-        for doc, embedding in zip(documents, embeddings):
-            # Unique ID if not provided
-            point_id = doc.id if doc.id else str(uuid.uuid4())
+        for doc, embedding in zip(new_documents, new_embeddings):
+            # Generate valid UUID for Qdrant point ID
+            point_id = str(uuid.uuid4())
 
-            # Payload (content + metadata)
-            payload = {"content": doc.content}
+            # Payload (content + metadata + original doc ID for deduplication)
+            payload = {"content": doc.content, "original_doc_id": doc.id}
             if doc.metadata:
                 payload.update(doc.metadata)
 
@@ -133,7 +169,7 @@ class QdrantVectorDB(VectorDatabase):
                 )
                 self.logger.debug(f"Batch {i // batch_size + 1}/{(len(points) - 1) // batch_size + 1} added")
 
-            self.logger.info(f"{len(documents)} documents added successfully")
+            self.logger.info(f"{len(new_documents)} documents added successfully")
 
         except Exception as e:
             raise RuntimeError(f"Failed to add Qdrant documents: {e}")

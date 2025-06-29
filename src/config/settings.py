@@ -23,8 +23,8 @@ class IsschatConfig:
     vectordb_host: str = "localhost"
     vectordb_port: int = 6333
 
-    llm_model: str = "google/gemini-2.5-flash-preview-05-20"
-    llm_temperature: float = 0.1
+    llm_model: str = "mistralai/mistral-small-3.2-24b-instruct"
+    llm_temperature: float = 0.3
     llm_max_tokens: int = 512
     search_k: int = 3
     search_fetch_k: int = 5
