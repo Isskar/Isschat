@@ -1,8 +1,3 @@
-"""
-Unified RAG pipeline.
-Replaces the old pipeline with centralized services and LangGraph.
-"""
-
 import logging
 import time
 from typing import Tuple, Dict, Any, Optional
@@ -18,7 +13,6 @@ class RAGPipeline:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.data_manager = get_data_manager()
 
-        # tools
         self.retrieval_tool = RetrievalTool()
         self.generation_tool = GenerationTool()
 
@@ -51,7 +45,6 @@ class RAGPipeline:
             if verbose:
                 self.logger.info(f"🔍 Processing query: '{query[:100]}...'")
 
-            # Step 1: Retrieval
             if verbose:
                 self.logger.info("📥 Step 1: Searching for relevant documents")
 
@@ -60,7 +53,6 @@ class RAGPipeline:
             if verbose:
                 self.logger.info(f"📄 {len(search_results)} documents found")
 
-            # Step 2: Generation
             if verbose:
                 self.logger.info("🤖 Step 2: Generating response")
 
@@ -71,13 +63,11 @@ class RAGPipeline:
             answer = generation_result["answer"]
             sources = generation_result["sources"]
 
-            # Calculate response time
             response_time = (time.time() - start_time) * 1000  # in ms
 
             if verbose:
                 self.logger.info(f"✅ Response generated in {response_time:.0f}ms")
 
-            # Save conversation (async)
             try:
                 conv_id = conversation_id or f"conv_{int(time.time())}"
                 self.data_manager.save_conversation(
@@ -102,7 +92,6 @@ class RAGPipeline:
             error_msg = f"RAG pipeline error: {str(e)}"
             self.logger.error(error_msg)
 
-            # Save error
             try:
                 response_time = (time.time() - start_time) * 1000
                 conv_id = conversation_id or f"conv_{int(time.time())}"
@@ -170,11 +159,9 @@ class RAGPipeline:
     def check_pipeline(self, test_query: str = "What does this documentation describe?") -> Dict[str, Any]:
         """Test the complete pipeline"""
         try:
-            # Check readiness
             if not self.is_ready():
                 return {"success": False, "error": "Pipeline not ready", "details": self.get_status()}
 
-            # Complete test
             start_time = time.time()
             answer, sources = self.process_query(test_query, verbose=True)
             end_time = time.time()
@@ -194,14 +181,13 @@ class RAGPipeline:
     def save_feedback(self, user_id: str, conversation_id: str, rating, comment: str = "") -> bool:
         """Save user feedback"""
         try:
-            # Convert string ratings to numeric values
             if isinstance(rating, str):
                 if rating.lower() == "good":
                     numeric_rating = 5
                 elif rating.lower() == "bad":
                     numeric_rating = 1
                 else:
-                    numeric_rating = 3  # neutral default
+                    numeric_rating = 3
             else:
                 numeric_rating = rating
 

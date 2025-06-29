@@ -64,13 +64,11 @@ class DataManager:
         self.path_manager = get_path_manager()
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        # Storage service
         if storage_service is None:
             self.storage = self._create_storage_service()
         else:
             self.storage = storage_service
 
-        # Ensure directories exist
         self._ensure_directories()
 
     def _create_storage_service(self):
@@ -83,21 +81,17 @@ class DataManager:
             if not config.azure_storage_account:
                 raise ValueError("AZURE_STORAGE_ACCOUNT required if USE_AZURE_STORAGE=true")
 
-            # Use Azure adapter directly
             storage = StorageFactory.create_azure_storage(
                 account_name=config.azure_storage_account, container_name=config.azure_blob_container
             )
             return storage
         else:
-            # Local storage
-            # Use local adapter directly
             storage = StorageFactory.create_local_storage(base_path=str(self.path_manager.data_dir))
             return storage
 
     def _ensure_directories(self):
         """Create directories with robust paths"""
         try:
-            # Use path_manager for robust paths
             self.path_manager.ensure_directories()
             self.logger.debug("Directories created successfully")
         except Exception as e:
@@ -125,7 +119,6 @@ class DataManager:
             metadata=metadata,
         )
 
-        # Robust path via path_manager
         today = datetime.now().strftime("%Y%m%d")
         file_path = self.path_manager.get_conversation_file(today)
 
@@ -144,7 +137,6 @@ class DataManager:
             metadata=metadata,
         )
 
-        # Robust path via path_manager
         today = datetime.now().strftime("%Y%m%d")
         file_path = self.path_manager.get_feedback_file(today)
 
@@ -162,7 +154,6 @@ class DataManager:
             metadata=metadata,
         )
 
-        # Robust path via path_manager
         today = datetime.now().strftime("%Y%m%d")
         file_path = self.path_manager.get_performance_file(today)
 
@@ -171,10 +162,8 @@ class DataManager:
     def _append_entry_to_file(self, file_path: Path, entry) -> bool:
         """Simple method to append JSONL with robust paths"""
         try:
-            # Convert to dict
             data = asdict(entry)
 
-            # Use storage service with relative path from data_dir (storage base)
             relative_path = file_path.relative_to(self.path_manager.data_dir)
             success = self.storage.append_jsonl_data(str(relative_path), data)
 
@@ -194,21 +183,17 @@ class DataManager:
     ) -> List[Dict]:
         """Retrieve conversation history with robust paths"""
         try:
-            # Load all conversation files
             conversations_dir = self.path_manager.conversations_dir
             all_entries = self._load_entries_from_directory(conversations_dir, "conversations_")
 
-            # Filter if necessary
             if user_id:
                 all_entries = [e for e in all_entries if e.get("user_id") == user_id]
 
             if conversation_id:
                 all_entries = [e for e in all_entries if e.get("conversation_id") == conversation_id]
 
-            # Sort by timestamp (most recent first)
             all_entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
-            # Limit results
             if limit > 0:
                 all_entries = all_entries[:limit]
 
@@ -263,16 +248,13 @@ class DataManager:
         entries = []
 
         try:
-            # List files in the directory
             if directory.exists():
                 for file_path in directory.glob(f"{file_prefix}*.jsonl"):
-                    # Relative path for storage service from data_dir (storage base)
                     relative_path = file_path.relative_to(self.path_manager.data_dir)
 
                     if self.storage.file_exists(str(relative_path)):
                         content = self.storage.load_text_file(str(relative_path))
                         if content:
-                            # Parse JSONL
                             for line in content.split("\n"):
                                 if line.strip():
                                     try:
@@ -309,7 +291,6 @@ class DataManager:
             return {"error": str(e)}
 
 
-# Global instance
 _data_manager: Optional[DataManager] = None
 
 

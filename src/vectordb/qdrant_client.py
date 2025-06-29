@@ -35,10 +35,8 @@ class QdrantVectorDB(VectorDatabase):
         self.config = get_config()
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        # Configuration from unified config
         self.collection_name = collection_name or self.config.vectordb_collection
 
-        # Embedding dimension (deduced from embedding model)
         if embedding_dim:
             self.embedding_dim = embedding_dim
         else:
@@ -46,43 +44,36 @@ class QdrantVectorDB(VectorDatabase):
 
             self.embedding_dim = get_embedding_service().dimension
 
-        # Advanced HNSW configuration
         self.distance_metric = Distance.COSINE
 
-        # Initialize Qdrant client - always use localhost server
         self.client = QdrantClient(host="localhost", port=self.config.vectordb_port)
         self.logger.info(f"Client Qdrant: localhost:{self.config.vectordb_port}")
 
-        # Create collection with HNSW
         self._ensure_collection_with_hnsw()
 
     def _ensure_collection_with_hnsw(self) -> None:
         try:
-            # Check if collection exists
             collections = self.client.get_collections().collections
             collection_names = [c.name for c in collections]
 
             if self.collection_name not in collection_names:
                 self.logger.info(f"Creating collection '{self.collection_name}' with HNSW")
 
-                # Optimized HNSW configuration
                 hnsw_config = HnswConfigDiff(
-                    m=48,  # Number of bidirectional connections (more = better precision)
-                    ef_construct=512,  # Dynamic neighborhood size (more = better quality)
-                    full_scan_threshold=20000,  # Threshold for full scan vs HNSW
-                    max_indexing_threads=8,  # Indexing parallelization
-                    on_disk=True,  # Store index on disk for large collections
+                    m=32,
+                    ef_construct=256,
+                    full_scan_threshold=20000,
+                    max_indexing_threads=8,
+                    on_disk=True,
                 )
 
-                # Optimizer configuration
                 optimizers_config = OptimizersConfigDiff(
-                    default_segment_number=2,  # Default number of segments
-                    max_segment_size=200000,  # Max segment size
-                    memmap_threshold=200000,  # Threshold for memory mapping
-                    indexing_threshold=50000,  # Threshold to start indexing
+                    default_segment_number=2,
+                    max_segment_size=200000,
+                    memmap_threshold=200000,
+                    indexing_threshold=50000,
                 )
 
-                # Create collection with advanced config
                 self.client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(
@@ -123,7 +114,6 @@ class QdrantVectorDB(VectorDatabase):
         if not documents:
             return
 
-        # Filter out existing documents to avoid duplicates
         new_documents = []
         new_embeddings = []
         existing_count = 0
@@ -144,13 +134,10 @@ class QdrantVectorDB(VectorDatabase):
 
         self.logger.info(f"Adding {len(new_documents)} new documents to '{self.collection_name}'")
 
-        # Prepare points for Qdrant
         points = []
         for doc, embedding in zip(new_documents, new_embeddings):
-            # Generate valid UUID for Qdrant point ID
             point_id = str(uuid.uuid4())
 
-            # Payload (content + metadata + original doc ID for deduplication)
             payload = {"content": doc.content, "original_doc_id": doc.id}
             if doc.metadata:
                 payload.update(doc.metadata)
@@ -158,14 +145,13 @@ class QdrantVectorDB(VectorDatabase):
             points.append(PointStruct(id=point_id, vector=embedding, payload=payload))
 
         try:
-            # Batch upsert with optimization
-            batch_size = 100  # Optimal batch size for Qdrant
+            batch_size = 100
             for i in range(0, len(points), batch_size):
                 batch = points[i : i + batch_size]
                 self.client.upsert(
                     collection_name=self.collection_name,
                     points=batch,
-                    wait=True,  # Wait for confirmation
+                    wait=True,
                 )
                 self.logger.debug(f"Batch {i // batch_size + 1}/{(len(points) - 1) // batch_size + 1} added")
 
@@ -179,7 +165,6 @@ class QdrantVectorDB(VectorDatabase):
     ) -> List[SearchResult]:
         """Optimized search with HNSW"""
         try:
-            # Build filter if provided
             qdrant_filter = None
             if filter_conditions:
                 conditions = []
@@ -188,19 +173,18 @@ class QdrantVectorDB(VectorDatabase):
                 if conditions:
                     qdrant_filter = Filter(must=conditions)
 
-            # Search with optimized HNSW parameters
             search_results = self.client.search(
                 collection_name=self.collection_name,
                 query_vector=query_embedding,
                 limit=k,
                 query_filter=qdrant_filter,
                 search_params={
-                    "hnsw_ef": max(k * 2, 128),  # ef parameter for HNSW search
-                    "exact": False,  # Use HNSW (faster than exact)
+                    "hnsw_ef": max(k * 2, 128),
+                    "exact": False,
                 },
+                score_threshold=0.2,
             )
 
-            # Convert results
             results = []
             for result in search_results:
                 payload = result.payload
@@ -250,7 +234,7 @@ class QdrantVectorDB(VectorDatabase):
             return {
                 "type": "qdrant",
                 "collection_name": self.collection_name,
-                "path": str(self.path),
+                "host_port": f"{self.config.vectordb_host}:{self.config.vectordb_port}",
                 "host": self.config.vectordb_host,
                 "port": self.config.vectordb_port,
                 "points_count": collection_info.points_count,
@@ -266,12 +250,9 @@ class QdrantVectorDB(VectorDatabase):
     def optimize_collection(self) -> None:
         """Optimize collection (HNSW indexing)"""
         try:
-            # Trigger manual optimization
             self.client.update_collection(
                 collection_name=self.collection_name,
-                optimizer_config=OptimizersConfigDiff(
-                    indexing_threshold=0  # Force immediate indexing
-                ),
+                optimizer_config=OptimizersConfigDiff(indexing_threshold=0),
             )
             self.logger.info(f"Collection '{self.collection_name}' optimization started")
         except Exception as e:

@@ -19,7 +19,6 @@ class GenerationTool:
         self.config = get_config()
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        # Check LLM config
         if not self.config.openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY required for generation")
 
@@ -39,16 +38,13 @@ class GenerationTool:
             Dict with answer, sources, etc.
         """
         try:
-            # Prepare context from documents
             context = self._prepare_context(documents, scores)
 
-            # Build prompt
-            prompt = self._build_prompt(query, context, history)
+            avg_score = sum(scores) / len(scores) if scores else 0.0
+            prompt = self._build_prompt(query, context, history, avg_score)
 
-            # Call LLM
             llm_response = self._call_openrouter(prompt)
 
-            # Prepare sources
             sources = self._format_sources(documents)
 
             return {
@@ -77,28 +73,32 @@ class GenerationTool:
 
         context_parts = []
         for i, doc in enumerate(documents):
-            # Extract content based on document type
-            if hasattr(doc, "document"):  # SearchResult
+            if hasattr(doc, "document"):
                 content = doc.document.content
                 title = doc.document.metadata.get("title", f"Document {i + 1}")
-            else:  # Document direct
+            else:
                 content = getattr(doc, "content", getattr(doc, "page_content", str(doc)))
                 title = getattr(doc, "metadata", {}).get("title", f"Document {i + 1}")
 
-            # Score if available
             score_info = f" (score: {scores[i]:.3f})" if scores and i < len(scores) else ""
 
             context_parts.append(f"## {title}{score_info}\n{content[:800]}...")
 
         return "\n\n".join(context_parts)
 
-    def _build_prompt(self, query: str, context: str, history: str = "") -> str:
-        """Build prompt for the LLM"""
-        base_prompt = PromptTemplates.get_default_template()
+    def _build_prompt(self, query: str, context: str, history: str = "", avg_score: float = 0.0) -> str:
+        """Build prompt based on context quality"""
 
-        history_section = f"HISTORY:\n{history}\n" if history.strip() else ""
+        if context == "No relevant documents found.":
+            return PromptTemplates.get_no_context_template().format(query=query)
 
-        return base_prompt.format(context=context, history=history_section, query=query)
+        elif avg_score > 0 and avg_score < 0.4:
+            return PromptTemplates.get_low_confidence_template().format(query=query, context=context)
+
+        else:
+            base_prompt = PromptTemplates.get_default_template()
+            history_section = f"{history}\n" if history.strip() else ""
+            return base_prompt.format(context=context, history=history_section, query=query)
 
     def _call_openrouter(self, prompt: str) -> Dict[str, Any]:
         """Call OpenRouter API"""
@@ -124,7 +124,6 @@ class GenerationTool:
             data = response.json()
             end_time = time.time()
 
-            # Extract response
             answer = data["choices"][0]["message"]["content"]
             token_count = data.get("usage", {}).get("total_tokens", 0)
 
@@ -141,11 +140,11 @@ class GenerationTool:
             return "No sources"
 
         sources = []
-        for i, doc in enumerate(documents[:3]):  # Max 3 sources
-            if hasattr(doc, "document"):  # SearchResult
+        for i, doc in enumerate(documents[:3]):
+            if hasattr(doc, "document"):
                 title = doc.document.metadata.get("title", f"Document {i + 1}")
                 url = doc.document.metadata.get("url", "")
-            else:  # Document direct
+            else:
                 metadata = getattr(doc, "metadata", {})
                 title = metadata.get("title", f"Document {i + 1}")
                 url = metadata.get("url", "")

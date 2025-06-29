@@ -45,32 +45,25 @@ def query(
     click.echo("=" * 80)
 
     try:
-        # Track timing for each step
         total_start = time.time()
 
-        # Initialize components
         init_start = time.time()
         config = get_config()
         init_time = (time.time() - init_start) * 1000
 
-        # Create retrieval tool
         retrieval_tool = RetrievalTool()
 
-        # Perform search
         search_start = time.time()
         results = retrieval_tool.retrieve(query, k=top_k)
         search_time = (time.time() - search_start) * 1000
 
-        # Note: encoding time is now included in search time
-        encoding_time = 0  # No separate encoding step
+        encoding_time = 0
 
-        # Generate LLM response if requested
         generation_time = 0
         llm_response = None
         if not no_llm and results:
             generation_start = time.time()
             generation_tool = GenerationTool()
-            # Convert results to context format
             context_docs = []
             for chunk in results:
                 if hasattr(chunk, "page_content"):
@@ -85,13 +78,11 @@ def query(
 
                 context_docs.append({"content": content, "metadata": metadata})
 
-            # Call generation tool with correct parameters
             llm_response_dict = generation_tool.generate(
                 query=query,
-                documents=results,  # Pass SearchResult objects directly
-                history="",  # Empty history for CLI query
+                documents=results,
+                history="",
             )
-            # Extract the answer from response dict
             llm_response = llm_response_dict.get("answer", "")
             generation_time = (time.time() - generation_start) * 1000
 
@@ -103,7 +94,6 @@ def query(
 
         click.echo(f"✅ Found {len(results)} chunks in {total_time:.1f}ms")
 
-        # Display timing breakdown
         if show_stats or verbose:
             click.echo("\n⏱️  Timing breakdown:")
             click.echo(f"   • Initialization: {init_time:.1f}ms")
@@ -113,7 +103,6 @@ def query(
                 click.echo(f"   • LLM generation: {generation_time:.1f}ms")
             click.echo(f"   • Total time: {total_time:.1f}ms")
 
-        # Collect statistics
         source_scores = defaultdict(list)
         all_scores = []
 
@@ -125,7 +114,6 @@ def query(
                     source_scores[f"{source}: {title}"].append(chunk.score)
                     all_scores.append(chunk.score)
 
-        # Display statistics
         if show_stats and all_scores:
             click.echo("\n📊 Score Statistics:")
             click.echo(f"   • Average score: {sum(all_scores) / len(all_scores):.4f}")
@@ -140,27 +128,22 @@ def query(
                 click.echo(f"     - Avg score: {avg_score:.4f}")
                 click.echo(f"     - Max score: {max(scores):.4f}")
 
-        # Display LLM response if generated
         if llm_response and not no_llm:
             click.echo("\n🤖 LLM Response:")
             click.echo("=" * 80)
             click.echo(llm_response)
             click.echo("=" * 80)
 
-        # Display results
         click.echo("\n🔍 Retrieved Chunks:")
         for i, chunk in enumerate(results, 1):
             click.echo(f"\n{'=' * 80}")
             click.echo(f"📄 Chunk {i}/{len(results)}")
             click.echo(f"{'=' * 80}")
 
-            # Display score
             if hasattr(chunk, "score") and chunk.score is not None:
                 click.echo(f"📊 Score: {chunk.score:.4f}")
 
-            # Display metadata
             if show_metadata:
-                # Extract metadata from SearchResult
                 if hasattr(chunk, "document") and chunk.document.metadata:
                     metadata = chunk.document.metadata
                 elif hasattr(chunk, "metadata") and chunk.metadata:
@@ -171,14 +154,12 @@ def query(
                 if metadata:
                     click.echo("\n📋 Metadata:")
                     for key, value in metadata.items():
-                        if key not in ["content", "text"]:  # Skip content fields in metadata
+                        if key not in ["content", "text"]:
                             click.echo(f"   • {key}: {value}")
 
-            # Display content
             if show_content:
                 click.echo("\n📝 Content:")
                 click.echo("-" * 80)
-                # Try different ways to get content
                 content = None
                 if hasattr(chunk, "page_content"):
                     content = chunk.page_content
@@ -190,10 +171,8 @@ def query(
                     content = str(chunk)
 
                 if verbose:
-                    # Show full content
                     click.echo(content)
                 else:
-                    # Show truncated content
                     max_lines = 10
                     lines = content.split("\n")
                     if len(lines) > max_lines:
@@ -202,8 +181,6 @@ def query(
                     else:
                         click.echo(content)
 
-            # Display source information
-            # Extract metadata from SearchResult
             if hasattr(chunk, "document") and chunk.document.metadata:
                 metadata = chunk.document.metadata
             elif hasattr(chunk, "metadata"):

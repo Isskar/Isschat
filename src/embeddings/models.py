@@ -19,11 +19,18 @@ class ModelInfo:
 
 # Modèles supportés avec leurs dimensions
 SUPPORTED_MODELS: Dict[str, ModelInfo] = {
+    "intfloat/multilingual-e5-large": ModelInfo(
+        name="intfloat/multilingual-e5-large",
+        dimension=1024,
+        max_sequence_length=512,
+        description="Modèle multilingue haute performance",
+        recommended_device="cpu",
+    ),
     "sentence-transformers/paraphrase-multilingual-mpnet-base-v2": ModelInfo(
         name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
         dimension=768,
         max_sequence_length=512,
-        description="Modèle multilingue haute qualité, recommandé pour Isschat",
+        description="Modèle multilingue haute qualité",
         recommended_device="cpu",
     ),
     "sentence-transformers/all-MiniLM-L12-v2": ModelInfo(

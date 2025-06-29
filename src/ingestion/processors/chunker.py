@@ -1,158 +1,176 @@
-"""
-Document chunking for processing pipeline.
-"""
-
-from typing import List, Dict, Any, Optional
-
+import re
+from typing import List, Dict, Any, Optional, Literal
 from ...core.interfaces import Document
 
 
 class DocumentChunker:
-    """Splits documents into appropriately sized chunks."""
+    """Simple document chunking."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """
-        Initialize the chunker.
-
-        Args:
-            config: Chunking configuration
-        """
         self.config = config or {}
         self.chunk_size = self.config.get("chunk_size", 1000)
         self.chunk_overlap = self.config.get("chunk_overlap", 200)
-        self.separator = self.config.get("separator", "\n\n")
 
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
-        """
-        Split documents into chunks.
-
-        Args:
-            documents: List of documents to chunk
-
-        Returns:
-            List[Document]: Chunked documents
-        """
         chunked_docs = []
-
         for doc in documents:
             chunks = self._split_document(doc)
             chunked_docs.extend(chunks)
-
         return chunked_docs
 
     def _split_document(self, document: Document) -> List[Document]:
-        """
-        Split a single document into chunks.
-
-        Args:
-            document: Document to split
-
-        Returns:
-            List[Document]: Document chunks
-        """
         content = document.page_content
-        chunks = []
 
-        # Simple text splitting by separator
-        parts = content.split(self.separator)
-        current_chunk = ""
+        if len(content) <= self.chunk_size:
+            return [document]
 
-        for part in parts:
-            # If the part itself is larger than chunk_size, split it further
-            if len(part) > self.chunk_size:
-                # Add current chunk if it exists
-                if current_chunk:
-                    chunks.append(self._create_chunk(document, current_chunk, len(chunks)))
-                    current_chunk = ""
-
-                # Split the large part into smaller chunks
-                large_part_chunks = self._split_large_text(part)
-                for large_chunk in large_part_chunks:
-                    chunks.append(self._create_chunk(document, large_chunk, len(chunks)))
-            elif len(current_chunk) + len(part) + len(self.separator) <= self.chunk_size:
-                if current_chunk:
-                    current_chunk += self.separator + part
-                else:
-                    current_chunk = part
-            else:
-                if current_chunk:
-                    chunks.append(self._create_chunk(document, current_chunk, len(chunks)))
-                current_chunk = part
-
-        # Add the last chunk
-        if current_chunk:
-            chunks.append(self._create_chunk(document, current_chunk, len(chunks)))
-
-        return chunks
-
-    def _split_large_text(self, text: str) -> List[str]:
-        """
-        Split text that is larger than chunk_size into smaller pieces.
-
-        Args:
-            text: Text to split
-
-        Returns:
-            List[str]: List of text chunks
-        """
         chunks = []
         start = 0
+        chunk_index = 0
 
-        while start < len(text):
+        while start < len(content):
             end = start + self.chunk_size
 
-            # If this is not the last chunk, try to find a good break point
-            if end < len(text):
-                # Look for space or punctuation to break on
-                break_point = end
-                for i in range(end - 1, max(start + self.chunk_size // 2, start), -1):
-                    if text[i] in " \n\t.,;!?":
-                        break_point = i + 1
-                        break
-                end = break_point
+            # Try to break at word boundary
+            if end < len(content):
+                while end > start and content[end] not in " \n\t.,;!?":
+                    end -= 1
+                if end == start:
+                    end = start + self.chunk_size
 
-            chunk = text[start:end].strip()
-            if chunk:
-                chunks.append(chunk)
+            chunk_text = content[start:end].strip()
+            if chunk_text:
+                chunk_metadata = document.metadata.copy()
+                chunk_metadata.update({"chunk_index": chunk_index, "chunk_size": len(chunk_text), "is_chunk": True})
 
-            # Apply overlap for next chunk
+                chunks.append(Document(page_content=chunk_text, metadata=chunk_metadata))
+                chunk_index += 1
+
             start = max(start + 1, end - self.chunk_overlap)
 
         return chunks
 
-    def _create_chunk(self, original_doc: Document, chunk_content: str, chunk_index: int) -> Document:
-        """
-        Create a chunk document from original document.
+    def get_chunking_stats(self, original_documents: List[Document], chunks: List[Document]) -> Dict[str, Any]:
+        """Calculate statistics about the chunking process."""
+        original_count = len(original_documents)
+        chunk_count = len(chunks)
+        avg_chunks_per_doc = chunk_count / original_count if original_count > 0 else 0
 
-        Args:
-            original_doc: Original document
-            chunk_content: Content of the chunk
-            chunk_index: Index of the chunk
+        return {"original_count": original_count, "chunk_count": chunk_count, "avg_chunks_per_doc": avg_chunks_per_doc}
 
-        Returns:
-            Document: Chunk document
-        """
-        chunk_metadata = original_doc.metadata.copy()
-        chunk_metadata.update({"chunk_index": chunk_index, "chunk_size": len(chunk_content), "is_chunk": True})
 
-        return Document(page_content=chunk_content, metadata=chunk_metadata)
+class ConfluenceChunker(DocumentChunker):
+    """Confluence-specific chunking strategies."""
 
-    def get_chunking_stats(self, original_docs: List[Document], chunked_docs: List[Document]) -> Dict[str, Any]:
-        """
-        Get chunking statistics.
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+        strategy: Literal["confluence_sections", "hierarchical"] = "confluence_sections",
+    ):
+        super().__init__(config)
+        self.strategy = strategy
 
-        Args:
-            original_docs: Original documents
-            chunked_docs: Chunked documents
+    def chunk_documents(self, documents: List[Document]) -> List[Document]:
+        if self.strategy == "confluence_sections":
+            return self._chunk_confluence_sections(documents)
+        elif self.strategy == "hierarchical":
+            return self._chunk_by_headers(documents)
+        else:
+            return super().chunk_documents(documents)
 
-        Returns:
-            Dict: Chunking statistics
-        """
-        return {
-            "original_count": len(original_docs),
-            "chunk_count": len(chunked_docs),
-            "avg_chunks_per_doc": len(chunked_docs) / len(original_docs) if original_docs else 0,
-            "avg_chunk_size": sum(len(doc.page_content) for doc in chunked_docs) / len(chunked_docs)
-            if chunked_docs
-            else 0,
-        }
+    def _chunk_confluence_sections(self, documents: List[Document]) -> List[Document]:
+        """Confluence-specific chunking based on macros and structure."""
+        chunked_docs = []
+
+        for doc in documents:
+            text = doc.page_content
+            sections = []
+
+            # Split by Confluence macros and common patterns
+            macro_patterns = [
+                r"<ac:structured-macro[^>]*>.*?</ac:structured-macro>",  # Confluence macros
+                r"<table[^>]*>.*?</table>",  # Tables
+                r"<ac:layout[^>]*>.*?</ac:layout>",  # Layouts
+                r"```[\s\S]*?```",  # Code blocks
+                r"\|[^|]*\|.*?\n",  # Table rows
+            ]
+
+            # Find all macro boundaries
+            boundaries = [0]
+            for pattern in macro_patterns:
+                for match in re.finditer(pattern, text, re.IGNORECASE | re.DOTALL):
+                    boundaries.extend([match.start(), match.end()])
+
+            boundaries.append(len(text))
+            boundaries = sorted(set(boundaries))
+
+            # Create sections based on boundaries
+            for i in range(len(boundaries) - 1):
+                start, end = boundaries[i], boundaries[i + 1]
+                section = text[start:end].strip()
+
+                if section and len(section) > 50:  # Minimum viable section
+                    sections.append(section)
+
+            # If no meaningful sections found, fall back to header splitting
+            if not sections:
+                sections = self._split_by_confluence_headers(text)
+
+            for i, section in enumerate(sections):
+                if section.strip():
+                    metadata = doc.metadata.copy()
+                    metadata.update(
+                        {
+                            "chunk_index": i,
+                            "chunk_strategy": "confluence_sections",
+                            "content_length": len(section),
+                        }
+                    )
+
+                    chunked_docs.append(Document(page_content=section, metadata=metadata))
+
+        return chunked_docs
+
+    def _chunk_by_headers(self, documents: List[Document]) -> List[Document]:
+        """Hierarchical chunking based on headers."""
+        chunked_docs = []
+
+        for doc in documents:
+            sections = self._split_by_confluence_headers(doc.page_content)
+
+            for i, section in enumerate(sections):
+                if section.strip():
+                    metadata = doc.metadata.copy()
+                    metadata.update(
+                        {
+                            "chunk_index": i,
+                            "chunk_strategy": "hierarchical",
+                            "content_length": len(section),
+                        }
+                    )
+
+                    chunked_docs.append(Document(page_content=section, metadata=metadata))
+
+        return chunked_docs
+
+    def _split_by_confluence_headers(self, text: str) -> List[str]:
+        """Split text by Confluence headers (h1-h6)."""
+        # Confluence headers in both formats
+        header_pattern = r"^(#{1,6}\s+.+|<h[1-6][^>]*>.*?</h[1-6]>)"
+
+        sections = []
+        current_section = []
+
+        for line in text.split("\n"):
+            if re.match(header_pattern, line.strip(), re.IGNORECASE):
+                if current_section:
+                    sections.append("\n".join(current_section))
+                current_section = [line]
+            else:
+                current_section.append(line)
+
+        if current_section:
+            sections.append("\n".join(current_section))
+
+        # Filter out empty or too small sections
+        return [s for s in sections if s.strip() and len(s.strip()) > 100]

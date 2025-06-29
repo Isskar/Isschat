@@ -23,8 +23,7 @@ class VectorDBFactory:
 
         config = get_config()
 
-        # Pour l'instant seul Qdrant avec HNSW est supporté
-        if config.vectordb_index_type in ["hnsw", "flat"]:
+        if config.vectordb_index_type in ["hnsw"]:
             return VectorDBFactory.create_qdrant()
         else:
             raise ValueError(f"Type vector DB non supporté: {config.vectordb_index_type}")

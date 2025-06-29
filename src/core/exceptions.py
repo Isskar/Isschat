@@ -11,36 +11,6 @@ class RAGSystemError(Exception):
     pass
 
 
-class RAGError(RAGSystemError):
-    """General RAG pipeline error"""
-
-    pass
-
-
-class ExtractionError(RAGSystemError):
-    """Raised when data extraction fails"""
-
-    pass
-
-
-class ProcessingError(RAGSystemError):
-    """Raised when document processing fails"""
-
-    pass
-
-
-class EmbeddingError(RAGSystemError):
-    """Raised when embedding generation fails"""
-
-    pass
-
-
-class VectorStoreError(RAGSystemError):
-    """Raised when vector store operations fail"""
-
-    pass
-
-
 class StorageAccessError(RAGSystemError):
     """Raised when storage access fails due to authentication or permission issues"""
 
@@ -66,10 +36,10 @@ def create_azure_access_error(
         StorageAccessError with standardized message format
     """
     return StorageAccessError(
-        f"❌ IMPOSSIBLE D'ACCÉDER AU {error_type} AZURE: "
+        f"❌ UNABLE TO ACCESS {error_type} AZURE: "
         f"Cannot access {resource_name}:\n"
         f"Error: {str(error)}\n"
-        f"Vous avez demandé d'utiliser Azure Storage mais l'accès est impossible.\n"
+        f"You requested to use Azure Storage but access is impossible.\n"
         f"{help_message}",
         storage_type="azure",
         original_error=error,
@@ -83,33 +53,3 @@ class RebuildError(RAGSystemError):
         super().__init__(message)
         self.storage_type = storage_type
         self.requested_storage = requested_storage
-
-
-class RetrievalError(RAGSystemError):
-    """Raised when document retrieval fails"""
-
-    pass
-
-
-class GenerationError(RAGSystemError):
-    """Raised when answer generation fails"""
-
-    pass
-
-
-class ConfigurationError(RAGSystemError):
-    """Raised when configuration is invalid"""
-
-    pass
-
-
-class MigrationError(RAGSystemError):
-    """Raised when migration operations fail"""
-
-    pass
-
-
-class EvaluationError(RAGSystemError):
-    """Raised when evaluation operations fail"""
-
-    pass

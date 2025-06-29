@@ -54,19 +54,15 @@ class PostProcessor:
         content = document.page_content
         metadata = document.metadata.copy()
 
-        # Clean whitespace
         if self.clean_whitespace:
             content = self._clean_whitespace(content)
 
-        # Normalize text
         if self.normalize_text:
             content = self._normalize_text(content)
 
-        # Enrich content with metadata for better search
         if self.enrich_content:
             content = self._enrich_content_with_metadata(content, metadata)
 
-        # Add processing metadata
         if self.add_metadata:
             processing_steps = ["whitespace_cleaning", "text_normalization"]
             if self.enrich_content:
@@ -85,7 +81,6 @@ class PostProcessor:
         Returns:
             str: Cleaned text
         """
-        # Remove excessive whitespace
         import re
 
         text = re.sub(r"\s+", " ", text)
@@ -102,11 +97,9 @@ class PostProcessor:
         Returns:
             str: Normalized text
         """
-        # Basic text normalization
         text = text.replace("\r\n", "\n")
         text = text.replace("\r", "\n")
 
-        # Remove excessive newlines
         import re
 
         text = re.sub(r"\n{3,}", "\n\n", text)
@@ -126,22 +119,18 @@ class PostProcessor:
         """
         enrichment_parts = []
 
-        # Add title if available
         title = metadata.get("title", "").strip()
         if title:
             enrichment_parts.append(f"Title: {title}")
 
-        # Add filename/page name if available
         filename = metadata.get("filename", metadata.get("page_name", metadata.get("source", ""))).strip()
         if filename and filename != title:
             enrichment_parts.append(f"Document: {filename}")
 
-        # Add URL if available (for Confluence)
         url = metadata.get("url", "").strip()
         if url:
             enrichment_parts.append(f"URL: {url}")
 
-        # Build enriched content
         if enrichment_parts:
             enrichment_header = " | ".join(enrichment_parts)
             return f"[{enrichment_header}]\n\n{content}"

@@ -1,3 +1,3 @@
 """
-Module core contenant les interfaces abstraites et la configuration centralisée.
+Core module containing abstract interfaces and centralized configuration.
 """

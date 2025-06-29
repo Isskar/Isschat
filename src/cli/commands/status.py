@@ -6,7 +6,7 @@ import click
 from typing import Dict, Any
 
 from src.config import get_config
-from src.ingestion.pipeline import create_ingestion_pipeline
+from src.ingestion import create_confluence_pipeline
 from src.rag.pipeline import RAGPipelineFactory
 
 
@@ -93,7 +93,7 @@ def _check_config_status(verbose: bool) -> Dict[str, Any]:
 def _check_ingestion_status(verbose: bool) -> Dict[str, Any]:
     """Check ingestion pipeline status"""
     try:
-        pipeline = create_ingestion_pipeline()
+        pipeline = create_confluence_pipeline()
 
         # Component tests
         test_results = pipeline.check_pipeline()

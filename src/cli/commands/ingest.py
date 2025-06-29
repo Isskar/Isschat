@@ -5,7 +5,7 @@ Ingestion command to build the vector database.
 import click
 import logging
 
-from ...ingestion.pipeline import create_ingestion_pipeline
+from src.ingestion import ConfluenceIngestionPipeline, create_confluence_pipeline
 
 
 @click.command()
@@ -26,7 +26,7 @@ def ingest(source: str, force_rebuild: bool, verbose: bool):
 
     try:
         # Create ingestion pipeline
-        pipeline = create_ingestion_pipeline()
+        pipeline: ConfluenceIngestionPipeline = create_confluence_pipeline()
 
         # Component tests
         if verbose:
@@ -47,7 +47,7 @@ def ingest(source: str, force_rebuild: bool, verbose: bool):
 
         # Execute ingestion according to source
         if source == "confluence":
-            results = pipeline.run_confluence_ingestion(force_rebuild=force_rebuild)
+            results = pipeline.run(force_rebuild=force_rebuild)
         else:
             click.echo(f"❌ Source '{source}' not supported")
             return

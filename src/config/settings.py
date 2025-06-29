@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 class IsschatConfig:
     data_dir: Path = Path("data")
 
-    embeddings_model: str = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+    embeddings_model: str = "intfloat/multilingual-e5-large"
     embeddings_device: str = "cpu"
     embeddings_batch_size: int = 32
     embeddings_normalize: bool = True
@@ -23,7 +23,7 @@ class IsschatConfig:
     vectordb_host: str = "localhost"
     vectordb_port: int = 6333
 
-    llm_model: str = "mistralai/mistral-small-3.2-24b-instruct"
+    llm_model: str = "google/gemini-2.5-flash-lite-preview-06-17"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 512
     search_k: int = 3
@@ -47,9 +47,7 @@ class IsschatConfig:
 
         return cls(
             data_dir=Path(os.getenv("DATA_DIR", "data")),
-            embeddings_model=os.getenv(
-                "EMBEDDINGS_MODEL", "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
-            ),
+            embeddings_model=os.getenv("EMBEDDINGS_MODEL", "intfloat/multilingual-e5-large"),
             embeddings_device=os.getenv("EMBEDDINGS_DEVICE", "cpu"),
             embeddings_batch_size=int(os.getenv("EMBEDDINGS_BATCH_SIZE", "32")),
             embeddings_normalize=os.getenv("EMBEDDINGS_NORMALIZE", "true").lower() == "true",
@@ -60,8 +58,8 @@ class IsschatConfig:
             vectordb_index_type=os.getenv("VECTORDB_INDEX_TYPE", "hnsw"),
             vectordb_host=os.getenv("VECTORDB_HOST", "localhost"),
             vectordb_port=int(os.getenv("VECTORDB_PORT", "6333")),
-            llm_model=os.getenv("LLM_MODEL", "google/gemini-2.5-flash-preview-05-20"),
-            llm_temperature=float(os.getenv("LLM_TEMPERATURE", "0.1")),
+            llm_model=os.getenv("LLM_MODEL", "google/gemini-2.5-flash-lite-preview-06-17"),
+            llm_temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
             llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", "512")),
             search_k=int(os.getenv("SEARCH_K", "3")),
             search_fetch_k=int(os.getenv("SEARCH_FETCH_K", "5")),
@@ -77,21 +75,17 @@ class IsschatConfig:
 
     def validate(self) -> bool:
         """Valider la configuration"""
-        # Validation des chemins
         if not self.data_dir:
             raise ValueError("data_dir est requis")
 
-        # Validation chunking
         if self.chunk_size <= 0:
             raise ValueError("chunk_size doit être positif")
         if self.chunk_overlap >= self.chunk_size:
             raise ValueError("chunk_overlap doit être < chunk_size")
 
-        # Validation vector DB
         if self.vectordb_index_type not in ["hnsw", "flat"]:
             raise ValueError("vectordb_index_type doit être 'hnsw' ou 'flat'")
 
-        # Validation LLM
         if not self.openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY est requis")
 
@@ -100,12 +94,9 @@ class IsschatConfig:
     @property
     def confluence_url(self) -> str:
         """URL Confluence complète"""
-        if self.confluence_space_name.startswith("http"):
-            return self.confluence_space_name
-        return f"https://{self.confluence_space_name}.atlassian.net"
+        return f"{self.confluence_space_name}/wiki"
 
 
-# Instance globale
 _config: Optional[IsschatConfig] = None
 
 

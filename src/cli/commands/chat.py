@@ -24,7 +24,6 @@ class ChatSession:
             click.echo("🔧 Initializing RAG pipeline...")
             self.pipeline = RAGPipelineFactory.create_default_pipeline()
 
-            # Check if ready
             if not self.pipeline.is_ready():
                 click.echo("⚠️ Vector database empty or not accessible")
                 click.echo("💡 Run first: isschat-cli ingest --source confluence")
@@ -72,13 +71,10 @@ class ChatSession:
                 elif not user_input:
                     continue
 
-                # Process question
                 click.echo("\n🔍 Searching...")
 
-                # Prepare history for context
                 history_context = self._build_history_context()
 
-                # Call RAG pipeline
                 answer, sources = self.pipeline.process_query(
                     query=user_input,
                     history=history_context,
@@ -87,7 +83,6 @@ class ChatSession:
                     verbose=False,
                 )
 
-                # Display response
                 click.echo("\n🤖 Isschat:")
                 click.echo("-" * 50)
                 click.echo(answer)
@@ -95,7 +90,6 @@ class ChatSession:
                 click.echo(f"📚 Sources: {sources}")
                 click.echo()
 
-                # Add to local history
                 self.history.append(
                     {
                         "question": user_input,
@@ -105,8 +99,7 @@ class ChatSession:
                     }
                 )
 
-                # Ask for feedback (optional)
-                if len(self.history) % 1 == 0:  # Every 3 questions
+                if len(self.history) % 1 == 0:
                     self._ask_for_feedback()
 
             except KeyboardInterrupt:
@@ -160,7 +153,6 @@ class ChatSession:
         click.echo(f"\n📝 History ({len(self.history)} questions):")
         click.echo("-" * 60)
 
-        # Show the last 5 questions
         for i, item in enumerate(self.history[-5:], 1):
             click.echo(f"{i}. Q: {item['question'][:80]}...")
             click.echo(f"   R: {item['answer'][:120]}...")
@@ -171,7 +163,6 @@ class ChatSession:
         if len(self.history) <= 1:
             return ""
 
-        # Take the last 2 exchanges for context
         context_parts = []
         for item in self.history[-2:]:
             context_parts.append(f"Q: {item['question']}")
@@ -192,7 +183,6 @@ class ChatSession:
                 rating = rating_input.lower()
                 comment = input("   Comment (optional): ").strip()
 
-                # Save feedback
                 success = self.pipeline.save_feedback(
                     user_id=self.user_id, conversation_id=self.conversation_id, rating=rating, comment=comment
                 )
@@ -205,7 +195,7 @@ class ChatSession:
             click.echo()
 
         except Exception:
-            pass  # Ignore feedback errors
+            pass
 
 
 @click.command()
@@ -213,11 +203,9 @@ class ChatSession:
 def chat(user_id: str):
     """Start an interactive chat session"""
 
-    # Create session
     session = ChatSession()
     session.user_id = user_id
 
-    # Initialize pipeline
     if not session.initialize():
         click.echo("💡 Suggestions:")
         click.echo("   1. Check your configuration (.env)")
@@ -225,7 +213,6 @@ def chat(user_id: str):
         click.echo("   3. Check status: isschat-cli status")
         return
 
-    # Start chat
     session.run_chat_loop()
 
 

@@ -12,36 +12,28 @@ from datetime import datetime, timedelta
 import uuid
 from typing import Optional
 
-# Add the parent directory to the Python search path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.config.settings import get_config
 
-# Set tokenizers parallelism to false to avoid deadlocks
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-# Fix asyncio event loop issues with Streamlit
 try:
-    # Create and set a new event loop if needed
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        # No running event loop, create a new one
         new_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(new_loop)
 
-    # Set the default policy
     asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
 except Exception as e:
     print(f"Note: asyncio configuration: {str(e)}")
-    pass  # Continue even if there's an issue with the event loop
+    pass
 
-# Import custom modules
 from src.rag.pipeline import RAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
 
-# Streamlit page configuration - must be the first Streamlit command
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
 
@@ -128,10 +120,9 @@ def main():
             st.session_state["page"] = "chat"
             st.rerun()
 
-        # New Chat button should be placed here, under 'Chat' button
         if st.session_state.get("page") == "chat" and st.button("New Chat", key="new_chat_button_sidebar"):
-            st.session_state["messages"] = []  # Clear messages
-            st.session_state["current_conversation_id"] = str(uuid.uuid4())  # Generate new conversation ID
+            st.session_state["messages"] = []
+            st.session_state["current_conversation_id"] = str(uuid.uuid4())
             st.rerun()
 
         if st.button("History", key="nav_history"):
@@ -252,10 +243,9 @@ def chat_page():
         st.subheader("Advanced Options")
         show_feedback = st.toggle("Enable feedback", value=True)
 
-        # New Chat button
         if st.button("New Chat", key="new_chat_button"):
-            st.session_state["messages"] = []  # Clear messages
-            st.session_state["current_conversation_id"] = str(uuid.uuid4())  # Generate new conversation ID
+            st.session_state["messages"] = []
+            st.session_state["current_conversation_id"] = str(uuid.uuid4())
             st.rerun()
 
     # Initialize current_conversation_id if not present or messages are empty (new chat)
@@ -269,7 +259,7 @@ def chat_page():
             pass  # Do not generate a new ID if it's just the welcome message
         else:
             st.session_state["current_conversation_id"] = str(uuid.uuid4())
-            st.session_state["messages"] = []  # Ensure messages are cleared for a truly new chat
+            st.session_state["messages"] = []
 
     # Display main interface
     st.subheader("Ask questions about our Confluence documentation")
@@ -341,8 +331,7 @@ def chat_page():
             st.session_state["current_conversation_id"] = st.session_state.pop(
                 "reuse_conversation_id", str(uuid.uuid4())
             )
-            st.session_state["messages"] = []  # Clear messages if we are resuming an old conversation
-            # Load existing messages for the resumed conversation
+            st.session_state["messages"] = []
             from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
@@ -475,9 +464,7 @@ def process_question_with_model(
             sources = ""
 
         # Calculate total response time from user input to completion
-        response_time = (time.time() - start_time) * 1000  # in milliseconds
-
-        # Process with features manager if available
+        response_time = (time.time() - start_time) * 1000
         if features and result != "Model unavailable":
             features.process_query_response(prompt, result, response_time, conversation_id)
         return result, sources

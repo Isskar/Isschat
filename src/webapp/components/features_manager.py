@@ -61,7 +61,6 @@ class FeedbackSystem:
     """Handles user feedback collection and storage."""
 
     def __init__(self, storage_service=None, feedback_file: Optional[str] = None):
-        # Get storage service from config if not provided
         if storage_service is None:
             from src.storage.data_manager import get_data_manager
 
@@ -70,12 +69,9 @@ class FeedbackSystem:
         else:
             self.storage_service = storage_service
 
-        # Remove redundant feedback file creation - use only data_manager
-        # The feedback_file parameter is kept for backward compatibility but not used
         self.feedback_file = feedback_file
 
     def _load_feedback_data(self):
-        """Load feedback data from data_manager (JSONL format)"""
         import logging
 
         logger = logging.getLogger(__name__)
@@ -86,7 +82,6 @@ class FeedbackSystem:
 
             data_manager = get_data_manager()
 
-            # Use data_manager to get feedback data directly
             logger.info("Loading feedbacks from data_manager")
             all_feedback = data_manager.get_feedback_data()
 
