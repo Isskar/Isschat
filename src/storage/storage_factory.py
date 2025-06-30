@@ -1,10 +1,20 @@
 from src.storage.storage_interface import StorageInterface
 from src.storage.local_storage import LocalStorage
-from src.storage.azure_storage_adapter import AzureStorage
+from src.storage.azure_storage import AzureStorage
 
 
 class StorageFactory:
     """Factory for creating storage implementations"""
+
+    @staticmethod
+    def create_storage(storage_type: str = "local", **kwargs) -> StorageInterface:
+        """Create storage instance based on type"""
+        if storage_type == "local":
+            return StorageFactory.create_local_storage(kwargs.get("base_path", "."))
+        elif storage_type == "azure":
+            return StorageFactory.create_azure_storage(kwargs.get("account_name"), kwargs.get("container_name"))
+        else:
+            raise ValueError(f"Unknown storage type: {storage_type}")
 
     @staticmethod
     def create_local_storage(base_path: str = ".") -> StorageInterface:

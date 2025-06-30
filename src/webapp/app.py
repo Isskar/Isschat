@@ -5,7 +5,6 @@ import os
 import sys
 import asyncio
 from pathlib import Path
-import shutil
 import traceback
 import pandas as pd
 from datetime import datetime, timedelta
@@ -46,7 +45,6 @@ def get_model(rebuild_db=False):
         from src.config.settings import get_debug_info
 
         # Get debug info
-        config = get_config()
         debug_info = get_debug_info()
 
         st.sidebar.expander("Debug", expanded=False).write(f"""
@@ -165,15 +163,27 @@ def main():
                             else:
                                 st.error("❌ Database rebuild failed. Check logs for details.")
                         else:
-                            # Fallback to old method
+                            # Fallback to old method using storage abstraction
+                            from src.storage.data_manager import get_data_manager
+
                             config = get_config()
+                            data_manager = get_data_manager()
+
                             try:
-                                if os.path.exists(config.persist_directory):
-                                    shutil.rmtree(config.persist_directory)
-                                    st.info(f"Directory {config.persist_directory} successfully deleted.")
-                                os.makedirs(config.persist_directory, exist_ok=True)
+                                # Clear vector database using storage abstraction
+                                if data_manager.storage.directory_exists("vector_db"):
+                                    # For Azure: delete all files in vector_db directory
+                                    # For Local: remove directory contents
+                                    vector_files = data_manager.storage.list_files("vector_db")
+                                    for file_path in vector_files:
+                                        data_manager.storage.delete_file(file_path)
+                                    st.info("Vector database directory cleared successfully.")
+
+                                # Ensure directory exists
+                                data_manager.storage.create_directory("vector_db")
+
                             except Exception as e:
-                                st.error(f"Error deleting directory: {str(e)}")
+                                st.error(f"Error clearing vector database: {str(e)}")
 
                             get_model(rebuild_db=True)
                             st.success("✅ Database successfully rebuilt from Confluence!")

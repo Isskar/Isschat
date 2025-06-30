@@ -100,7 +100,7 @@ class IsschatConfig:
 _config: Optional[IsschatConfig] = None
 
 
-def get_config() -> IsschatConfig:
+def get_config() -> Optional[IsschatConfig]:
     """Obtenir l'instance globale de configuration"""
     global _config
     if _config is None:

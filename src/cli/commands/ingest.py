@@ -31,18 +31,13 @@ def ingest(source: str, force_rebuild: bool, verbose: bool):
         # Component tests
         if verbose:
             click.echo("Checking components...")
-            test_results = pipeline.check_pipeline()
+            connection_success = pipeline.check_connection()
 
-            if test_results["overall_success"]:
-                click.echo("✅ All components are ready")
+            if connection_success:
+                click.echo("✅ Connection successful!")
             else:
                 click.echo("⚠️ Problems detected:")
-                for error in test_results["errors"]:
-                    click.echo(f"   • {error}")
-
-                if not click.confirm("Continue despite problems?"):
-                    click.echo("❌ Ingestion cancelled")
-                    return
+                return
             click.echo()
 
         # Execute ingestion according to source

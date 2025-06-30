@@ -417,11 +417,19 @@ class FeaturesManager:
 
             self.storage_service = get_data_manager()
 
-        # Create necessary directories using storage service
-        directories = ["logs", "logs/feedback", "data", "cache"]
-        for directory in directories:
-            if hasattr(self.storage_service, "create_directory"):
-                self.storage_service.create_directory(directory)
+        # Create necessary directories using path manager and storage service
+        from src.config.paths import get_path_manager
+
+        path_manager = get_path_manager()
+        if hasattr(self.storage_service, "storage") and hasattr(self.storage_service.storage, "create_directory"):
+            # Use the storage abstraction from data_manager
+            path_manager.ensure_directories(storage_service=self.storage_service.storage)
+        elif hasattr(self.storage_service, "create_directory"):
+            # Direct storage service
+            path_manager.ensure_directories(storage_service=self.storage_service)
+        else:
+            # Fallback to local creation
+            path_manager.ensure_directories()
 
         # Configure logging - use only console logging to avoid local file creation
         logging.basicConfig(

@@ -96,18 +96,10 @@ def _check_ingestion_status(verbose: bool) -> Dict[str, Any]:
         pipeline = create_confluence_pipeline()
 
         # Component tests
-        test_results = pipeline.check_pipeline()
+        connection_success = pipeline.check_connection()
 
         # General status
         status_info = pipeline.get_status()
-
-        checks = {
-            "Embedding service": test_results.get("embedding_service", False),
-            "Vector DB": test_results.get("vector_db", False),
-            "Confluence config": test_results.get("confluence_config", False),
-        }
-
-        success = test_results.get("overall_success", False)
 
         details = {}
         if verbose:
@@ -115,10 +107,9 @@ def _check_ingestion_status(verbose: bool) -> Dict[str, Any]:
                 "pipeline_ready": status_info.get("pipeline_ready", False),
                 "vector_db_exists": status_info.get("vector_db", {}).get("exists", False),
                 "vector_db_count": status_info.get("vector_db", {}).get("count", 0),
-                "errors": test_results.get("errors", []),
             }
 
-        return {"success": success, "checks": checks, "details": details}
+        return {"success": connection_success, "details": details}
 
     except Exception as e:
         return {"success": False, "error": str(e), "checks": {"Ingestion pipeline": False}}

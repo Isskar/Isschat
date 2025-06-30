@@ -169,7 +169,7 @@ def get_embedding_service() -> EmbeddingService:
     global _embedding_service
     if _embedding_service is None:
         _embedding_service = EmbeddingService()
-    return _embedding_service
+    return _embedding_service  # type: ignore[return-value]
 
 
 def reset_embedding_service():

@@ -11,7 +11,7 @@ from .settings import IsschatConfig
 class PathManager:
     """Robust path manager for the entire project"""
 
-    def __init__(self, config: IsschatConfig):
+    def __init__(self, config: Optional[IsschatConfig] = None):
         self.config = config
         # Project root path (goes up from src/config to root)
         self.project_root = Path(__file__).parent.parent.parent
@@ -53,20 +53,33 @@ class PathManager:
         """Robust processed data path"""
         return self.data_dir / "processed"
 
-    def ensure_directories(self) -> None:
-        """Create all necessary directories"""
-        directories = [
-            self.data_dir,
-            self.logs_dir,
-            self.conversations_dir,
-            self.feedback_dir,
-            self.performance_dir,
-            self.raw_data_dir,
-            self.processed_data_dir,
-        ]
-
-        for directory in directories:
-            directory.mkdir(parents=True, exist_ok=True)
+    def ensure_directories(self, storage_service=None) -> None:
+        """Create all necessary directories using storage abstraction"""
+        if storage_service is None:
+            # Fallback to local creation if no storage service provided
+            directories = [
+                self.data_dir,
+                self.logs_dir,
+                self.conversations_dir,
+                self.feedback_dir,
+                self.performance_dir,
+                self.raw_data_dir,
+                self.processed_data_dir,
+            ]
+            for directory in directories:
+                directory.mkdir(parents=True, exist_ok=True)
+        else:
+            # Use storage abstraction
+            directory_names = [
+                "logs",
+                "logs/conversations",
+                "logs/feedback",
+                "logs/performance",
+                "raw",
+                "processed",
+            ]
+            for directory_name in directory_names:
+                storage_service.create_directory(directory_name)
 
     def get_conversation_file(self, date_str: str) -> Path:
         """Conversation file path for a date"""
@@ -85,7 +98,7 @@ class PathManager:
 _path_manager: Optional[PathManager] = None
 
 
-def get_path_manager() -> PathManager:
+def get_path_manager() -> Optional[PathManager]:
     """Get the global path manager instance"""
     global _path_manager
     if _path_manager is None:

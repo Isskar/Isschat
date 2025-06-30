@@ -223,6 +223,8 @@ class QdrantVectorDB(VectorDatabase):
         try:
             self.client.delete_collection(self.collection_name)
             self.logger.info(f"Collection '{self.collection_name}' deleted")
+            # Recreate the collection immediately after deletion
+            self._ensure_collection_with_hnsw()
         except Exception as e:
             raise RuntimeError(f"Failed to delete collection: {e}")
 

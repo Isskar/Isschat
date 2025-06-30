@@ -90,9 +90,9 @@ class DataManager:
             return storage
 
     def _ensure_directories(self):
-        """Create directories with robust paths"""
+        """Create directories with robust paths using storage abstraction"""
         try:
-            self.path_manager.ensure_directories()
+            self.path_manager.ensure_directories(storage_service=self.storage)
             self.logger.debug("Directories created successfully")
         except Exception as e:
             self.logger.error(f"Error creating directories: {e}")
@@ -294,7 +294,7 @@ class DataManager:
 _data_manager: Optional[DataManager] = None
 
 
-def get_data_manager() -> DataManager:
+def get_data_manager() -> Optional[DataManager]:
     """Get the global data manager instance"""
     global _data_manager
     if _data_manager is None:
