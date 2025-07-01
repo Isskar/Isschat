@@ -45,7 +45,7 @@ dependencies = [
     "streamlit-feedback>=0.1.4",
     "psutil>=7.0.0",
     "einops>=0.8.1",
-    "qdrant-client>=1.7.0",
+    "weaviate-client>=4.9.0",
     "llama-index-readers-confluence>=0.3.1",
 ]
 

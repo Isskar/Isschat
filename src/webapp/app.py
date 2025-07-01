@@ -18,15 +18,8 @@ from src.config.settings import get_config
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 try:
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        new_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(new_loop)
-
-    asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
-except Exception as e:
-    print(f"Note: asyncio configuration: {str(e)}")
+    asyncio.get_running_loop()
+except RuntimeError:
     pass
 
 from src.rag.pipeline import RAGPipelineFactory

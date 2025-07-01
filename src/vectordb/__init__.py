@@ -1,5 +1,5 @@
 from .interface import VectorDatabase, Document, SearchResult
-from .qdrant_client import QdrantVectorDB
+from .weaviate_client import WeaviateVectorDB
 from .factory import VectorDBFactory
 
-__all__ = ["VectorDatabase", "Document", "SearchResult", "QdrantVectorDB", "VectorDBFactory"]
+__all__ = ["VectorDatabase", "Document", "SearchResult", "WeaviateVectorDB", "VectorDBFactory"]

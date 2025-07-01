@@ -21,7 +21,7 @@ class IsschatConfig:
     vectordb_collection: str = "isschat_docs"
     vectordb_index_type: str = "hnsw"
     vectordb_host: str = "localhost"
-    vectordb_port: int = 6333
+    vectordb_port: int = 8080
 
     llm_model: str = "google/gemini-2.5-flash-lite-preview-06-17"
     llm_temperature: float = 0.3
@@ -57,7 +57,7 @@ class IsschatConfig:
             vectordb_collection=os.getenv("VECTORDB_COLLECTION", "isschat_docs"),
             vectordb_index_type=os.getenv("VECTORDB_INDEX_TYPE", "hnsw"),
             vectordb_host=os.getenv("VECTORDB_HOST", "localhost"),
-            vectordb_port=int(os.getenv("VECTORDB_PORT", "6333")),
+            vectordb_port=int(os.getenv("VECTORDB_PORT", "8080")),
             llm_model=os.getenv("LLM_MODEL", "google/gemini-2.5-flash-lite-preview-06-17"),
             llm_temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
             llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", "512")),

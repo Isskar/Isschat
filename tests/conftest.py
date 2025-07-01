@@ -25,9 +25,9 @@ class TestConfig:
 
     # Vector database configuration
     vector_store_path: str = "./test_vector_store"
-    qdrant_host: str = "localhost"
-    qdrant_port: int = 6333
-    qdrant_collection: str = "test_collection"
+    weaviate_host: str = "localhost"
+    weaviate_port: int = 8080
+    weaviate_collection: str = "test_collection"
 
     # Chunking configuration
     chunk_size: int = 1000
@@ -103,18 +103,17 @@ def temp_dir():
 
 
 @pytest.fixture
-def mock_qdrant_client():
-    """Provide mock Qdrant client."""
+def mock_weaviate_client():
+    """Provide mock Weaviate client."""
     mock = Mock()
-    mock.collection_exists.return_value = True
-    mock.create_collection.return_value = True
-    mock.upsert_documents.return_value = {"operation_id": "test", "status": "completed"}
-    mock.search.return_value = [
-        {"id": "1", "payload": {"content": "test", "original_doc_id": "doc1"}, "score": 0.9},
-        {"id": "2", "payload": {"content": "test2", "original_doc_id": "doc2"}, "score": 0.8},
+    mock.collections.exists.return_value = True
+    mock.collections.create.return_value = True
+    mock.collections.get.return_value.batch.dynamic.return_value.__enter__.return_value.add_object.return_value = True
+    mock.collections.get.return_value.query.near_vector.return_value.objects = [
+        Mock(properties={"content": "test", "original_doc_id": "doc1"}, metadata=Mock(distance=0.1), uuid="1"),
+        Mock(properties={"content": "test2", "original_doc_id": "doc2"}, metadata=Mock(distance=0.2), uuid="2"),
     ]
-    mock.get_collection_info.return_value = {"points_count": 100, "vectors_count": 100}
-    mock.document_exists.return_value = False
+    mock.collections.get.return_value.aggregate.over_all.return_value.total_count = 100
     return mock
 
 
