@@ -1,5 +1,6 @@
 import re
 from typing import List, Dict, Any, Optional, Literal
+import tiktoken
 from ...core.interfaces import Document
 
 
@@ -66,21 +67,40 @@ class DocumentChunker:
 
 
 class ConfluenceChunker(DocumentChunker):
-    """Confluence-specific chunking strategies."""
+    """Confluence-specific chunking strategies with multi-level semantic chunking."""
 
     def __init__(
         self,
         config: Optional[Dict[str, Any]] = None,
-        strategy: Literal["confluence_sections", "hierarchical"] = "confluence_sections",
+        strategy: Literal["confluence_sections", "hierarchical", "semantic_hierarchical"] = "semantic_hierarchical",
+        model_name: str = "gpt-4",
     ):
         super().__init__(config)
         self.strategy = strategy
+        self.model_name = model_name
+
+        # Initialize tokenizer for token-based sizing
+        try:
+            self.tokenizer = tiktoken.encoding_for_model(model_name)
+        except KeyError:
+            # Fallback to cl100k_base for unknown models
+            self.tokenizer = tiktoken.get_encoding("cl100k_base")
+
+        # Dynamic chunk sizes based on content type
+        self.content_type_limits = {
+            "text": self.config.get("text_chunk_tokens", 1000),
+            "table": self.config.get("table_chunk_tokens", 2000),
+            "list": self.config.get("list_chunk_tokens", 1500),
+            "code": self.config.get("code_chunk_tokens", 1500),
+        }
 
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
         if self.strategy == "confluence_sections":
             return self._chunk_confluence_sections(documents)
         elif self.strategy == "hierarchical":
             return self._chunk_by_headers(documents)
+        elif self.strategy == "semantic_hierarchical":
+            return self._chunk_semantic_hierarchical(documents)
         else:
             return super().chunk_documents(documents)
 
@@ -145,6 +165,167 @@ class ConfluenceChunker(DocumentChunker):
                     chunked_docs.append(Document(page_content=enriched_content, metadata=metadata))
 
         return chunked_docs
+
+    def _chunk_semantic_hierarchical(self, documents: List[Document]) -> List[Document]:
+        """Multi-level semantic chunking for Confluence with token-based sizing."""
+        chunked_docs = []
+
+        for doc in documents:
+            # Extract document structure
+            structure = self._analyze_document_structure(doc.page_content)
+
+            # Create chunks based on semantic boundaries
+            semantic_chunks = self._create_semantic_chunks(doc, structure)
+
+            chunked_docs.extend(semantic_chunks)
+
+        return chunked_docs
+
+    def _analyze_document_structure(self, text: str) -> Dict[str, Any]:
+        """Analyze document structure to identify semantic boundaries."""
+        structure = {"headers": [], "tables": [], "lists": [], "code_blocks": [], "content_sections": []}
+
+        lines = text.split("\n")
+        current_position = 0
+
+        for i, line in enumerate(lines):
+            line_start = current_position
+            current_position += len(line) + 1  # +1 for newline
+
+            # Detect headers (both markdown and HTML)
+            if self._is_header(line):
+                level = self._get_header_level(line)
+                title = self._extract_header_text(line)
+                structure["headers"].append(
+                    {"level": level, "title": title, "line_num": i, "position": line_start, "text": line}
+                )
+
+            # Detect table starts
+            elif self._is_table_start(line):
+                table_end = self._find_table_end(lines, i)
+                if table_end > i:
+                    structure["tables"].append(
+                        {
+                            "start_line": i,
+                            "end_line": table_end,
+                            "start_pos": line_start,
+                            "content": "\n".join(lines[i : table_end + 1]),
+                        }
+                    )
+
+            # Detect list items
+            elif self._is_list_item(line):
+                list_end = self._find_list_end(lines, i)
+                if list_end > i:
+                    structure["lists"].append(
+                        {
+                            "start_line": i,
+                            "end_line": list_end,
+                            "start_pos": line_start,
+                            "content": "\n".join(lines[i : list_end + 1]),
+                        }
+                    )
+
+            # Detect code blocks
+            elif line.strip().startswith("```"):
+                code_end = self._find_code_block_end(lines, i)
+                if code_end > i:
+                    structure["code_blocks"].append(
+                        {
+                            "start_line": i,
+                            "end_line": code_end,
+                            "start_pos": line_start,
+                            "content": "\n".join(lines[i : code_end + 1]),
+                        }
+                    )
+
+        return structure
+
+    def _create_semantic_chunks(self, doc: Document, structure: Dict[str, Any]) -> List[Document]:
+        """Create semantic chunks based on document structure and token limits."""
+        chunks = []
+        text = doc.page_content
+        headers = structure["headers"]
+
+        if not headers:
+            # No headers found, use content-aware chunking
+            return self._chunk_by_content_type(doc, structure)
+
+        # Process sections between headers
+        for i, header in enumerate(headers):
+            section_start = header["position"]
+            section_end = headers[i + 1]["position"] if i + 1 < len(headers) else len(text)
+
+            section_text = text[section_start:section_end].strip()
+            if not section_text:
+                continue
+
+            # Determine content type and appropriate token limit
+            content_type = self._classify_content_type(section_text)
+            token_limit = self.content_type_limits.get(content_type, self.content_type_limits["text"])
+
+            # Check if section fits within token limit
+            section_tokens = len(self.tokenizer.encode(section_text))
+
+            if section_tokens <= token_limit:
+                # Section fits, create single chunk
+                chunk = self._create_chunk(doc, section_text, header, content_type, len(chunks))
+                chunks.append(chunk)
+            else:
+                # Section too large, split semantically
+                sub_chunks = self._split_large_section(
+                    doc, section_text, header, content_type, token_limit, len(chunks)
+                )
+                chunks.extend(sub_chunks)
+
+        return chunks
+
+    def _chunk_by_content_type(self, doc: Document, structure: Dict[str, Any]) -> List[Document]:
+        """Chunk document by content type when no headers are present."""
+        chunks = []
+        text = doc.page_content
+
+        # Extract all structured content (tables, lists, code blocks)
+        structured_content = []
+        for content_type in ["tables", "lists", "code_blocks"]:
+            for item in structure[content_type]:
+                structured_content.append(
+                    {
+                        "start_pos": item["start_pos"],
+                        "end_pos": item["start_pos"] + len(item["content"]),
+                        "content": item["content"],
+                        "type": content_type[:-1] if content_type.endswith("s") else content_type,
+                    }
+                )
+
+        # Sort by position
+        structured_content.sort(key=lambda x: x["start_pos"])
+
+        # Create chunks, preserving structured content
+        current_pos = 0
+        chunk_index = 0
+
+        for item in structured_content:
+            # Add text before structured content
+            if item["start_pos"] > current_pos:
+                text_chunk = text[current_pos : item["start_pos"]].strip()
+                if text_chunk:
+                    chunks.extend(self._split_text_by_tokens(doc, text_chunk, "text", chunk_index))
+                    chunk_index = len(chunks)
+
+            # Add structured content as complete unit
+            chunk = self._create_chunk(doc, item["content"], None, item["type"], chunk_index)
+            chunks.append(chunk)
+            chunk_index += 1
+            current_pos = item["end_pos"]
+
+        # Add remaining text
+        if current_pos < len(text):
+            remaining_text = text[current_pos:].strip()
+            if remaining_text:
+                chunks.extend(self._split_text_by_tokens(doc, remaining_text, "text", chunk_index))
+
+        return chunks
 
     def _chunk_by_headers(self, documents: List[Document]) -> List[Document]:
         """Hierarchical chunking based on headers."""
@@ -402,9 +583,15 @@ class ConfluenceChunker(DocumentChunker):
         """Generate contextual information for a chunk."""
         context_parts = []
 
-        # Document title
+        # Document title with hierarchy
+        title_parts = []
+        if metadata.get("parent_title"):
+            title_parts.append(metadata["parent_title"])
         if metadata.get("title"):
-            context_parts.append(f"Document: {metadata['title']}")
+            title_parts.append(metadata["title"])
+
+        if title_parts:
+            context_parts.append(f"Document: {' > '.join(title_parts)}")
 
         # Space information (for Confluence)
         if metadata.get("space_key"):
@@ -415,8 +602,14 @@ class ConfluenceChunker(DocumentChunker):
             context_parts.append(f"URL: {metadata['url']}")
 
         # Hierarchy information (for hierarchical chunks)
-        if metadata.get("section_path"):
+        if metadata.get("hierarchy_path") and metadata.get("hierarchy_path") != "Root":
+            context_parts.append(f"Section: {metadata['hierarchy_path']}")
+        elif metadata.get("section_path"):
             context_parts.append(f"Section: {metadata['section_path']}")
+
+        # Content type information
+        if metadata.get("content_type") and metadata.get("content_type") != "text":
+            context_parts.append(f"Type: {metadata['content_type']}")
 
         # Source information
         if metadata.get("source"):
@@ -426,3 +619,318 @@ class ConfluenceChunker(DocumentChunker):
             return f"[{' | '.join(context_parts)}]"
 
         return "[Contexte non disponible]"
+
+    # Helper methods for semantic chunking
+
+    def _is_header(self, line: str) -> bool:
+        """Check if line is a header (markdown or HTML)."""
+        line = line.strip()
+        # Markdown headers
+        if re.match(r"^#{1,6}\s+", line):
+            return True
+        # HTML headers
+        if re.match(r"<h[1-6][^>]*>.*</h[1-6]>", line, re.IGNORECASE):
+            return True
+        return False
+
+    def _get_header_level(self, line: str) -> int:
+        """Get header level from line."""
+        line = line.strip()
+        # Markdown headers
+        md_match = re.match(r"^(#{1,6})\s+", line)
+        if md_match:
+            return len(md_match.group(1))
+        # HTML headers
+        html_match = re.match(r"<h([1-6])[^>]*>", line, re.IGNORECASE)
+        if html_match:
+            return int(html_match.group(1))
+        return 1
+
+    def _extract_header_text(self, line: str) -> str:
+        """Extract text from header line."""
+        line = line.strip()
+        # Markdown headers
+        md_match = re.match(r"^#{1,6}\s+(.+)$", line)
+        if md_match:
+            return md_match.group(1).strip()
+        # HTML headers
+        html_match = re.match(r"<h[1-6][^>]*>(.*?)</h[1-6]>", line, re.IGNORECASE)
+        if html_match:
+            return re.sub(r"<[^>]+>", "", html_match.group(1)).strip()
+        return line
+
+    def _is_table_start(self, line: str) -> bool:
+        """Check if line starts a table."""
+        line = line.strip()
+        # HTML table
+        if line.startswith("<table"):
+            return True
+        # Markdown table (line with pipes)
+        if "|" in line and not line.startswith("|--"):
+            return True
+        return False
+
+    def _find_table_end(self, lines: List[str], start: int) -> int:
+        """Find end of table starting at start line."""
+        if start >= len(lines):
+            return start
+
+        start_line = lines[start].strip()
+
+        # HTML table
+        if start_line.startswith("<table"):
+            for i in range(start + 1, len(lines)):
+                if "</table>" in lines[i]:
+                    return i
+            return len(lines) - 1
+
+        # Markdown table
+        if "|" in start_line:
+            for i in range(start + 1, len(lines)):
+                if "|" not in lines[i].strip() or not lines[i].strip():
+                    return i - 1
+            return len(lines) - 1
+
+        return start
+
+    def _is_list_item(self, line: str) -> bool:
+        """Check if line is a list item."""
+        line = line.strip()
+        # Unordered list
+        if re.match(r"^[-*+]\s+", line):
+            return True
+        # Ordered list
+        if re.match(r"^\d+\.\s+", line):
+            return True
+        # HTML list
+        if line.startswith("<li") or line.startswith("<ul") or line.startswith("<ol"):
+            return True
+        return False
+
+    def _find_list_end(self, lines: List[str], start: int) -> int:
+        """Find end of list starting at start line."""
+        if start >= len(lines):
+            return start
+
+        # Look for consecutive list items or until different content
+        for i in range(start + 1, len(lines)):
+            line = lines[i].strip()
+            if not line:  # Empty line might end list
+                # Check next non-empty line
+                next_content = False
+                for j in range(i + 1, len(lines)):
+                    if lines[j].strip():
+                        if not self._is_list_item(lines[j]):
+                            return i - 1
+                        next_content = True
+                        break
+                if not next_content:
+                    return i - 1
+            elif not self._is_list_item(line) and not line.startswith("  "):  # Not indented continuation
+                return i - 1
+
+        return len(lines) - 1
+
+    def _find_code_block_end(self, lines: List[str], start: int) -> int:
+        """Find end of code block starting at start line."""
+        if start >= len(lines):
+            return start
+
+        for i in range(start + 1, len(lines)):
+            if lines[i].strip().startswith("```"):
+                return i
+
+        return len(lines) - 1
+
+    def _classify_content_type(self, text: str) -> str:
+        """Classify content type for appropriate token limits."""
+        text_lower = text.lower()
+
+        # Check for tables
+        if "<table" in text_lower or "|" in text:
+            return "table"
+
+        # Check for code blocks
+        if "```" in text or "<pre" in text_lower or "<code" in text_lower:
+            return "code"
+
+        # Check for lists
+        if (
+            re.search(r"^[-*+]\s+", text, re.MULTILINE)
+            or re.search(r"^\d+\.\s+", text, re.MULTILINE)
+            or "<li" in text_lower
+        ):
+            return "list"
+
+        return "text"
+
+    def _create_chunk(
+        self, doc: Document, content: str, header: Optional[Dict], content_type: str, chunk_index: int
+    ) -> Document:
+        """Create a chunk document with enhanced metadata."""
+        metadata = doc.metadata.copy()
+
+        # Build hierarchy path
+        hierarchy_path = []
+        if header:
+            hierarchy_path.append(header["title"])
+
+        # Add parent page context for subpages
+        if metadata.get("parent_title"):
+            hierarchy_path.insert(0, metadata.get("parent_title"))
+
+        # Extract cross-page references
+        cross_references = self._extract_cross_references(content, doc.metadata)
+
+        metadata.update(
+            {
+                "chunk_index": chunk_index,
+                "chunk_strategy": "semantic_hierarchical",
+                "content_type": content_type,
+                "content_length": len(content),
+                "token_count": len(self.tokenizer.encode(content)),
+                "hierarchy_path": " > ".join(hierarchy_path) if hierarchy_path else "Root",
+                "header_level": header["level"] if header else 0,
+                "semantic_boundary": True,
+                "cross_references": cross_references,
+                "reference_count": len(cross_references),
+            }
+        )
+
+        # Add contextual information
+        enriched_content = self._add_context_to_chunk(content, metadata)
+
+        return Document(page_content=enriched_content, metadata=metadata)
+
+    def _split_large_section(
+        self, doc: Document, text: str, header: Optional[Dict], content_type: str, token_limit: int, start_index: int
+    ) -> List[Document]:
+        """Split large section into smaller semantic chunks."""
+        chunks = []
+
+        # Try to split by paragraphs first
+        paragraphs = text.split("\n\n")
+        current_chunk = []
+        current_tokens = 0
+
+        overlap_tokens = self.config.get("chunk_overlap_tokens", 50)
+
+        for paragraph in paragraphs:
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+
+            para_tokens = len(self.tokenizer.encode(paragraph))
+
+            if current_tokens + para_tokens > token_limit and current_chunk:
+                # Create chunk from accumulated paragraphs
+                chunk_text = "\n\n".join(current_chunk)
+                chunk = self._create_chunk(doc, chunk_text, header, content_type, start_index + len(chunks))
+                chunks.append(chunk)
+
+                # Start new chunk with overlap
+                if overlap_tokens > 0 and current_chunk:
+                    # Add last part of previous chunk for context
+                    overlap_text = current_chunk[-1][-overlap_tokens * 4 :]  # Approximate char count
+                    current_chunk = [overlap_text, paragraph]
+                    current_tokens = len(self.tokenizer.encode(overlap_text)) + para_tokens
+                else:
+                    current_chunk = [paragraph]
+                    current_tokens = para_tokens
+            else:
+                current_chunk.append(paragraph)
+                current_tokens += para_tokens
+
+        # Add remaining content
+        if current_chunk:
+            chunk_text = "\n\n".join(current_chunk)
+            chunk = self._create_chunk(doc, chunk_text, header, content_type, start_index + len(chunks))
+            chunks.append(chunk)
+
+        return chunks
+
+    def _split_text_by_tokens(self, doc: Document, text: str, content_type: str, start_index: int) -> List[Document]:
+        """Split text by token limits while preserving semantic boundaries."""
+        token_limit = self.content_type_limits.get(content_type, self.content_type_limits["text"])
+        text_tokens = len(self.tokenizer.encode(text))
+
+        if text_tokens <= token_limit:
+            chunk = self._create_chunk(doc, text, None, content_type, start_index)
+            return [chunk]
+
+        return self._split_large_section(doc, text, None, content_type, token_limit, start_index)
+
+    def _extract_cross_references(self, content: str, doc_metadata: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Extract cross-page references from content."""
+        cross_refs = []
+
+        # Confluence page links - ac:link macro
+        link_pattern = r'<ac:link[^>]*>.*?<ri:page[^>]*ri:content-title="([^"]+)"[^>]*/>.*?</ac:link>'
+        for match in re.finditer(link_pattern, content, re.IGNORECASE | re.DOTALL):
+            linked_page = match.group(1)
+            cross_refs.append(
+                {
+                    "type": "confluence_page_link",
+                    "target_title": linked_page,
+                    "context": match.group(0)[:100] + "..." if len(match.group(0)) > 100 else match.group(0),
+                }
+            )
+
+        # Confluence space links
+        space_link_pattern = r'<ac:link[^>]*>.*?<ri:space[^>]*ri:space-key="([^"]+)"[^>]*/>.*?</ac:link>'
+        for match in re.finditer(space_link_pattern, content, re.IGNORECASE | re.DOTALL):
+            space_key = match.group(1)
+            cross_refs.append(
+                {
+                    "type": "confluence_space_link",
+                    "target_space": space_key,
+                    "context": match.group(0)[:100] + "..." if len(match.group(0)) > 100 else match.group(0),
+                }
+            )
+
+        # Markdown-style links that might reference other pages
+        md_link_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
+        for match in re.finditer(md_link_pattern, content):
+            link_text = match.group(1)
+            link_url = match.group(2)
+
+            # Check if it's an internal confluence link
+            if "confluence" in link_url.lower() or link_url.startswith("/") or link_url.startswith("../"):
+                cross_refs.append(
+                    {
+                        "type": "markdown_internal_link",
+                        "link_text": link_text,
+                        "link_url": link_url,
+                        "context": match.group(0),
+                    }
+                )
+
+        # @mention patterns (user references)
+        mention_pattern = r'<ac:link[^>]*>.*?<ri:user[^>]*ri:username="([^"]+)"[^>]*/>.*?</ac:link>'
+        for match in re.finditer(mention_pattern, content, re.IGNORECASE | re.DOTALL):
+            username = match.group(1)
+            cross_refs.append(
+                {
+                    "type": "user_mention",
+                    "username": username,
+                    "context": match.group(0)[:100] + "..." if len(match.group(0)) > 100 else match.group(0),
+                }
+            )
+
+        # Include macro references (for content embedded from other pages)
+        include_pattern = (
+            r'<ac:structured-macro[^>]*ac:name="include"[^>]*>.*?'
+            r'<ac:parameter[^>]*ac:name="[^"]*">([^<]+)</ac:parameter>.*?'
+            r"</ac:structured-macro>"
+        )
+        for match in re.finditer(include_pattern, content, re.IGNORECASE | re.DOTALL):
+            included_content = match.group(1).strip()
+            cross_refs.append(
+                {
+                    "type": "include_macro",
+                    "included_content": included_content,
+                    "context": match.group(0)[:100] + "..." if len(match.group(0)) > 100 else match.group(0),
+                }
+            )
+
+        return cross_refs

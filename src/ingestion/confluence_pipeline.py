@@ -17,9 +17,22 @@ class ConfluenceIngestionPipeline(BaseIngestionPipeline):
         super().__init__()
         self._extractor = None
 
-        # Use Confluence-specific chunker with confluence_sections strategy
+        # Use Confluence-specific chunker with semantic hierarchical strategy
+        chunker_config = {
+            "chunk_size": self.config.chunk_size,
+            "chunk_overlap": self.config.chunk_overlap,
+            # Token-based chunk sizes for different content types
+            "text_chunk_tokens": getattr(self.config, "confluence_text_chunk_tokens", 1000),
+            "table_chunk_tokens": getattr(self.config, "confluence_table_chunk_tokens", 2000),
+            "list_chunk_tokens": getattr(self.config, "confluence_list_chunk_tokens", 1500),
+            "code_chunk_tokens": getattr(self.config, "confluence_code_chunk_tokens", 1500),
+            "chunk_overlap_tokens": getattr(self.config, "confluence_chunk_overlap_tokens", 50),
+        }
+
         self.chunker = ConfluenceChunker(
-            {"chunk_size": self.config.chunk_size, "chunk_overlap": self.config.chunk_overlap}
+            config=chunker_config,
+            strategy="semantic_hierarchical",
+            model_name=getattr(self.config, "confluence_tokenizer_model", "gpt-4"),
         )
 
     def get_source_name(self) -> str:
