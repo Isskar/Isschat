@@ -292,14 +292,12 @@ def chat_page():
             conversation_id=conversation_id, limit=max_turns * 2
         )
 
-        # Sort by timestamp to ensure correct order
         conversation_entries.sort(key=lambda x: x.get("timestamp", ""))
 
         history = []
         for entry in conversation_entries:
-            if entry.get("question"):
+            if entry.get("question") and entry.get("answer"):
                 history.append(f"User: {entry['question']}")
-            if entry.get("answer"):
                 history.append(f"Assistant: {entry['answer']}")
         return "\n".join(history)
 
