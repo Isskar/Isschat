@@ -53,3 +53,14 @@ class RebuildError(RAGSystemError):
         super().__init__(message)
         self.storage_type = storage_type
         self.requested_storage = requested_storage
+
+
+class EmbeddingModelNotSelectedError(RAGSystemError):
+    """Raised when no embedding model is selected"""
+
+    def __init__(self, available_models: list[str]):
+        self.available_models = available_models
+        models_list = "\n".join(f"  - {model}" for model in available_models)
+        super().__init__(
+            f"❌ No embedding model selected.\nPlease choose a model from the available ones:\n{models_list}"
+        )
