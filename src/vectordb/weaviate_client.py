@@ -2,6 +2,7 @@
 Weaviate client implementation with optimized configuration.
 """
 
+import os
 import logging
 from typing import List, Dict, Any, Optional
 
@@ -37,8 +38,9 @@ class WeaviateVectorDB(VectorDatabase):
             self.embedding_dim = get_embedding_service().dimension
 
         # Initialize Weaviate client
-        self.client = weaviate.connect_to_local(
-            host="localhost", port=self.config.vectordb_port or 8080, grpc_port=50051
+        auth_credentials = weaviate.auth.AuthApiKey(api_key=os.getenv("WEAVIATE_API_KEY"))
+        self.client = weaviate.connect_to_weaviate_cloud(
+            cluster_url=os.getenv("WEAVIATE_URL", ""), auth_credentials=auth_credentials
         )
         self.logger.info(f"Weaviate client connected: localhost:{self.config.vectordb_port or 8080}")
 
@@ -55,6 +57,10 @@ class WeaviateVectorDB(VectorDatabase):
                     vectorizer_config=Configure.Vectorizer.none(),
                     vector_index_config=Configure.VectorIndex.hnsw(
                         distance_metric=VectorDistances.COSINE, ef=256, ef_construction=256, max_connections=32
+                    ),
+                    inverted_index_config=Configure.inverted_index(
+                        bm25_b=0.75,
+                        bm25_k1=1.2,
                     ),
                     properties=[
                         Property(name="content", data_type=DataType.TEXT),
