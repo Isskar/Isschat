@@ -99,8 +99,7 @@ def main():
 
     # Sidebar for navigation and options
     with st.sidebar:
-        st.image("https://img.icons8.com/color/96/000000/confluence--v2.png", width=100)
-        st.title("ISSCHAT")
+        st.image("logo.png", width=300)
 
         # Always display user info
         st.success(f"Connected as: {st.session_state['user']['email']}")
