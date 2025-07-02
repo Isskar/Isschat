@@ -235,9 +235,9 @@ class FeedbackSystem:
             score = feedback_obj.get("score") if feedback_obj else None
 
             # Handle different rating formats
-            if rating >= 4 or score == 1 or score == "👍":
+            if (isinstance(rating, (int, float)) and rating >= 4) or rating == "👍" or score == 1 or score == "👍":
                 positive += 1
-            elif rating <= 2 or score == 0 or score == "👎":
+            elif (isinstance(rating, (int, float)) and rating <= 2) or rating == "👎" or score == 0 or score == "👎":
                 negative += 1
 
         satisfaction_rate = (positive / total * 100) if total > 0 else 0.0

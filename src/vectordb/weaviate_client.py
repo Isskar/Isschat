@@ -2,7 +2,6 @@
 Weaviate client implementation with optimized configuration.
 """
 
-import os
 import logging
 from typing import List, Dict, Any, Optional
 
@@ -12,6 +11,7 @@ from weaviate.classes.query import Filter
 
 from .interface import VectorDatabase, Document, SearchResult
 from ..config import get_config
+from ..config.secrets import get_weaviate_api_key, get_weaviate_url
 
 
 class WeaviateVectorDB(VectorDatabase):
@@ -38,10 +38,14 @@ class WeaviateVectorDB(VectorDatabase):
             self.embedding_dim = get_embedding_service().dimension
 
         # Initialize Weaviate client
-        auth_credentials = weaviate.auth.AuthApiKey(api_key=os.getenv("WEAVIATE_API_KEY"))
-        self.client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=os.getenv("WEAVIATE_URL", ""), auth_credentials=auth_credentials
-        )
+        weaviate_api_key = get_weaviate_api_key()
+        weaviate_url = get_weaviate_url()
+
+        if not weaviate_api_key or not weaviate_url:
+            raise ValueError("WEAVIATE_API_KEY and WEAVIATE_URL must be configured")
+
+        auth_credentials = weaviate.auth.AuthApiKey(api_key=weaviate_api_key)
+        self.client = weaviate.connect_to_weaviate_cloud(cluster_url=weaviate_url, auth_credentials=auth_credentials)
         self.logger.info(f"Weaviate client connected: localhost:{self.config.vectordb_port or 8080}")
 
         self._ensure_collection()

@@ -3,6 +3,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 from dotenv import load_dotenv
+from . import secrets
 
 
 @dataclass
@@ -63,14 +64,14 @@ class IsschatConfig:
             llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", "512")),
             search_k=int(os.getenv("SEARCH_K", "3")),
             search_fetch_k=int(os.getenv("SEARCH_FETCH_K", "5")),
-            confluence_api_key=os.getenv("CONFLUENCE_PRIVATE_API_KEY", ""),
-            confluence_space_key=os.getenv("CONFLUENCE_SPACE_KEY", ""),
-            confluence_space_name=os.getenv("CONFLUENCE_SPACE_NAME", ""),
-            confluence_email=os.getenv("CONFLUENCE_EMAIL_ADDRESS", ""),
-            openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            confluence_api_key=secrets.get_confluence_api_key() or "",
+            confluence_space_key=secrets.get_confluence_space_key() or "",
+            confluence_space_name=secrets.get_confluence_space_name() or "",
+            confluence_email=secrets.get_confluence_email() or "",
+            openrouter_api_key=secrets.get_openrouter_api_key() or "",
             use_azure_storage=os.getenv("USE_AZURE_STORAGE", "false").lower() == "true",
-            azure_storage_account=os.getenv("AZURE_STORAGE_ACCOUNT", ""),
-            azure_blob_container=os.getenv("AZURE_BLOB_CONTAINER_NAME", ""),
+            azure_storage_account=secrets.get_azure_storage_account() or "",
+            azure_blob_container=secrets.get_azure_blob_container() or "",
         )
 
     def validate(self) -> bool:
