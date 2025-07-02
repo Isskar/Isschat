@@ -4,8 +4,8 @@ Main entry point for Isschat Evaluation System
 """
 
 import json
-import sys
 import os
+import sys
 import argparse
 import importlib
 from pathlib import Path
@@ -210,11 +210,16 @@ class EvaluationManager:
         # Check CI threshold
         return overall_pass_rate >= self.config.get_ci_threshold()
 
-    def save_results(self, output_path: Optional[Path] = None) -> None:
-        """Save evaluation results to file"""
+    def save_results(self, output_path: Optional[Path] = None) -> Optional[Path]:
+        """
+        Save evaluation results to file
+
+        Returns:
+            Path to the saved file, or None if saving failed
+        """
         if not self.results:
             print("⚠️ No results to save")
-            return
+            return None
 
         if output_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -228,9 +233,11 @@ class EvaluationManager:
                 json.dump(self.results, f, ensure_ascii=False, indent=2)
 
             print(f"💾 Results saved to: {output_path}")
+            return output_path
 
         except Exception as e:
             print(f"❌ Error saving results: {e}")
+            return None
 
     def print_summary(self) -> None:
         """Print evaluation summary"""
@@ -305,10 +312,10 @@ class EvaluationManager:
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(description="Isschat Evaluation System")
+
     # Get available categories dynamically
     temp_config = EvaluationConfig()
     available_categories = temp_config.get_all_categories()
-
     parser.add_argument(
         "--categories",
         nargs="+",
@@ -316,8 +323,12 @@ def main():
         help="Specific categories to evaluate",
     )
     parser.add_argument("--ci", action="store_true", help="Run in CI mode")
-    parser.add_argument("--output", type=str, help="Output file path")
-
+    parser.add_argument("--output", type=str, help="Output file path for JSON results")
+    parser.add_argument(
+        "--html-report",
+        action="store_true",
+        help="Generate an HTML report after evaluation",
+    )
     args = parser.parse_args()
 
     try:
@@ -334,10 +345,25 @@ def main():
 
         # Save results
         output_path = Path(args.output) if args.output else None
-        manager.save_results(output_path)
+        saved_results_path = manager.save_results(output_path)
 
         # Print summary
         manager.print_summary()
+
+        # Generate HTML report if requested
+        if args.html_report:
+            if saved_results_path:
+                print("\nGenerating HTML report...")
+                try:
+                    # Lazy import to avoid circular dependency issues
+                    from rag_evaluation.report_generator import generate_html_report
+
+                    report_path = generate_html_report(saved_results_path)
+                    print(f"✅ HTML report generated: {report_path}")
+                except Exception as e:
+                    print(f"❌ Error generating HTML report: {e}")
+            else:
+                print("⚠️ Cannot generate HTML report, results were not saved.")
 
         # Exit with appropriate code for CI
         if config.ci_mode and config.fail_on_threshold:
