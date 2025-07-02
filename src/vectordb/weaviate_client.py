@@ -6,7 +6,7 @@ import logging
 from typing import List, Dict, Any, Optional
 
 import weaviate
-from weaviate.classes.config import Configure, Property, DataType, VectorDistances
+from weaviate.classes.config import Configure, Property, VectorDistances, DataType
 from weaviate.classes.query import Filter
 
 from .interface import VectorDatabase, Document, SearchResult
@@ -45,7 +45,9 @@ class WeaviateVectorDB(VectorDatabase):
             raise ValueError("WEAVIATE_API_KEY and WEAVIATE_URL must be configured")
 
         auth_credentials = weaviate.auth.AuthApiKey(api_key=weaviate_api_key)
-        self.client = weaviate.connect_to_weaviate_cloud(cluster_url=weaviate_url, auth_credentials=auth_credentials)
+        self.client = weaviate.connect_to_weaviate_cloud(
+            cluster_url=weaviate_url, auth_credentials=auth_credentials, skip_init_checks=True
+        )
         self.logger.info(f"Weaviate client connected: localhost:{self.config.vectordb_port or 8080}")
 
         self._ensure_collection()
@@ -67,8 +69,8 @@ class WeaviateVectorDB(VectorDatabase):
                         bm25_k1=1.2,
                     ),
                     properties=[
-                        Property(name="content", data_type=DataType.TEXT),
-                        Property(name="original_doc_id", data_type=DataType.TEXT),
+                        Property(name="content", data_type=DataType.TEXT),  # noqa
+                        Property(name="original_doc_id", data_type=DataType.TEXT),  # noqa
                     ],
                 )
 
@@ -136,7 +138,7 @@ class WeaviateVectorDB(VectorDatabase):
                         else:
                             properties[key] = str(value)
 
-                data_objects.append(weaviate.classes.data.DataObject(properties=properties, vector=embedding))
+                data_objects.append({"properties": properties, "vector": embedding})
 
             # Batch insert with progress tracking
             batch_size = 100
@@ -145,7 +147,7 @@ class WeaviateVectorDB(VectorDatabase):
 
                 with collection.batch.dynamic() as batch_context:
                     for obj in batch:
-                        batch_context.add_object(properties=obj.properties, vector=obj.vector)
+                        batch_context.add_object(properties=obj["properties"], vector=obj["vector"])
 
                 self.logger.debug(f"Batch {i // batch_size + 1}/{(len(data_objects) - 1) // batch_size + 1} added")
 

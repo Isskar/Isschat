@@ -11,7 +11,6 @@ from collections import defaultdict
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from ...config import get_config
 from ...rag.tools.retrieval_tool import RetrievalTool
 from ...rag.tools.generation_tool import GenerationTool
 
@@ -48,7 +47,6 @@ def query(
         total_start = time.time()
 
         init_start = time.time()
-        config = get_config()
         init_time = (time.time() - init_start) * 1000
 
         retrieval_tool = RetrievalTool()

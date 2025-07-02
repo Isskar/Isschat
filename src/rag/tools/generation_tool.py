@@ -129,7 +129,7 @@ class GenerationTool:
 
             return {"answer": answer.strip(), "token_count": token_count, "generation_time": end_time - start_time}
 
-        except requests.exceptions.RequestException as e:
+        except requests.RequestException as e:
             raise RuntimeError(f"OpenRouter API error: {e}")
         except (KeyError, IndexError) as e:
             raise RuntimeError(f"Invalid OpenRouter response format: {e}")

@@ -1585,6 +1585,7 @@ dependencies = [
     { name = "langchain-huggingface" },
     { name = "langchain-openai" },
     { name = "langchain-text-splitters" },
+    { name = "langdetect" },
     { name = "llama-index-readers-confluence" },
     { name = "lxml" },
     { name = "matplotlib" },
@@ -1654,6 +1655,7 @@ requires-dist = [
     { name = "langchain-huggingface", specifier = ">=0.2.0" },
     { name = "langchain-openai", specifier = ">=0.3.16" },
     { name = "langchain-text-splitters", specifier = ">=0.2.0" },
+    { name = "langdetect", specifier = ">=1.0.9" },
     { name = "llama-index-readers-confluence", specifier = ">=0.3.1" },
     { name = "lxml", specifier = ">=5.1.0" },
     { name = "matplotlib", specifier = ">=3.7.0" },
@@ -2000,6 +2002,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/e7/ac/b4a25c5716bb0103b
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8b/a3/3696ff2444658053c01b6b7443e761f28bb71217d82bb89137a978c5f66f/langchain_text_splitters-0.3.8-py3-none-any.whl", hash = "sha256:e75cc0f4ae58dcf07d9f18776400cf8ade27fadd4ff6d264df6278bb302f6f02", size = 32440, upload-time = "2025-04-04T14:03:50.6Z" },
 ]
+
+[[package]]
+name = "langdetect"
+version = "1.0.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0e/72/a3add0e4eec4eb9e2569554f7c70f4a3c27712f40e3284d483e88094cc0e/langdetect-1.0.9.tar.gz", hash = "sha256:cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0", size = 981474, upload-time = "2021-05-07T07:54:13.562Z" }
 
 [[package]]
 name = "langsmith"
