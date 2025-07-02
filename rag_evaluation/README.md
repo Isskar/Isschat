@@ -13,6 +13,9 @@ uv run --extra evaluation rag_evaluation/run_evaluation.py --categories robustne
 
 # CI mode (critical tests only)
 uv run --extra evaluation rag_evaluation/run_evaluation.py --ci
+
+# Run evaluation and generate an HTML report
+uv run --extra evaluation rag_evaluation/main.py --html-report
 ```
 
 ## 📊 Available Evaluators
