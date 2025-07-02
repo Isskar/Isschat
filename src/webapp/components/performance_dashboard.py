@@ -18,10 +18,10 @@ class PerformanceDashboard:
 
         # Get storage service from config if not provided
         if storage_service is None:
-            from src.core.config import _ensure_config_initialized
+            from src.storage.data_manager import get_data_manager
 
-            config_manager = _ensure_config_initialized()
-            self.storage_service = config_manager.get_storage_service()
+            data_manager = get_data_manager()
+            self.storage_service = data_manager.storage
         else:
             self.storage_service = storage_service
         self.colors = {

@@ -10,7 +10,7 @@ from typing import List, Dict, Optional
 import plotly.express as px
 from itertools import groupby
 
-from ...core.data_manager import get_data_manager
+from src.storage.data_manager import get_data_manager
 
 
 class ConversationHistoryManager:
@@ -56,11 +56,9 @@ class ConversationHistoryManager:
         """Render the conversation history page."""
         st.title("Conversation History")
 
-        # Sidebar for filters
         with st.sidebar:
             st.subheader("Filters")
 
-            # Period filter
             period_options = {
                 "Today": 1,
                 "Last 7 days": 7,
@@ -71,18 +69,15 @@ class ConversationHistoryManager:
             selected_period = st.selectbox(
                 "Time Period",
                 options=list(period_options.keys()),
-                index=3,  # Changed default to "All history" (index 3)
+                index=3,
             )
 
-            # User filter (for admins)
             show_all_users = st.checkbox("Show all users", value=False)
             if show_all_users:
                 user_id = None
 
-            # Conversation limit
             limit = st.slider("Max conversations", 10, 200, 50)
 
-        # Get filtered data
         conversations = self._get_filtered_conversations(
             user_id=user_id, period_days=period_options[selected_period], limit=limit
         )
@@ -91,7 +86,6 @@ class ConversationHistoryManager:
             st.info("No conversations found for the selected criteria.")
             return
 
-        # Tabs for different views
         tab1, tab2 = st.tabs(["Conversation List", "Search"])
 
         with tab1:
@@ -120,7 +114,6 @@ class ConversationHistoryManager:
             st.info("No conversations to display.")
             return
 
-        # Display options
         col1, col2 = st.columns([3, 1])
         with col1:
             show_details = st.checkbox("Show full details", value=False, key="show_details_history_list")
@@ -130,24 +123,19 @@ class ConversationHistoryManager:
         if export_btn:
             self._export_conversations_csv(conversations)
 
-        # Group conversations by conversation_id
-        # First, sort by conversation_id and then by timestamp to ensure consistent grouping and order within groups
         conversations.sort(key=lambda x: (x.get("conversation_id", ""), x.get("timestamp", "")))
 
         grouped_conversations = {}
         for k, g in groupby(conversations, lambda x: x.get("conversation_id", "")):
             grouped_conversations[k] = list(g)
 
-        # Sort conversation groups by the timestamp of their first message (most recent conversation first)
         sorted_conversation_groups = sorted(
             grouped_conversations.items(),
             key=lambda item: item[1][0].get("timestamp", ""),  # Use timestamp of the first message in the group
             reverse=True,
         )
 
-        # Display conversations
         for i, (conversation_id, conv_entries) in enumerate(sorted_conversation_groups):
-            # Get the first message for summary display
             first_entry = conv_entries[0]
             num_messages = len(conv_entries)
             total_response_time = sum(e.get("response_time_ms", 0) for e in conv_entries)
@@ -159,8 +147,7 @@ class ConversationHistoryManager:
                 f"⏱️ {total_response_time:.0f}ms",
                 expanded=False,
             ):
-                # Display all entries within this conversation
-                for j, entry in enumerate(conv_entries):
+                for entry in conv_entries:
                     st.markdown(f"**❓ Question ({self._format_timestamp(entry['timestamp'])}):**")
                     st.write(entry["question"])
 
@@ -171,7 +158,6 @@ class ConversationHistoryManager:
                         preview = entry["answer"][:200] + "..." if len(entry["answer"]) > 200 else entry["answer"]
                         st.write(preview)
 
-                    # Display metadata for each turn
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
                         st.metric("Response Length", f"{entry.get('answer_length', 0)} chars")
@@ -195,9 +181,8 @@ class ConversationHistoryManager:
                                 st.markdown(f"{k + 1}. [{title}]({url})")
                             else:
                                 st.write(f"{k + 1}. {title}")
-                    st.markdown("---")  # Separator between turns
+                    st.markdown("---")
 
-                # Button to continue this conversation
                 if st.button("Continue this conversation", key=f"continue_conv_{conversation_id}_{i}"):
                     st.session_state["reuse_conversation_id"] = conversation_id
                     st.session_state["page"] = "chat"
@@ -211,7 +196,6 @@ class ConversationHistoryManager:
             st.info("No data available for statistics.")
             return
 
-        # General metrics
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
@@ -229,16 +213,13 @@ class ConversationHistoryManager:
             total_sources = sum(c.get("sources_count", 0) for c in conversations)
             st.metric("Total Sources Used", total_sources)
 
-        # Charts
         st.markdown("### Trends")
 
-        # Prepare data for charts
         df = pd.DataFrame(conversations)
         if not df.empty:
             df["timestamp"] = pd.to_datetime(df["timestamp"])
             df["date"] = df["timestamp"].dt.date
 
-            # Daily conversations chart
             daily_counts = df.groupby("date").size().reset_index(name="count")
             fig_daily = px.line(
                 daily_counts,
@@ -251,7 +232,6 @@ class ConversationHistoryManager:
             fig_daily.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="white")
             st.plotly_chart(fig_daily, use_container_width=True)
 
-            # User engagement over time
             if len(set(conv.get("user_id") for conv in conversations)) > 1:
                 user_daily = df.groupby(["date", "user_id"]).size().reset_index(name="count")
                 fig_users = px.bar(
@@ -269,11 +249,9 @@ class ConversationHistoryManager:
         """Render the search interface."""
         st.markdown("### Search Conversations")
 
-        # Search interface
         search_term = st.text_input("Search in questions and answers:")
 
         if search_term:
-            # Filter conversations
             filtered_conversations = []
             for conv in conversations:
                 if (
@@ -284,15 +262,13 @@ class ConversationHistoryManager:
 
             st.write(f"**{len(filtered_conversations)} result(s) found**")
 
-            # Display results
-            for i, conv in enumerate(filtered_conversations[:10]):  # Limit to 10 results
+            for i, conv in enumerate(filtered_conversations[:10]):
                 with st.expander(
                     f"🕐 {self._format_timestamp(conv['timestamp'])} - 👤 {conv.get('user_id', 'Anonymous')}",
                     expanded=False,
                 ):
                     st.markdown("**❓ Question:**")
                     question = conv["question"]
-                    # Highlight search term
                     highlighted_question = question.replace(
                         search_term, f'<span class="search-highlight">{search_term}</span>'
                     )
@@ -305,7 +281,6 @@ class ConversationHistoryManager:
                     )
                     st.markdown(highlighted_answer, unsafe_allow_html=True)
 
-                    # Metadata
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.write(f"**Response Time:** {conv.get('response_time_ms', 0):.0f}ms")
@@ -323,17 +298,14 @@ class ConversationHistoryManager:
         else:
             st.info("Enter a search term to find relevant conversations.")
 
-            # Show popular topics when no search
             st.markdown("#### Popular Topics")
             self._render_popular_topics(conversations)
 
     def _render_popular_topics(self, conversations: List[Dict]):
         """Render popular topics analysis."""
-        # Extract keywords from questions
         all_words = []
         for conv in conversations:
             words = conv.get("question", "").lower().split()
-            # Filter short words and common words
             filtered_words = [
                 word.strip(".,!?;:")
                 for word in words
@@ -394,7 +366,6 @@ class ConversationHistoryManager:
         )
 
 
-# Global instance of the history manager
 _history_manager = None
 
 

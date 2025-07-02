@@ -61,32 +61,27 @@ class FeedbackSystem:
     """Handles user feedback collection and storage."""
 
     def __init__(self, storage_service=None, feedback_file: Optional[str] = None):
-        # Get storage service from config if not provided
         if storage_service is None:
-            from src.core.config import _ensure_config_initialized
+            from src.storage.data_manager import get_data_manager
 
-            config_manager = _ensure_config_initialized()
-            self.storage_service = config_manager.get_storage_service()
+            data_manager = get_data_manager()
+            self.storage_service = data_manager.storage
         else:
             self.storage_service = storage_service
 
-        # Remove redundant feedback file creation - use only data_manager
-        # The feedback_file parameter is kept for backward compatibility but not used
         self.feedback_file = feedback_file
 
     def _load_feedback_data(self):
-        """Load feedback data from data_manager (JSONL format)"""
         import logging
 
         logger = logging.getLogger(__name__)
         all_feedback = []
 
         try:
-            from src.core.data_manager import get_data_manager
+            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
 
-            # Use data_manager to get feedback data directly
             logger.info("Loading feedbacks from data_manager")
             all_feedback = data_manager.get_feedback_data()
 
@@ -121,7 +116,7 @@ class FeedbackSystem:
             try:
                 # Sauvegarder dans le data manager d'abord
                 try:
-                    from src.core.data_manager import get_data_manager
+                    from src.storage.data_manager import get_data_manager
 
                     data_manager = get_data_manager()
 
@@ -158,13 +153,12 @@ class FeedbackSystem:
             except Exception as e:
                 print(f"Error saving feedback via data_manager: {e}")
 
-            # Force a rerun to update the interface
-            st.rerun()
+            # Note: Removed st.rerun() to prevent callback interruption
 
         try:
             feedback_response = streamlit_feedback(
                 feedback_type="thumbs",
-                optional_text_label="Commentaire (optionnel):",
+                optional_text_label="Comment (optional):",
                 align="flex-start",
                 key=f"feedback_widget_{content_hash}",
                 on_submit=feedback_callback,
@@ -172,7 +166,7 @@ class FeedbackSystem:
 
             return feedback_response
         except Exception as e:
-            st.error(f"Erreur avec le widget de feedback: {e}")
+            st.error(f"Error with feedback widget: {e}")
             return None
 
     def get_feedback_statistics(self, days: int = 30) -> Dict:
@@ -187,7 +181,7 @@ class FeedbackSystem:
         """
         # Try data manager first
         try:
-            from src.core.data_manager import get_data_manager
+            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             feedback_data = data_manager.get_feedback_data(limit=1000)
@@ -241,9 +235,9 @@ class FeedbackSystem:
             score = feedback_obj.get("score") if feedback_obj else None
 
             # Handle different rating formats
-            if rating >= 4 or score == 1 or score == "👍":
+            if (isinstance(rating, (int, float)) and rating >= 4) or rating == "👍" or score == 1 or score == "👍":
                 positive += 1
-            elif rating <= 2 or score == 0 or score == "👎":
+            elif (isinstance(rating, (int, float)) and rating <= 2) or rating == "👎" or score == 0 or score == "👎":
                 negative += 1
 
         satisfaction_rate = (positive / total * 100) if total > 0 else 0.0
@@ -419,18 +413,23 @@ class FeaturesManager:
 
         # Get storage service from config if not provided
         if storage_service is None:
-            from src.core.config import _ensure_config_initialized
+            from src.storage.data_manager import get_data_manager
 
-            config_manager = _ensure_config_initialized()
-            self.storage_service = config_manager.get_storage_service()
+            self.storage_service = get_data_manager()
+
+        # Create necessary directories using path manager and storage service
+        from src.config.paths import get_path_manager
+
+        path_manager = get_path_manager()
+        if hasattr(self.storage_service, "storage") and hasattr(self.storage_service.storage, "create_directory"):
+            # Use the storage abstraction from data_manager
+            path_manager.ensure_directories(storage_service=self.storage_service.storage)
+        elif hasattr(self.storage_service, "create_directory"):
+            # Direct storage service
+            path_manager.ensure_directories(storage_service=self.storage_service)
         else:
-            self.storage_service = storage_service
-
-        # Create necessary directories using storage service
-        directories = ["logs", "logs/feedback", "data", "cache"]
-        for directory in directories:
-            if hasattr(self.storage_service._storage, "create_directory"):
-                self.storage_service._storage.create_directory(directory)
+            # Fallback to local creation
+            path_manager.ensure_directories()
 
         # Configure logging - use only console logging to avoid local file creation
         logging.basicConfig(
@@ -471,7 +470,7 @@ class FeaturesManager:
 
         # Save to data manager
         try:
-            from src.core.data_manager import get_data_manager
+            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
 

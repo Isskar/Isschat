@@ -31,7 +31,6 @@ class LocalStorage(StorageInterface):
     def write_file(self, file_path: str, data: bytes) -> bool:
         full_path = self._get_full_path(file_path)
         try:
-            # Create directory if needed
             full_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(full_path, "wb") as f:
@@ -64,10 +63,8 @@ class LocalStorage(StorageInterface):
             if not full_path.exists():
                 return []
 
-            # Get all matching files
             files = list(full_path.glob(pattern))
 
-            # Return relative paths from base_path
             return [str(f.relative_to(self.base_path)) for f in files if f.is_file()]
         except Exception as e:
             logging.error(f"Error listing files in {full_path}: {e}")

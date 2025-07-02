@@ -57,6 +57,8 @@ An intelligent chatbot that interacts with Isskar Confluence knowledge base usin
 
 ## Launch
 
+### Web Interface
+
 1. **Install dependencies**
    ```bash
    uv sync
@@ -74,6 +76,59 @@ An intelligent chatbot that interacts with Isskar Confluence knowledge base usin
 4. **Launch the chatbot**
 
    Ask your question to the chatbot
+
+### Command Line Interface (CLI)
+
+Isschat provides a powerful CLI tool for managing and querying your knowledge base:
+
+#### Available Commands
+
+- **Status Check**: Check system components and configuration
+  ```bash
+  uv run python -m src.cli.main status [--verbose] [--component config|ingestion|rag|all]
+  ```
+
+- **Data Ingestion**: Build or update the vector database from Confluence
+  ```bash
+  uv run python -m src.cli.main ingest [--source confluence] [--force-rebuild] [--verbose]
+  ```
+
+- **Interactive Chat**: Start a chat session without the web interface
+  ```bash
+  uv run python -m src.cli.main chat [--user-id cli_user]
+  ```
+
+- **Direct Query**: Query the vector database with detailed results
+  ```bash
+  uv run python -m src.cli.main query -q "your question" [options]
+  ```
+
+#### Query Command Options
+
+- `-q, --query`: Your search query (required)
+- `-k, --top-k`: Number of chunks to retrieve (default: 5)
+- `-s, --score-threshold`: Minimum similarity score (default: 0.0)
+- `-v, --verbose`: Show detailed chunk information
+- `--show-metadata`: Display document metadata
+- `--show-content`: Display chunk content (default: true)
+- `--show-stats`: Display statistics about sources and scores
+- `--no-llm`: Skip LLM generation and only show retrieved chunks
+
+#### Example Usage
+
+```bash
+# Check system status
+isschat-cli status --verbose
+
+# Ingest data from Confluence
+isschat-cli ingest --source confluence --verbose
+
+# Start interactive chat
+isschat-cli chat
+
+# Query with detailed information
+isschat-cli query -q "How to configure authentication?" -k 3 --show-metadata --show-stats
+```
    
 
 ## Architecture

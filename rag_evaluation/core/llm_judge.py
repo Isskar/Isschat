@@ -4,7 +4,7 @@ LLM-based judge for evaluating Isschat responses
 
 from typing import Dict, Any
 
-from src.core.config import get_config
+from src.config.settings import get_config
 from langchain_openai import ChatOpenAI
 from langchain_core.utils.utils import convert_to_secret_str
 
@@ -18,8 +18,8 @@ class LLMJudge:
 
         # Get API key from config
         try:
-            app_config = get_config()
-            api_key = convert_to_secret_str(app_config.openrouter_api_key)
+            isschat_config = get_config()
+            api_key = convert_to_secret_str(isschat_config.openrouter_api_key)
             if not api_key:
                 raise ValueError("OPENROUTER_API_KEY not found in configuration")
         except Exception as e:

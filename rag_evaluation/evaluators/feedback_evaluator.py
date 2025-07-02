@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from rag_evaluation.core.base_evaluator import BaseEvaluator, TestCase, EvaluationResult, EvaluationStatus
-from src.core.data_manager import get_data_manager, JSONLDataStore
+from src.storage.data_manager import get_data_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -127,10 +127,9 @@ class FeedbackClassifier:
 class FeedbackDataLoader:
     def __init__(self, limit: Optional[int] = None):
         """Initialize data loader"""
-        self.feedback_data_store: JSONLDataStore = get_data_manager().feedback_store
+        self.feedback_data_store = get_data_manager().get_feedback_data
         self.limit = limit
         logger.info(f"FeedbackDataLoader initialized with limit: {limit}")
-        logger.info(f"Data store file path: {self.feedback_data_store.file_path}")
 
     def load_feedbacks(self) -> Optional[List[FeedbackEntry]]:
         logger.info("=== FEEDBACK LOADING START ===")
@@ -138,7 +137,7 @@ class FeedbackDataLoader:
         try:
             # Load raw feedback data from data manager
             logger.info("Loading feedback data from data manager...")
-            raw_feedbacks = self.feedback_data_store.load_entries(limit=self.limit)
+            raw_feedbacks = self.feedback_data_store(limit=self.limit)
 
             if not raw_feedbacks:
                 logger.warning("No feedback data loaded from data manager")
