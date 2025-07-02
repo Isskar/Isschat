@@ -87,11 +87,18 @@ class ConfluenceChunker(DocumentChunker):
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
 
         # Dynamic chunk sizes based on content type
+        # If chunk_size is provided, use it as the default for all content types
+        default_token_limit = self.config.get("text_chunk_tokens", 1000)
+        if "chunk_size" in self.config:
+            # Convert character-based chunk_size to approximate token limit
+            # Rough approximation: 1 token ≈ 4 characters
+            default_token_limit = max(self.config["chunk_size"] // 4, 10)
+
         self.content_type_limits = {
-            "text": self.config.get("text_chunk_tokens", 1000),
-            "table": self.config.get("table_chunk_tokens", 2000),
-            "list": self.config.get("list_chunk_tokens", 1500),
-            "code": self.config.get("code_chunk_tokens", 1500),
+            "text": self.config.get("text_chunk_tokens", default_token_limit),
+            "table": self.config.get("table_chunk_tokens", int(default_token_limit * 2)),
+            "list": self.config.get("list_chunk_tokens", int(default_token_limit * 1.5)),
+            "code": self.config.get("code_chunk_tokens", int(default_token_limit * 1.5)),
         }
 
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
@@ -794,6 +801,8 @@ class ConfluenceChunker(DocumentChunker):
                 "semantic_boundary": True,
                 "cross_references": cross_references,
                 "reference_count": len(cross_references),
+                "chunk_size": len(content),
+                "is_chunk": True,
             }
         )
 
@@ -837,6 +846,14 @@ class ConfluenceChunker(DocumentChunker):
                 else:
                     current_chunk = [paragraph]
                     current_tokens = para_tokens
+            elif para_tokens > token_limit:
+                # Single paragraph is too large, split it by sentences/words
+                sub_chunks = self._split_large_paragraph(
+                    doc, paragraph, header, content_type, token_limit, start_index + len(chunks)
+                )
+                chunks.extend(sub_chunks)
+                current_chunk = []
+                current_tokens = 0
             else:
                 current_chunk.append(paragraph)
                 current_tokens += para_tokens
@@ -934,3 +951,86 @@ class ConfluenceChunker(DocumentChunker):
             )
 
         return cross_refs
+
+    def _split_large_paragraph(
+        self,
+        doc: Document,
+        paragraph: str,
+        header: Optional[Dict],
+        content_type: str,
+        token_limit: int,
+        start_index: int,
+    ) -> List[Document]:
+        """Split a large paragraph that exceeds token limits."""
+        chunks = []
+
+        # Try to split by sentences first
+        sentences = re.split(r"[.!?]+\s+", paragraph)
+        current_chunk = []
+        current_tokens = 0
+
+        overlap_tokens = self.config.get("chunk_overlap_tokens", 50)
+
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+
+            # Add punctuation back if it was removed
+            if not sentence.endswith((".", "!", "?")):
+                sentence += "."
+
+            sent_tokens = len(self.tokenizer.encode(sentence))
+
+            if current_tokens + sent_tokens > token_limit and current_chunk:
+                # Create chunk from accumulated sentences
+                chunk_text = " ".join(current_chunk)
+                chunk = self._create_chunk(doc, chunk_text, header, content_type, start_index + len(chunks))
+                chunks.append(chunk)
+
+                # Start new chunk with overlap
+                if overlap_tokens > 0 and current_chunk:
+                    overlap_text = current_chunk[-1][-overlap_tokens * 4 :]  # Approximate char count
+                    current_chunk = [overlap_text, sentence]
+                    current_tokens = len(self.tokenizer.encode(overlap_text)) + sent_tokens
+                else:
+                    current_chunk = [sentence]
+                    current_tokens = sent_tokens
+            elif sent_tokens > token_limit:
+                # Single sentence is too large, split by words
+                words = sentence.split()
+                word_chunks = []
+                current_word_chunk = []
+                current_word_tokens = 0
+
+                for word in words:
+                    word_tokens = len(self.tokenizer.encode(word))
+                    if current_word_tokens + word_tokens > token_limit and current_word_chunk:
+                        word_chunks.append(" ".join(current_word_chunk))
+                        current_word_chunk = [word]
+                        current_word_tokens = word_tokens
+                    else:
+                        current_word_chunk.append(word)
+                        current_word_tokens += word_tokens
+
+                if current_word_chunk:
+                    word_chunks.append(" ".join(current_word_chunk))
+
+                # Create chunks from word splits
+                for word_chunk in word_chunks:
+                    chunk = self._create_chunk(doc, word_chunk, header, content_type, start_index + len(chunks))
+                    chunks.append(chunk)
+
+                current_chunk = []
+                current_tokens = 0
+            else:
+                current_chunk.append(sentence)
+                current_tokens += sent_tokens
+
+        # Add remaining content
+        if current_chunk:
+            chunk_text = " ".join(current_chunk)
+            chunk = self._create_chunk(doc, chunk_text, header, content_type, start_index + len(chunks))
+            chunks.append(chunk)
+
+        return chunks

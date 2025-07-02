@@ -1,7 +1,3 @@
-"""
-Tests for the new embeddings service architecture.
-"""
-
 import pytest
 from unittest.mock import Mock, patch
 import numpy as np
