@@ -29,6 +29,22 @@ from src.webapp.components.history_manager import get_history_manager
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
 
+# Initialize embedder at startup
+@st.cache_resource
+def initialize_embedder():
+    """Initialize the embedding service at startup"""
+    from src.embeddings.service import get_embedding_service
+
+    try:
+        embedder = get_embedding_service()
+        # Force model loading by accessing the model property
+        _ = embedder.model
+        return embedder
+    except Exception as e:
+        st.error(f"Failed to initialize embedding service: {str(e)}")
+        raise
+
+
 # Cache the model loading
 @st.cache_resource
 def get_model(rebuild_db=False):
@@ -154,6 +170,13 @@ def main():
 def chat_page():
     # Reset page if necessary
     st.session_state["page"] = "chat"
+
+    # Initialize embedder first
+    try:
+        initialize_embedder()
+    except Exception:
+        st.error("Failed to initialize embedding service. Please check your configuration.")
+        return
 
     # Load the model
     model = get_model()

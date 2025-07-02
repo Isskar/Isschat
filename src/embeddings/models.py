@@ -23,33 +23,40 @@ SUPPORTED_MODELS: Dict[str, ModelInfo] = {
         name="intfloat/multilingual-e5-large",
         dimension=1024,
         max_sequence_length=512,
-        description="Modèle multilingue haute performance",
+        description="",
         recommended_device="cpu",
     ),
     "sentence-transformers/paraphrase-multilingual-mpnet-base-v2": ModelInfo(
         name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
         dimension=768,
         max_sequence_length=512,
-        description="Modèle multilingue haute qualité",
+        description="",
         recommended_device="cpu",
     ),
     "sentence-transformers/all-MiniLM-L12-v2": ModelInfo(
         name="sentence-transformers/all-MiniLM-L12-v2",
         dimension=384,
         max_sequence_length=512,
-        description="Modèle compact et rapide, bon compromis performance/taille",
+        description="",
     ),
     "sentence-transformers/all-mpnet-base-v2": ModelInfo(
         name="sentence-transformers/all-mpnet-base-v2",
         dimension=768,
         max_sequence_length=512,
-        description="Modèle anglais haute performance",
+        description="",
     ),
     "sentence-transformers/all-MiniLM-L6-v2": ModelInfo(
         name="sentence-transformers/all-MiniLM-L6-v2",
         dimension=384,
         max_sequence_length=512,
-        description="Modèle très léger pour des tests rapides",
+        description="",
+    ),
+    "intfloat/multilingual-e5-small": ModelInfo(
+        name="intfloat/multilingual-e5-small",
+        dimension=384,
+        max_sequence_length=512,
+        description="",
+        recommended_device="cpu",
     ),
 }
 
@@ -64,16 +71,9 @@ def get_model_dimension(model_name: str) -> int:
     model_info = get_model_info(model_name)
     if model_info:
         return model_info.dimension
+    from src.core.exceptions import EmbeddingModelNotSelectedError
 
-    # Fallback pour modèles non référencés
-    # Essayer de déduire depuis le nom
-    if "384" in model_name or "MiniLM" in model_name:
-        return 384
-    elif "768" in model_name or "mpnet" in model_name or "multilingual" in model_name:
-        return 768
-    else:
-        # Valeur par défaut conservative
-        return 384
+    raise EmbeddingModelNotSelectedError(list(SUPPORTED_MODELS.keys()))
 
 
 def validate_model_name(model_name: str) -> bool:

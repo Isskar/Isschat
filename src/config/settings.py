@@ -10,7 +10,7 @@ from . import secrets
 class IsschatConfig:
     data_dir: Path = Path("data")
 
-    embeddings_model: str = "intfloat/multilingual-e5-large"
+    embeddings_model: str = "intfloat/multilingual-e5-small"
     embeddings_device: str = "cpu"
     embeddings_batch_size: int = 32
     embeddings_normalize: bool = True
@@ -42,36 +42,40 @@ class IsschatConfig:
 
     @classmethod
     def from_env(cls, env_file: str = ".env") -> "IsschatConfig":
-        """Charger depuis env avec chemins robustes"""
+        """Load configuration from environment with robust defaults"""
         if os.path.exists(env_file):
             load_dotenv(env_file)
 
+        # Create instance with defaults first
+        defaults = cls()
+
         return cls(
-            data_dir=Path(os.getenv("DATA_DIR", "data")),
-            embeddings_model=os.getenv("EMBEDDINGS_MODEL", "intfloat/multilingual-e5-large"),
-            embeddings_device=os.getenv("EMBEDDINGS_DEVICE", "cpu"),
-            embeddings_batch_size=int(os.getenv("EMBEDDINGS_BATCH_SIZE", "32")),
-            embeddings_normalize=os.getenv("EMBEDDINGS_NORMALIZE", "true").lower() == "true",
-            chunk_size=int(os.getenv("CHUNK_SIZE", "1000")),
-            chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "200")),
-            min_chunk_size=int(os.getenv("MIN_CHUNK_SIZE", "100")),
-            vectordb_collection=os.getenv("VECTORDB_COLLECTION", "isschat_docs"),
-            vectordb_index_type=os.getenv("VECTORDB_INDEX_TYPE", "hnsw"),
-            vectordb_host=os.getenv("VECTORDB_HOST", "localhost"),
-            vectordb_port=int(os.getenv("VECTORDB_PORT", "8080")),
-            llm_model=os.getenv("LLM_MODEL", "google/gemini-2.5-flash-lite-preview-06-17"),
-            llm_temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
-            llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", "512")),
-            search_k=int(os.getenv("SEARCH_K", "3")),
-            search_fetch_k=int(os.getenv("SEARCH_FETCH_K", "5")),
-            confluence_api_key=secrets.get_confluence_api_key() or "",
-            confluence_space_key=secrets.get_confluence_space_key() or "",
-            confluence_space_name=secrets.get_confluence_space_name() or "",
-            confluence_email=secrets.get_confluence_email() or "",
-            openrouter_api_key=secrets.get_openrouter_api_key() or "",
-            use_azure_storage=os.getenv("USE_AZURE_STORAGE", "false").lower() == "true",
-            azure_storage_account=secrets.get_azure_storage_account() or "",
-            azure_blob_container=secrets.get_azure_blob_container() or "",
+            data_dir=Path(os.getenv("DATA_DIR", str(defaults.data_dir))),
+            embeddings_model=os.getenv("EMBEDDINGS_MODEL", defaults.embeddings_model),
+            embeddings_device=os.getenv("EMBEDDINGS_DEVICE", defaults.embeddings_device),
+            embeddings_batch_size=int(os.getenv("EMBEDDINGS_BATCH_SIZE", str(defaults.embeddings_batch_size))),
+            embeddings_normalize=os.getenv("EMBEDDINGS_NORMALIZE", str(defaults.embeddings_normalize)).lower()
+            == "true",
+            chunk_size=int(os.getenv("CHUNK_SIZE", str(defaults.chunk_size))),
+            chunk_overlap=int(os.getenv("CHUNK_OVERLAP", str(defaults.chunk_overlap))),
+            min_chunk_size=int(os.getenv("MIN_CHUNK_SIZE", str(defaults.min_chunk_size))),
+            vectordb_collection=os.getenv("VECTORDB_COLLECTION", defaults.vectordb_collection),
+            vectordb_index_type=os.getenv("VECTORDB_INDEX_TYPE", defaults.vectordb_index_type),
+            vectordb_host=os.getenv("VECTORDB_HOST", defaults.vectordb_host),
+            vectordb_port=int(os.getenv("VECTORDB_PORT", str(defaults.vectordb_port))),
+            llm_model=os.getenv("LLM_MODEL", defaults.llm_model),
+            llm_temperature=float(os.getenv("LLM_TEMPERATURE", str(defaults.llm_temperature))),
+            llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", str(defaults.llm_max_tokens))),
+            search_k=int(os.getenv("SEARCH_K", str(defaults.search_k))),
+            search_fetch_k=int(os.getenv("SEARCH_FETCH_K", str(defaults.search_fetch_k))),
+            confluence_api_key=secrets.get_confluence_api_key() or defaults.confluence_api_key,
+            confluence_space_key=secrets.get_confluence_space_key() or defaults.confluence_space_key,
+            confluence_space_name=secrets.get_confluence_space_name() or defaults.confluence_space_name,
+            confluence_email=secrets.get_confluence_email() or defaults.confluence_email,
+            openrouter_api_key=secrets.get_openrouter_api_key() or defaults.openrouter_api_key,
+            use_azure_storage=os.getenv("USE_AZURE_STORAGE", str(defaults.use_azure_storage)).lower() == "true",
+            azure_storage_account=secrets.get_azure_storage_account() or defaults.azure_storage_account,
+            azure_blob_container=secrets.get_azure_blob_container() or defaults.azure_blob_container,
         )
 
     def validate(self) -> bool:
