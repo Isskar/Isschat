@@ -35,7 +35,10 @@ class HTMLReportGenerator:
         """
         if output_path is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = Path(f"rapport_evaluation_{timestamp}.html")
+            output_path = Path("evaluation_results") / f"rapport_evaluation_{timestamp}.html"
+
+        # Ensure evaluation_results directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Filter out excluded categories for main tabs
         filtered_results = self._filter_results(results)
