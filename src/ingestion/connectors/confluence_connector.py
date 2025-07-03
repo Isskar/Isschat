@@ -18,7 +18,6 @@ class ConfluenceConnector(BaseConnector):
         self._validate_required_config()
         self.reader = self._create_reader()
 
-        # Initialiser l'enrichisseur de métadonnées
         self.enricher = None
         self._setup_metadata_enricher()
 
@@ -163,7 +162,6 @@ class ConfluenceConnector(BaseConnector):
                     }
                 )
 
-                # Enrichir les métadonnées si l'enrichisseur est disponible
                 if self.enricher:
                     try:
                         metadata = self.enricher.enrich_document_metadata(metadata)
@@ -171,7 +169,7 @@ class ConfluenceConnector(BaseConnector):
                     except Exception as e:
                         self.logger.warning(f"Échec de l'enrichissement des métadonnées: {e}")
 
-                documents.append(Document(page_content=doc.text, metadata=metadata))
+                documents.append(Document(content=doc.text, metadata=metadata))
             except Exception as e:
                 self.logger.warning(f"Failed to convert document: {e}")
 

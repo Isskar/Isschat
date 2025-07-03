@@ -140,7 +140,20 @@ class DataManager:
         today = datetime.now().strftime("%Y%m%d")
         file_path = self.path_manager.get_feedback_file(today)
 
-        return self._append_entry_to_file(file_path, entry)
+        try:
+            success = self._append_entry_to_file(file_path, entry)
+            if success:
+                self.logger.info(
+                    f"✅ Feedback saved successfully: user={user_id}, conv={conversation_id}, rating={rating}"
+                )
+            else:
+                self.logger.error(
+                    f"❌ Failed to save feedback: user={user_id}, conv={conversation_id}, rating={rating}"
+                )
+            return success
+        except Exception as e:
+            self.logger.error(f"❌ Exception saving feedback: {e}")
+            return False
 
     def save_performance(
         self, operation: str, duration_ms: float, user_id: str, metadata: Optional[Dict] = None
@@ -184,19 +197,24 @@ class DataManager:
         """Retrieve conversation history with robust paths"""
         try:
             conversations_dir = self.path_manager.conversations_dir
+            self.logger.info(f"Loading conversations from: {conversations_dir}")
             all_entries = self._load_entries_from_directory(conversations_dir, "conversations_")
+            self.logger.info(f"Found {len(all_entries)} total conversation entries")
 
             if user_id:
                 all_entries = [e for e in all_entries if e.get("user_id") == user_id]
+                self.logger.info(f"Filtered to {len(all_entries)} entries for user: {user_id}")
 
             if conversation_id:
                 all_entries = [e for e in all_entries if e.get("conversation_id") == conversation_id]
+                self.logger.info(f"Filtered to {len(all_entries)} entries for conversation: {conversation_id}")
 
             all_entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
             if limit > 0:
                 all_entries = all_entries[:limit]
 
+            self.logger.info(f"Returning {len(all_entries)} conversation entries")
             return all_entries
 
         except Exception as e:
@@ -207,16 +225,20 @@ class DataManager:
         """Retrieve feedback data with robust paths"""
         try:
             feedback_dir = self.path_manager.feedback_dir
+            self.logger.info(f"Loading feedback from: {feedback_dir}")
             all_entries = self._load_entries_from_directory(feedback_dir, "feedback_")
+            self.logger.info(f"Found {len(all_entries)} total feedback entries")
 
             if user_id:
                 all_entries = [e for e in all_entries if e.get("user_id") == user_id]
+                self.logger.info(f"Filtered to {len(all_entries)} feedback entries for user: {user_id}")
 
             all_entries.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
             if limit > 0:
                 all_entries = all_entries[:limit]
 
+            self.logger.info(f"Returning {len(all_entries)} feedback entries")
             return all_entries
 
         except Exception as e:
@@ -248,24 +270,41 @@ class DataManager:
         entries = []
 
         try:
+            self.logger.info(f"Checking directory exists: {directory}")
+
             if directory.exists():
-                for file_path in directory.glob(f"{file_prefix}*.jsonl"):
+                files = list(directory.glob(f"{file_prefix}*.jsonl"))
+                self.logger.info(f"Found {len(files)} files matching pattern '{file_prefix}*.jsonl'")
+
+                for file_path in files:
                     relative_path = file_path.relative_to(self.path_manager.data_dir)
+                    self.logger.info(f"Processing file: {relative_path}")
 
                     if self.storage.file_exists(str(relative_path)):
                         content = self.storage.load_text_file(str(relative_path))
                         if content:
-                            for line in content.split("\n"):
+                            lines = content.split("\n")
+                            valid_lines = 0
+                            for line in lines:
                                 if line.strip():
                                     try:
                                         data = json.loads(line.strip())
                                         entries.append(data)
+                                        valid_lines += 1
                                     except json.JSONDecodeError:
                                         continue
+                            self.logger.info(f"Loaded {valid_lines} entries from {relative_path}")
+                        else:
+                            self.logger.warning(f"File {relative_path} exists but content is empty")
+                    else:
+                        self.logger.warning(f"File {relative_path} does not exist in storage")
+            else:
+                self.logger.warning(f"Directory {directory} does not exist")
 
         except Exception as e:
             self.logger.error(f"Error loading from {directory}: {e}")
 
+        self.logger.info(f"Total entries loaded: {len(entries)}")
         return entries
 
     def get_info(self) -> Dict[str, Any]:

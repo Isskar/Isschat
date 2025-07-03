@@ -65,7 +65,7 @@ class TestBaseConnector:
     def test_sync_full_mode(self):
         """Test sync with FULL mode."""
         connector = MockConnector()
-        test_docs = [Document(page_content="test", metadata={})]
+        test_docs = [Document(content="test", metadata={})]
         connector.extract_result = test_docs
 
         result = connector.sync(SyncMode.FULL)
@@ -79,7 +79,7 @@ class TestBaseConnector:
     def test_sync_incremental_mode_success(self):
         """Test sync with INCREMENTAL mode."""
         connector = MockConnector()
-        test_docs = [Document(page_content="test", metadata={})]
+        test_docs = [Document(content="test", metadata={})]
         connector.extract_result = test_docs
 
         since = datetime(2023, 1, 1)
@@ -101,7 +101,7 @@ class TestBaseConnector:
     def test_sync_specific_mode_success(self):
         """Test sync with SPECIFIC mode."""
         connector = MockConnector()
-        test_docs = [Document(page_content="test", metadata={"page_id": "1"})]
+        test_docs = [Document(content="test", metadata={"page_id": "1"})]
         connector.extract_result = test_docs
 
         result = connector.sync(SyncMode.SPECIFIC, document_ids=["1"])
@@ -132,7 +132,7 @@ class TestBaseConnector:
     def test_get_changed_documents_default(self):
         """Test default get_changed_documents implementation."""
         connector = MockConnector()
-        test_docs = [Document(page_content="test", metadata={})]
+        test_docs = [Document(content="test", metadata={})]
         connector.extract_result = test_docs
 
         since = datetime(2023, 1, 1)
@@ -144,9 +144,9 @@ class TestBaseConnector:
         """Test default get_documents_by_ids implementation."""
         connector = MockConnector()
         test_docs = [
-            Document(page_content="test1", metadata={"page_id": "1"}),
-            Document(page_content="test2", metadata={"page_id": "2"}),
-            Document(page_content="test3", metadata={"page_id": "3"}),
+            Document(content="test1", metadata={"page_id": "1"}),
+            Document(content="test2", metadata={"page_id": "2"}),
+            Document(content="test3", metadata={"page_id": "3"}),
         ]
         connector.extract_result = test_docs
 
@@ -274,7 +274,7 @@ class TestConfluenceConnector:
         documents = connector.extract()
 
         assert len(documents) == 1
-        assert documents[0].page_content == "Test content"
+        assert documents[0].content == "Test content"
         assert documents[0].metadata["source"] == "confluence"
         assert documents[0].metadata["space_key"] == "TEST"
 
@@ -320,7 +320,7 @@ class TestConfluenceConnector:
         documents = connector.get_changed_documents(since)
 
         assert len(documents) == 1
-        assert documents[0].page_content == "Updated content"
+        assert documents[0].content == "Updated content"
 
     @patch("src.ingestion.connectors.confluence_connector.ConfluenceReader")
     def test_supports_incremental_and_specific(self, mock_reader_class):

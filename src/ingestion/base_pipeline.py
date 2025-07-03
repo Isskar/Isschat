@@ -10,7 +10,7 @@ from typing import List, Dict, Any
 
 from ..config import get_config
 from ..embeddings import get_embedding_service
-from ..vectordb import VectorDBFactory, Document as VectorDocument
+from ..vectordb import VectorDBFactory, VectorDocument
 from ..core.interfaces import Document
 from .processors.chunker import DocumentChunker
 
@@ -85,7 +85,7 @@ class BaseIngestionPipeline(ABC):
 
     def generate_embeddings(self, chunks: List[Document]) -> List[List[float]]:
         """Generate embeddings for chunks."""
-        texts = [chunk.page_content for chunk in chunks]
+        texts = [chunk.content for chunk in chunks]
 
         self.logger.info(f"🔢 Generating embeddings for {len(texts)} chunks")
         embeddings_array = self.embedding_service.encode_texts(texts, show_progress=True)
@@ -105,16 +105,16 @@ class BaseIngestionPipeline(ABC):
             metadata.update(
                 {
                     "source": self.get_source_name(),
-                    "chunk_length": len(chunk.page_content),
+                    "chunk_length": len(chunk.content),
                     "embedding_model": self.embedding_service.model_name,
                     "ingestion_timestamp": time.time(),
                 }
             )
 
             # Générer un ID déterministe
-            doc_id = self._generate_document_id(chunk.page_content, metadata, idx)
+            doc_id = self._generate_document_id(chunk.content, metadata, idx)
 
-            vector_doc = VectorDocument(id=doc_id, content=chunk.page_content, metadata=metadata)
+            vector_doc = VectorDocument(id=doc_id, content=chunk.content, metadata=metadata)
             vector_docs.append(vector_doc)
 
         self.logger.info(f"💾 Storing {len(vector_docs)} documents in vector database")

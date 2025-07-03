@@ -51,7 +51,7 @@ class PostProcessor:
         Returns:
             Document: Processed document
         """
-        content = document.page_content
+        content = document.content
         metadata = document.metadata.copy()
 
         if self.clean_whitespace:
@@ -69,7 +69,7 @@ class PostProcessor:
                 processing_steps.append("content_enrichment")
             metadata.update({"processed": True, "processing_steps": processing_steps})
 
-        return Document(page_content=content, metadata=metadata)
+        return Document(content=content, metadata=metadata)
 
     def _clean_whitespace(self, text: str) -> str:
         """
@@ -148,8 +148,8 @@ class PostProcessor:
         Returns:
             Dict: Processing statistics
         """
-        original_total_length = sum(len(doc.page_content) for doc in original_docs)
-        processed_total_length = sum(len(doc.page_content) for doc in processed_docs)
+        original_total_length = sum(len(doc.content) for doc in original_docs)
+        processed_total_length = sum(len(doc.content) for doc in processed_docs)
 
         return {
             "original_count": len(original_docs),
