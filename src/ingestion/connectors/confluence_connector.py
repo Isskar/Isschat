@@ -32,24 +32,24 @@ class ConfluenceConnector(BaseConnector):
         self.include_attachments = None
 
     def _setup_metadata_enricher(self) -> None:
-        """Configure l'enrichisseur de métadonnées"""
+        """Configure the metadata enricher"""
         try:
-            # Récupérer l'URL de base sans /wiki pour l'enrichisseur
+            # Get the base URL without /wiki for the enricher
             base_url_for_enricher = self.config.get("confluence_space_name", "")
 
             self.enricher = ConfluenceMetadataEnricher(
                 base_url=base_url_for_enricher, username=self.username, api_token=self.api_token
             )
 
-            # Tester la connexion
+            # Test the connection
             if self.enricher.test_connection():
-                self.logger.info("Enrichisseur de métadonnées initialisé avec succès")
+                self.logger.info("Metadata enricher initialized successfully")
             else:
-                self.logger.warning("Enrichisseur de métadonnées non disponible (API inaccessible)")
+                self.logger.warning("Metadata enricher not available (API inaccessible)")
                 self.enricher = None
 
         except Exception as e:
-            self.logger.warning(f"Impossible d'initialiser l'enrichisseur de métadonnées: {e}")
+            self.logger.warning(f"Unable to initialize metadata enricher: {e}")
             self.enricher = None
 
     def _validate_required_config(self) -> None:
@@ -152,7 +152,7 @@ class ConfluenceConnector(BaseConnector):
             try:
                 metadata = doc.metadata.copy()
 
-                # Métadonnées de base
+                # Base metadata
                 metadata.update(
                     {
                         "source": "confluence",
@@ -165,16 +165,16 @@ class ConfluenceConnector(BaseConnector):
                 if self.enricher:
                     try:
                         metadata = self.enricher.enrich_document_metadata(metadata)
-                        self.logger.debug(f"Métadonnées enrichies pour la page {metadata.get('page_id', 'unknown')}")
+                        self.logger.debug(f"Enriched metadata for page {metadata.get('page_id', 'unknown')}")
                     except Exception as e:
-                        self.logger.warning(f"Échec de l'enrichissement des métadonnées: {e}")
+                        self.logger.warning(f"Failed to enrich metadata: {e}")
 
                 documents.append(Document(content=doc.text, metadata=metadata))
             except Exception as e:
                 self.logger.warning(f"Failed to convert document: {e}")
 
         if self.enricher:
-            self.logger.info(f"Converted {len(documents)} documents avec métadonnées enrichies")
+            self.logger.info(f"Converted {len(documents)} documents with enriched metadata")
         else:
             self.logger.info(f"Converted {len(documents)} documents")
         return documents

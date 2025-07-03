@@ -540,11 +540,11 @@ class ConfluenceChunker(DocumentChunker):
         # Add header if first row looks like headers
         if parsed_rows:
             first_row = parsed_rows[0]
-            table_content += f"En-têtes: {' | '.join(first_row)}\n\n"
+            table_content += f"Headers: {' | '.join(first_row)}\n\n"
 
             # Add data rows
             for i, row in enumerate(parsed_rows[1:], 1):
-                table_content += f"Ligne {i}: {' | '.join(row)}\n"
+                table_content += f"Row {i}: {' | '.join(row)}\n"
 
         return table_content
 
@@ -573,11 +573,11 @@ class ConfluenceChunker(DocumentChunker):
         if parsed_rows:
             # First row is usually headers in markdown tables
             headers = parsed_rows[0]
-            table_content += f"En-têtes: {' | '.join(headers)}\n\n"
+            table_content += f"Headers: {' | '.join(headers)}\n\n"
 
             # Add data rows
             for i, row in enumerate(parsed_rows[1:], 1):
-                table_content += f"Ligne {i}: {' | '.join(row)}\n"
+                table_content += f"Row {i}: {' | '.join(row)}\n"
 
         return table_content
 
@@ -590,7 +590,7 @@ class ConfluenceChunker(DocumentChunker):
         """Generate contextual information for a chunk with enriched metadata."""
         context_parts = []
 
-        # Document et hiérarchie enrichie
+        # Document and enriched hierarchy
         if metadata.get("hierarchy_breadcrumb"):
             context_parts.append(f"Document: {metadata.get('hierarchy_breadcrumb')}")
         else:
@@ -603,45 +603,45 @@ class ConfluenceChunker(DocumentChunker):
             if title_parts:
                 context_parts.append(f"Document: {' > '.join(title_parts)}")
 
-        # Espace
+        # Space
         if metadata.get("space_key"):
-            context_parts.append(f"Espace: {metadata['space_key']}")
+            context_parts.append(f"Space: {metadata['space_key']}")
 
-        # Auteur enrichi
+        # Enriched author
         if metadata.get("author_name"):
-            context_parts.append(f"Auteur: {metadata.get('author_name')}")
+            context_parts.append(f"Author: {metadata.get('author_name')}")
 
-        # Contributeurs
+        # Contributors
         contributors_names = metadata.get("contributors_names", [])
         if contributors_names:
-            # Limiter à 3 contributeurs pour éviter un contexte trop long
+            # Limit to 3 contributors to avoid context being too long
             contrib_display = contributors_names[:3]
             if len(contributors_names) > 3:
-                contrib_display.append(f"+ {len(contributors_names) - 3} autres")
-            context_parts.append(f"Contributeurs: {', '.join(contrib_display)}")
+                contrib_display.append(f"+ {len(contributors_names) - 3} others")
+            context_parts.append(f"Contributors: {', '.join(contrib_display)}")
 
-        # Dates enrichies
+        # Enriched dates
         created_date = metadata.get("created_date")
         if created_date:
             created = created_date[:10]  # YYYY-MM-DD
-            context_parts.append(f"Créé: {created}")
+            context_parts.append(f"Created: {created}")
 
         last_modified_date = metadata.get("last_modified_date")
         if last_modified_date:
             modified = last_modified_date[:10]  # YYYY-MM-DD
-            context_parts.append(f"Modifié: {modified}")
+            context_parts.append(f"Modified: {modified}")
 
         # URL
         if metadata.get("url"):
             context_parts.append(f"URL: {metadata['url']}")
 
-        # Section actuelle
+        # Current section
         if metadata.get("hierarchy_path") and metadata.get("hierarchy_path") != "Root":
             context_parts.append(f"Section: {metadata['hierarchy_path']}")
         elif metadata.get("section_path"):
             context_parts.append(f"Section: {metadata['section_path']}")
 
-        # Type de contenu
+        # Content type
         if metadata.get("content_type") and metadata.get("content_type") != "text":
             context_parts.append(f"Type: {metadata['content_type']}")
 
@@ -652,7 +652,7 @@ class ConfluenceChunker(DocumentChunker):
         if context_parts:
             return f"[{' | '.join(context_parts)}]"
 
-        return "[Contexte non disponible]"
+        return "[Context not available]"
 
     # Helper methods for semantic chunking
 
