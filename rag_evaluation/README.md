@@ -70,7 +70,7 @@ uv run --extra evaluation rag_evaluation/main.py --html-report
 
 2. **Added test datasets to DVC**:
    ```bash
-   dvc add --no-scm rag_evaluation/config/test_datasets
+   dvc add rag_evaluation/config/test_datasets
    ```
 
 3. **Configured Azure remote**:
