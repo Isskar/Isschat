@@ -5,6 +5,7 @@ from llama_index.readers.confluence import ConfluenceReader
 
 
 from src.ingestion.connectors.base_connector import BaseConnector
+from src.ingestion.connectors.metadata_enricher import ConfluenceMetadataEnricher
 from src.core.interfaces import Document
 
 
@@ -17,6 +18,10 @@ class ConfluenceConnector(BaseConnector):
         self._validate_required_config()
         self.reader = self._create_reader()
 
+        # Initialiser l'enrichisseur de métadonnées
+        self.enricher = None
+        self._setup_metadata_enricher()
+
     def _setup_connection_config(self, config: Dict[str, Any]) -> None:
         space_name = config.get("confluence_space_name", "")
         self.base_url = f"{space_name}/wiki"
@@ -26,6 +31,27 @@ class ConfluenceConnector(BaseConnector):
         self.space_key = config.get("confluence_space_key")
 
         self.include_attachments = None
+
+    def _setup_metadata_enricher(self) -> None:
+        """Configure l'enrichisseur de métadonnées"""
+        try:
+            # Récupérer l'URL de base sans /wiki pour l'enrichisseur
+            base_url_for_enricher = self.config.get("confluence_space_name", "")
+
+            self.enricher = ConfluenceMetadataEnricher(
+                base_url=base_url_for_enricher, username=self.username, api_token=self.api_token
+            )
+
+            # Tester la connexion
+            if self.enricher.test_connection():
+                self.logger.info("Enrichisseur de métadonnées initialisé avec succès")
+            else:
+                self.logger.warning("Enrichisseur de métadonnées non disponible (API inaccessible)")
+                self.enricher = None
+
+        except Exception as e:
+            self.logger.warning(f"Impossible d'initialiser l'enrichisseur de métadonnées: {e}")
+            self.enricher = None
 
     def _validate_required_config(self) -> None:
         if not self.base_url:
@@ -127,6 +153,7 @@ class ConfluenceConnector(BaseConnector):
             try:
                 metadata = doc.metadata.copy()
 
+                # Métadonnées de base
                 metadata.update(
                     {
                         "source": "confluence",
@@ -136,9 +163,20 @@ class ConfluenceConnector(BaseConnector):
                     }
                 )
 
+                # Enrichir les métadonnées si l'enrichisseur est disponible
+                if self.enricher:
+                    try:
+                        metadata = self.enricher.enrich_document_metadata(metadata)
+                        self.logger.debug(f"Métadonnées enrichies pour la page {metadata.get('page_id', 'unknown')}")
+                    except Exception as e:
+                        self.logger.warning(f"Échec de l'enrichissement des métadonnées: {e}")
+
                 documents.append(Document(page_content=doc.text, metadata=metadata))
             except Exception as e:
                 self.logger.warning(f"Failed to convert document: {e}")
 
-        self.logger.info(f"Converted {len(documents)} documents")
+        if self.enricher:
+            self.logger.info(f"Converted {len(documents)} documents avec métadonnées enrichies")
+        else:
+            self.logger.info(f"Converted {len(documents)} documents")
         return documents

@@ -587,38 +587,65 @@ class ConfluenceChunker(DocumentChunker):
         return f"{context_info}\n\n{content}"
 
     def _get_document_context(self, metadata: Dict[str, Any]) -> str:
-        """Generate contextual information for a chunk."""
+        """Generate contextual information for a chunk with enriched metadata."""
         context_parts = []
 
-        # Document title with hierarchy
-        title_parts = []
-        if metadata.get("parent_title"):
-            title_parts.append(metadata["parent_title"])
-        if metadata.get("title"):
-            title_parts.append(metadata["title"])
+        # Document et hiérarchie enrichie
+        if metadata.get("hierarchy_breadcrumb"):
+            context_parts.append(f"Document: {metadata.get('hierarchy_breadcrumb')}")
+        else:
+            # Fallback to legacy format
+            title_parts = []
+            if metadata.get("parent_title"):
+                title_parts.append(metadata["parent_title"])
+            if metadata.get("title"):
+                title_parts.append(metadata["title"])
+            if title_parts:
+                context_parts.append(f"Document: {' > '.join(title_parts)}")
 
-        if title_parts:
-            context_parts.append(f"Document: {' > '.join(title_parts)}")
-
-        # Space information (for Confluence)
+        # Espace
         if metadata.get("space_key"):
             context_parts.append(f"Espace: {metadata['space_key']}")
 
-        # URL/Path information
+        # Auteur enrichi
+        if metadata.get("author_name"):
+            context_parts.append(f"Auteur: {metadata.get('author_name')}")
+
+        # Contributeurs
+        contributors_names = metadata.get("contributors_names", [])
+        if contributors_names:
+            # Limiter à 3 contributeurs pour éviter un contexte trop long
+            contrib_display = contributors_names[:3]
+            if len(contributors_names) > 3:
+                contrib_display.append(f"+ {len(contributors_names) - 3} autres")
+            context_parts.append(f"Contributeurs: {', '.join(contrib_display)}")
+
+        # Dates enrichies
+        created_date = metadata.get("created_date")
+        if created_date:
+            created = created_date[:10]  # YYYY-MM-DD
+            context_parts.append(f"Créé: {created}")
+
+        last_modified_date = metadata.get("last_modified_date")
+        if last_modified_date:
+            modified = last_modified_date[:10]  # YYYY-MM-DD
+            context_parts.append(f"Modifié: {modified}")
+
+        # URL
         if metadata.get("url"):
             context_parts.append(f"URL: {metadata['url']}")
 
-        # Hierarchy information (for hierarchical chunks)
+        # Section actuelle
         if metadata.get("hierarchy_path") and metadata.get("hierarchy_path") != "Root":
             context_parts.append(f"Section: {metadata['hierarchy_path']}")
         elif metadata.get("section_path"):
             context_parts.append(f"Section: {metadata['section_path']}")
 
-        # Content type information
+        # Type de contenu
         if metadata.get("content_type") and metadata.get("content_type") != "text":
             context_parts.append(f"Type: {metadata['content_type']}")
 
-        # Source information
+        # Source
         if metadata.get("source"):
             context_parts.append(f"Source: {metadata['source']}")
 
