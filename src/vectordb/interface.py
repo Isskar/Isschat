@@ -5,31 +5,15 @@ Supports both Qdrant and FAISS implementations.
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
 
-
-@dataclass
-class Document:
-    """Simple document representation"""
-
-    id: Optional[str] = None
-    content: str = ""
-    metadata: Optional[Dict[str, Any]] = None
-
-
-@dataclass
-class SearchResult:
-    """Search result with document and score"""
-
-    document: Document
-    score: float
+from ..core.documents import VectorDocument, SearchResult
 
 
 class VectorDatabase(ABC):
     """Vector database interface"""
 
     @abstractmethod
-    def add_documents(self, documents: List[Document], embeddings: List[List[float]]) -> None:
+    def add_documents(self, documents: List[VectorDocument], embeddings: List[List[float]]) -> None:
         """Add documents with their embeddings to the database"""
         pass
 

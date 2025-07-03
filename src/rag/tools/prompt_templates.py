@@ -1,22 +1,24 @@
-"""
-Prompt templates for different generation scenarios.
-"""
-
-from typing import Dict
+from datetime import datetime
 
 
 class PromptTemplates:
     """Collection of prompt templates for the RAG system."""
 
     @staticmethod
-    def get_default_template() -> str:
-        """Get the default prompt template with balanced confidence."""
-        return """
-=== RÔLE ET MISSION ===
-Vous êtes ISSCHAT, un assistant virtuel spécialisé dans l'accompagnement professionnel.
+    def system_prompt() -> str:
+        return f"""=== RÔLE ET MISSION ===
+Tu es ISSCHAT, un assistant virtuel spécialisé dans l'accompagnement professionnel.
 En tant qu'assitant virtuel, vous vous efforcez d'être utile, précis et accessible
 tout en maintenant un ton professionnel et chaleureux.
+Pour information, la date d'aujourd'hui est le {datetime.now().strftime("%d/%m/%Y")}
+        """
 
+    @staticmethod
+    def get_default_template() -> str:
+        """Get the default prompt template with balanced confidence."""
+        return (
+            PromptTemplates.system_prompt()
+            + """
 === CONTEXTE DE LA CONVERSATION ===
 Historique des échanges :
 -----
@@ -54,17 +56,14 @@ Documents fournies :
 Question : {query}
 Réponse :
         """
+        )
 
     @staticmethod
     def get_high_confidence_template() -> str:
         """Template for high-confidence responses with reliable sources."""
-        return """
-=== RÔLE ET MISSION ===
-Vous êtes ISSCHAT, un assistant virtuel spécialisé dans l'accompagnement professionnel.
-En tant qu'assitant virtuel, vous vous efforcez d'être utile, précis et accessible
-tout en maintenant un ton professionnel et chaleureux.
-
-=== CONTEXTE DE LA CONVERSATION ===
+        return (
+            PromptTemplates.system_prompt()
+            + """=== CONTEXTE DE LA CONVERSATION ===
 Historique des échanges :
 -----
 {history}
@@ -101,17 +100,14 @@ Documents fournies :
 Question : {query}
 Réponse :
         """
+        )
 
     @staticmethod
     def get_low_confidence_template() -> str:
         """Template for low-confidence responses with unreliable or missing sources."""
-        return """
-=== RÔLE ET MISSION ===
-Vous êtes ISSCHAT, un assistant virtuel spécialisé dans l'accompagnement professionnel.
-En tant qu'assitant virtuel, vous vous efforcez d'être utile, précis et accessible
-tout en maintenant un ton professionnel et chaleureux.
-
-=== CONTEXTE DE LA CONVERSATION ===
+        return (
+            PromptTemplates.system_prompt()
+            + """=== CONTEXTE DE LA CONVERSATION ===
 Historique des échanges :
 -----
 {history}
@@ -157,13 +153,21 @@ Quand l'information des documents fournies est insuffisante :
 Question : {query}
 Réponse :
         """
+        )
 
     @staticmethod
     def get_no_context_template() -> str:
         """Template when no relevant documents are found."""
-        return """Tu es ISSCHAT, assistant virtuel de la documentation Confluence.
+        return (
+            PromptTemplates.system_prompt()
+            + """=== CONTEXTE DE LA CONVERSATION ===
+Historique des échanges :
+-----
+{history}
+-----
 
-Je n'ai trouvé aucun document pertinent pour répondre à : "{query}"
+=== SOURCES DOCUMENTAIRES ===
+Pas de documents trouvés
 
 Peux-tu reformuler ta question ou être plus spécifique ? Par exemple :
 - Utilise des synonymes ou termes alternatifs
@@ -171,17 +175,4 @@ Peux-tu reformuler ta question ou être plus spécifique ? Par exemple :
 - Décompose ta question en plusieurs parties
 
 RÉPONSE :"""
-
-    @staticmethod
-    def get_available_templates() -> Dict[str, str]:
-        """
-        Get list of available template types.
-
-        Returns:
-            Dictionary mapping template names to descriptions
-        """
-        return {
-            "default": "Template équilibré pour usage général",
-            "high_confidence": "Template pour sources fiables et vérifiées",
-            "low_confidence": "Template pour sources limitées ou incertaines",
-        }
+        )

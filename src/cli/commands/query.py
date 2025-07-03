@@ -64,8 +64,8 @@ def query(
             generation_tool = GenerationTool()
             context_docs = []
             for chunk in results:
-                if hasattr(chunk, "page_content"):
-                    content = chunk.page_content
+                if hasattr(chunk, "content"):
+                    content = chunk.content
                 else:
                     content = str(chunk)
 
@@ -159,8 +159,8 @@ def query(
                 click.echo("\n📝 Content:")
                 click.echo("-" * 80)
                 content = None
-                if hasattr(chunk, "page_content"):
-                    content = chunk.page_content
+                if hasattr(chunk, "content"):
+                    content = chunk.content
                 elif hasattr(chunk, "document") and hasattr(chunk.document, "content"):
                     content = chunk.document.content
                 elif hasattr(chunk, "content"):

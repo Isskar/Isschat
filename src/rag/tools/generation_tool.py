@@ -1,46 +1,36 @@
-"""
-Unified generation tool.
-Replaces generation_tool.py with unified config.
-"""
-
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import logging
 import requests
 
 from ...config import get_config
 from src.rag.tools.prompt_templates import PromptTemplates
+from ...core.documents import RetrievalDocument
 
 
 class GenerationTool:
-    """Generation tool using unified config"""
-
     def __init__(self):
-        """Initialize with unified config"""
         self.config = get_config()
         self.logger = logging.getLogger(self.__class__.__name__)
 
         if not self.config.openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY required for generation")
 
-    def generate(
-        self, query: str, documents: List, scores: Optional[List[float]] = None, history: str = ""
-    ) -> Dict[str, Any]:
+    def generate(self, query: str, documents: List[RetrievalDocument], history: str = "") -> Dict[str, Any]:
         """
         Generate response from query and retrieved documents
 
         Args:
             query: User query
-            documents: Retrieved documents (SearchResult or Document)
-            scores: Relevance scores
+            documents: Retrieved documents with scores
             history: Conversation history
 
         Returns:
             Dict with answer, sources, etc.
         """
         try:
-            context = self._prepare_context(documents, scores)
+            context = self._prepare_context(documents)
 
-            avg_score = sum(scores) / len(scores) if scores else 0.0
+            avg_score = sum(doc.score for doc in documents) / len(documents) if documents else 0.0
             prompt = self._build_prompt(query, context, history, avg_score)
 
             llm_response = self._call_openrouter(prompt)
@@ -66,39 +56,31 @@ class GenerationTool:
                 "error": str(e),
             }
 
-    def _prepare_context(self, documents: List, scores: Optional[List[float]] = None) -> str:
-        """Prepare context from retrieved documents"""
+    def _prepare_context(self, documents: List[RetrievalDocument]) -> str:
         if not documents:
             return "No relevant documents found."
 
-        context_parts = []
-        for i, doc in enumerate(documents):
-            if hasattr(doc, "document"):
-                content = doc.document.content
-                title = doc.document.metadata.get("title", f"Document {i + 1}")
-            else:
-                content = getattr(doc, "content", getattr(doc, "page_content", str(doc)))
-                title = getattr(doc, "metadata", {}).get("title", f"Document {i + 1}")
-
-            score_info = f" (score: {scores[i]:.3f})" if scores and i < len(scores) else ""
-
-            context_parts.append(f"## {title}{score_info}\n{content[:800]}...")
-
+        # Adjust max content length based on number of documents to fit in context window
+        max_content_per_doc = max(400, 2000 // len(documents)) if documents else 800
+        context_parts = [doc.to_context_section(max_content_per_doc) for doc in documents]
         return "\n\n".join(context_parts)
 
     def _build_prompt(self, query: str, context: str, history: str = "", avg_score: float = 0.0) -> str:
         """Build prompt based on context quality"""
+        history_section = f"{history}\n" if history.strip() else ""
 
-        if context == "No relevant documents found.":
-            return PromptTemplates.get_no_context_template().format(query=query)
+        if avg_score < 0.3:
+            return PromptTemplates.get_no_context_template().format(query=query, history=history)
 
-        elif avg_score > 0 and avg_score < 0.4:
-            return PromptTemplates.get_low_confidence_template().format(query=query, context=context)
+        elif avg_score < 0.5:
+            return PromptTemplates.get_low_confidence_template().format(query=query, context=context, history=history)
 
+        elif avg_score > 0.8:
+            return PromptTemplates.get_high_confidence_template().format(
+                context=context, history=history_section, query=query
+            )
         else:
-            base_prompt = PromptTemplates.get_default_template()
-            history_section = f"{history}\n" if history.strip() else ""
-            return base_prompt.format(context=context, history=history_section, query=query)
+            return PromptTemplates.get_default_template().format(context=context, history=history_section, query=query)
 
     def _call_openrouter(self, prompt: str) -> Dict[str, Any]:
         """Call OpenRouter API"""
@@ -134,36 +116,29 @@ class GenerationTool:
         except (KeyError, IndexError) as e:
             raise RuntimeError(f"Invalid OpenRouter response format: {e}")
 
-    def _format_sources(self, documents: List) -> str:
+    def _format_sources(self, documents: List[RetrievalDocument]) -> str:
         """Format sources for display"""
         if not documents:
             return "No sources"
+        # Deduplicate sources based on title and URL
+        seen_sources = set()
+        unique_sources = []
 
-        sources = []
-        for i, doc in enumerate(documents[:3]):
-            if hasattr(doc, "document"):
-                title = doc.document.metadata.get("title", f"Document {i + 1}")
-                url = doc.document.metadata.get("url", "")
-            else:
-                metadata = getattr(doc, "metadata", {})
-                title = metadata.get("title", f"Document {i + 1}")
-                url = metadata.get("url", "")
+        for doc in documents:
+            source_key = (doc.title, doc.url)
+            if source_key not in seen_sources:
+                seen_sources.add(source_key)
+                unique_sources.append(doc.to_source_link())
 
-            if url:
-                sources.append(f"[{title}]({url})")
-            else:
-                sources.append(title)
-
-        return " • ".join(sources)
+        return " • ".join(unique_sources)
 
     def is_ready(self) -> bool:
-        """Check if the tool is ready"""
         return bool(self.config.openrouter_api_key)
 
     def get_stats(self) -> Dict[str, Any]:
         """Generation tool statistics"""
         return {
-            "type": "unified_generation_tool",
+            "type": "generation_tool",
             "ready": self.is_ready(),
             "config": {
                 "llm_model": self.config.llm_model,

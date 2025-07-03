@@ -19,6 +19,8 @@ class PathManager:
     @property
     def data_dir(self) -> Path:
         """Absolute and robust data path"""
+        if self.config is None:
+            return self.project_root / "data"
         if self.config.data_dir.is_absolute():
             return self.config.data_dir
         return self.project_root / self.config.data_dir

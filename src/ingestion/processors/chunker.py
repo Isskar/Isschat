@@ -24,7 +24,7 @@ class DocumentChunker:
         return self.chunk_documents([document])
 
     def _split_document(self, document: Document) -> List[Document]:
-        content = document.page_content
+        content = document.content
 
         if len(content) <= self.chunk_size:
             return [document]
@@ -50,7 +50,7 @@ class DocumentChunker:
 
                 # Add contextual information to chunk content
                 enriched_content = self._add_context_to_chunk(chunk_text, chunk_metadata)
-                chunks.append(Document(page_content=enriched_content, metadata=chunk_metadata))
+                chunks.append(Document(content=enriched_content, metadata=chunk_metadata))
                 chunk_index += 1
 
             start = max(start + 1, end - self.chunk_overlap)
@@ -116,7 +116,7 @@ class ConfluenceChunker(DocumentChunker):
         chunked_docs = []
 
         for doc in documents:
-            text = doc.page_content
+            text = doc.content
             sections = []
 
             # First, extract and process tables separately
@@ -169,7 +169,7 @@ class ConfluenceChunker(DocumentChunker):
 
                     # Add contextual information to chunk content
                     enriched_content = self._add_context_to_chunk(section, metadata)
-                    chunked_docs.append(Document(page_content=enriched_content, metadata=metadata))
+                    chunked_docs.append(Document(content=enriched_content, metadata=metadata))
 
         return chunked_docs
 
@@ -179,7 +179,7 @@ class ConfluenceChunker(DocumentChunker):
 
         for doc in documents:
             # Extract document structure
-            structure = self._analyze_document_structure(doc.page_content)
+            structure = self._analyze_document_structure(doc.content)
 
             # Create chunks based on semantic boundaries
             semantic_chunks = self._create_semantic_chunks(doc, structure)
@@ -251,7 +251,7 @@ class ConfluenceChunker(DocumentChunker):
     def _create_semantic_chunks(self, doc: Document, structure: Dict[str, Any]) -> List[Document]:
         """Create semantic chunks based on document structure and token limits."""
         chunks = []
-        text = doc.page_content
+        text = doc.content
         headers = structure["headers"]
 
         if not headers:
@@ -290,7 +290,7 @@ class ConfluenceChunker(DocumentChunker):
     def _chunk_by_content_type(self, doc: Document, structure: Dict[str, Any]) -> List[Document]:
         """Chunk document by content type when no headers are present."""
         chunks = []
-        text = doc.page_content
+        text = doc.content
 
         # Extract all structured content (tables, lists, code blocks)
         structured_content = []
@@ -339,7 +339,7 @@ class ConfluenceChunker(DocumentChunker):
         chunked_docs = []
 
         for doc in documents:
-            hierarchical_chunks = self._create_hierarchical_chunks(doc.page_content)
+            hierarchical_chunks = self._create_hierarchical_chunks(doc.content)
 
             for chunk_data in hierarchical_chunks:
                 metadata = doc.metadata.copy()
@@ -356,7 +356,7 @@ class ConfluenceChunker(DocumentChunker):
 
                 # Add contextual information to chunk content
                 enriched_content = self._add_context_to_chunk(chunk_data["content"], metadata)
-                chunked_docs.append(Document(page_content=enriched_content, metadata=metadata))
+                chunked_docs.append(Document(content=enriched_content, metadata=metadata))
 
         return chunked_docs
 
@@ -809,7 +809,7 @@ class ConfluenceChunker(DocumentChunker):
         # Add contextual information
         enriched_content = self._add_context_to_chunk(content, metadata)
 
-        return Document(page_content=enriched_content, metadata=metadata)
+        return Document(content=enriched_content, metadata=metadata)
 
     def _split_large_section(
         self, doc: Document, text: str, header: Optional[Dict], content_type: str, token_limit: int, start_index: int
