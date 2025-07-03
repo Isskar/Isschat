@@ -66,10 +66,10 @@ def mock_embeddings():
 @pytest.fixture
 def sample_documents():
     """Provide sample documents for testing."""
-    from src.vectordb.interface import Document
+    from src.core.documents import BaseDocument
 
     return [
-        Document(
+        BaseDocument(
             content="Ceci est le premier document de test avec du contenu substantiel pour tester le chunking.",  # noqa
             metadata={
                 "title": "Document 1",
@@ -80,7 +80,7 @@ def sample_documents():
                 "url": "https://test.atlassian.net/doc1",
             },
         ),
-        Document(
+        BaseDocument(
             content="Ceci est le deuxième document de test avec des informations importantes sur l'architecture.",
             metadata={
                 "title": "Document 2",

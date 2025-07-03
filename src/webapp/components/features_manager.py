@@ -120,14 +120,14 @@ class FeedbackSystem:
             content_hash = abs(hash(question + answer))
 
         def feedback_callback(response):
-            # Protection contre les soumissions multiples
+            # Protection against multiple submissions
             feedback_key = f"feedback_submitted_{conversation_id}_{content_hash}"
             if feedback_key in st.session_state:
-                st.info("Feedback déjà enregistré pour cette réponse.")
+                st.info("Feedback already recorded for this response.")
                 return
 
             try:
-                # Sauvegarder dans le data manager d'abord
+                # Save to data manager first
                 try:
                     from src.storage.data_manager import get_data_manager
 
@@ -158,24 +158,24 @@ class FeedbackSystem:
                         },
                     )
                     if success:
-                        st.success("✅ Merci pour votre feedback !")
-                        # Marquer comme soumis pour éviter les doublons
+                        st.success("✅ Thank you for your feedback!")
+                        # Mark as submitted to avoid duplicates
                         st.session_state[feedback_key] = True
                         self.logger.info(
                             f"✅ Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
                         )
                     else:
-                        st.error("❌ Impossible de sauvegarder le feedback. Veuillez réessayer.")
+                        st.error("❌ Unable to save feedback. Please try again.")
                         self.logger.error(
                             f"❌ Failed to save feedback: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
                         )
 
                 except Exception as e:
-                    st.error(f"❌ Erreur lors de la sauvegarde: {e}")
+                    st.error(f"❌ Error during save: {e}")
                     self.logger.error(f"Error saving feedback via data_manager: {e}")
 
             except Exception as e:
-                st.error(f"❌ Erreur lors de la sauvegarde du feedback: {e}")
+                st.error(f"❌ Error saving feedback: {e}")
                 self.logger.error(f"Error saving feedback via data_manager: {e}")
 
             # Force Streamlit to update the UI
