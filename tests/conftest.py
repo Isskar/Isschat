@@ -70,7 +70,7 @@ def sample_documents():
 
     return [
         BaseDocument(
-            content="Ceci est le premier document de test avec du contenu substantiel pour tester le chunking.",  # noqa
+            content="Ceci est le premier document de test avec du contenu substantiel pour tester le chunking.",
             metadata={
                 "title": "Document 1",
                 "source": "confluence",
