@@ -5,6 +5,7 @@ Retrieval evaluator for testing document retrieval performance
 import time
 import logging
 import math
+import re
 from typing import List, Dict, Any, Tuple, Optional
 
 from rag_evaluation.core.base_evaluator import TestCase, EvaluationStatus, EvaluationResult
@@ -104,6 +105,15 @@ class RetrievalEvaluator(BaseEvaluator):
             metadata=test_case.metadata,
         )
 
+    def _extract_page_id(self, url: str) -> str:
+        """Extract page ID from Confluence URL using regex"""
+        if not url:
+            return ""
+
+        # Extract pages/number from URL
+        match = re.search(r"pages/(\d+)", url)
+        return match.group(1) if match else url
+
     def _calculate_retrieval_metrics(self, expected_docs: List[Dict], retrieved_docs: List[Dict]) -> Dict[str, Any]:
         """Calculate comprehensive retrieval performance metrics"""
 
@@ -127,25 +137,25 @@ class RetrievalEvaluator(BaseEvaluator):
                 "ndcg_at_5": 1.0 if not retrieved_docs else 0.0,
             }
 
-        # Extract URLs for comparison
-        expected_urls = {doc["url"] for doc in expected_docs}
-        retrieved_urls = [doc.get("url", "") for doc in retrieved_docs]
+        # Extract page IDs for comparison
+        expected_page_ids = {self._extract_page_id(doc["url"]) for doc in expected_docs}
+        retrieved_page_ids = [self._extract_page_id(doc.get("url", "")) for doc in retrieved_docs]
 
         # Calculate basic precision and recall
-        relevant_retrieved = expected_urls.intersection(set(retrieved_urls))
-        precision = len(relevant_retrieved) / len(retrieved_urls) if retrieved_urls else 0.0
-        recall = len(relevant_retrieved) / len(expected_urls) if expected_urls else 0.0
+        relevant_retrieved = expected_page_ids.intersection(set(retrieved_page_ids))
+        precision = len(relevant_retrieved) / len(retrieved_page_ids) if retrieved_page_ids else 0.0
+        recall = len(relevant_retrieved) / len(expected_page_ids) if expected_page_ids else 0.0
         f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
 
         # Calculate Precision@K and Recall@K
-        precision_at_k = self._calculate_precision_at_k(expected_urls, retrieved_urls)
-        recall_at_k = self._calculate_recall_at_k(expected_urls, retrieved_urls)
+        precision_at_k = self._calculate_precision_at_k(expected_page_ids, retrieved_page_ids)
+        recall_at_k = self._calculate_recall_at_k(expected_page_ids, retrieved_page_ids)
 
         # Calculate Mean Reciprocal Rank (MRR)
-        mrr = self._calculate_mrr(expected_urls, retrieved_urls)
+        mrr = self._calculate_mrr(expected_page_ids, retrieved_page_ids)
 
         # Calculate Mean Average Precision (MAP)
-        map_score = self._calculate_map(expected_urls, retrieved_urls)
+        map_score = self._calculate_map(expected_page_ids, retrieved_page_ids)
 
         # Calculate NDCG@K
         ndcg_scores = self._calculate_ndcg(expected_docs, retrieved_docs)
@@ -172,66 +182,68 @@ class RetrievalEvaluator(BaseEvaluator):
             **ndcg_scores,
         }
 
-    def _calculate_precision_at_k(self, expected_urls: set, retrieved_urls: List[str]) -> Dict[str, float]:
+    def _calculate_precision_at_k(self, expected_page_ids: set, retrieved_page_ids: List[str]) -> Dict[str, float]:
         """Calculate Precision@K for K=1,3,5"""
         precision_at_k = {}
 
         for k in [1, 3, 5]:
-            if len(retrieved_urls) >= k:
-                relevant_at_k = sum(1 for url in retrieved_urls[:k] if url in expected_urls)
+            if len(retrieved_page_ids) >= k:
+                relevant_at_k = sum(1 for page_id in retrieved_page_ids[:k] if page_id in expected_page_ids)
                 precision_at_k[f"precision_at_{k}"] = relevant_at_k / k
             else:
                 # If we have fewer than k results, calculate based on what we have
-                relevant_at_k = sum(1 for url in retrieved_urls if url in expected_urls)
-                precision_at_k[f"precision_at_{k}"] = relevant_at_k / len(retrieved_urls) if retrieved_urls else 0.0
+                relevant_at_k = sum(1 for page_id in retrieved_page_ids if page_id in expected_page_ids)
+                precision_at_k[f"precision_at_{k}"] = (
+                    relevant_at_k / len(retrieved_page_ids) if retrieved_page_ids else 0.0
+                )
 
         return precision_at_k
 
-    def _calculate_recall_at_k(self, expected_urls: set, retrieved_urls: List[str]) -> Dict[str, float]:
+    def _calculate_recall_at_k(self, expected_page_ids: set, retrieved_page_ids: List[str]) -> Dict[str, float]:
         """Calculate Recall@K for K=1,3,5"""
         recall_at_k = {}
 
         for k in [1, 3, 5]:
-            relevant_at_k = sum(1 for url in retrieved_urls[:k] if url in expected_urls)
-            recall_at_k[f"recall_at_{k}"] = relevant_at_k / len(expected_urls) if expected_urls else 0.0
+            relevant_at_k = sum(1 for page_id in retrieved_page_ids[:k] if page_id in expected_page_ids)
+            recall_at_k[f"recall_at_{k}"] = relevant_at_k / len(expected_page_ids) if expected_page_ids else 0.0
 
         return recall_at_k
 
-    def _calculate_mrr(self, expected_urls: set, retrieved_urls: List[str]) -> float:
+    def _calculate_mrr(self, expected_page_ids: set, retrieved_page_ids: List[str]) -> float:
         """Calculate Mean Reciprocal Rank"""
-        for i, url in enumerate(retrieved_urls):
-            if url in expected_urls:
+        for i, page_id in enumerate(retrieved_page_ids):
+            if page_id in expected_page_ids:
                 return 1.0 / (i + 1)
         return 0.0
 
-    def _calculate_map(self, expected_urls: set, retrieved_urls: List[str]) -> float:
+    def _calculate_map(self, expected_page_ids: set, retrieved_page_ids: List[str]) -> float:
         """Calculate Mean Average Precision"""
-        if not expected_urls:
+        if not expected_page_ids:
             return 0.0
 
         relevant_count = 0
         precision_sum = 0.0
 
-        for i, url in enumerate(retrieved_urls):
-            if url in expected_urls:
+        for i, page_id in enumerate(retrieved_page_ids):
+            if page_id in expected_page_ids:
                 relevant_count += 1
                 precision_at_i = relevant_count / (i + 1)
                 precision_sum += precision_at_i
 
-        return precision_sum / len(expected_urls) if expected_urls else 0.0
+        return precision_sum / len(expected_page_ids) if expected_page_ids else 0.0
 
     def _calculate_ndcg(self, expected_docs: List[Dict], retrieved_docs: List[Dict]) -> Dict[str, float]:
         """Calculate Normalized Discounted Cumulative Gain at K=5"""
         ndcg_scores = {}
 
         # Create relevance mapping (1 for relevant, 0 for not relevant)
-        expected_urls = {doc["url"] for doc in expected_docs}
+        expected_page_ids = {self._extract_page_id(doc["url"]) for doc in expected_docs}
 
         for k in [5]:
             dcg = 0.0
             for i, doc in enumerate(retrieved_docs[:k]):
-                url = doc.get("url", "")
-                relevance = 1.0 if url in expected_urls else 0.0
+                page_id = self._extract_page_id(doc.get("url", ""))
+                relevance = 1.0 if page_id in expected_page_ids else 0.0
                 if i == 0:
                     dcg += relevance
                 else:
@@ -261,15 +273,17 @@ class RetrievalEvaluator(BaseEvaluator):
         if not has_ranking_info:
             return 1.0  # No ranking requirements
 
-        # Create mapping of URL to expected rank
-        expected_ranks = {doc["url"]: doc.get("expected_rank", float("inf")) for doc in expected_docs}
+        # Create mapping of page ID to expected rank
+        expected_ranks = {
+            self._extract_page_id(doc["url"]): doc.get("expected_rank", float("inf")) for doc in expected_docs
+        }
 
         # Calculate NDCG-like score
         dcg = 0.0
         for i, retrieved_doc in enumerate(retrieved_docs[:5]):  # Top 5
-            url = retrieved_doc.get("url", "")
-            if url in expected_ranks:
-                relevance = 1.0 / expected_ranks[url]  # Higher relevance for lower expected rank
+            page_id = self._extract_page_id(retrieved_doc.get("url", ""))
+            if page_id in expected_ranks:
+                relevance = 1.0 / expected_ranks[page_id]  # Higher relevance for lower expected rank
                 dcg += relevance / (i + 1)  # Discounted by position
 
         # Ideal DCG (if documents were in perfect order)
