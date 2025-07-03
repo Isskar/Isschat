@@ -61,6 +61,10 @@ class FeedbackSystem:
     """Handles user feedback collection and storage."""
 
     def __init__(self, storage_service=None, feedback_file: Optional[str] = None):
+        import logging
+
+        self.logger = logging.getLogger(self.__class__.__name__)
+
         if storage_service is None:
             from src.storage.data_manager import get_data_manager
 
@@ -109,10 +113,19 @@ class FeedbackSystem:
         Returns:
             Dict: Feedback response if provided, otherwise None.
         """
-        content_hash = abs(hash(question + answer))
+        # Generate stable key based on conversation ID and content
+        if conversation_id:
+            content_hash = abs(hash(f"{conversation_id}_{question}_{answer}"))
+        else:
+            content_hash = abs(hash(question + answer))
 
         def feedback_callback(response):
-            print(f"Feedback received: {response}")
+            # Protection contre les soumissions multiples
+            feedback_key = f"feedback_submitted_{conversation_id}_{content_hash}"
+            if feedback_key in st.session_state:
+                st.info("Feedback déjà enregistré pour cette réponse.")
+                return
+
             try:
                 # Sauvegarder dans le data manager d'abord
                 try:
@@ -132,7 +145,7 @@ class FeedbackSystem:
                         comment = response.get("text", "")
 
                     # Save feedback via data_manager (JSONL format)
-                    data_manager.save_feedback(
+                    success = data_manager.save_feedback(
                         user_id=user_id,
                         conversation_id=conversation_id,  # Pass conversation_id
                         rating=rating,
@@ -144,23 +157,36 @@ class FeedbackSystem:
                             "sources": sources,
                         },
                     )
-                    print(
-                        f"Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
-                    )
+                    if success:
+                        st.success("✅ Merci pour votre feedback !")
+                        # Marquer comme soumis pour éviter les doublons
+                        st.session_state[feedback_key] = True
+                        self.logger.info(
+                            f"✅ Feedback saved via data_manager: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
+                        )
+                    else:
+                        st.error("❌ Impossible de sauvegarder le feedback. Veuillez réessayer.")
+                        self.logger.error(
+                            f"❌ Failed to save feedback: rating={rating}, conversation_id={conversation_id}, user_id={user_id}"  # noqa
+                        )
+
                 except Exception as e:
-                    print(f"Error saving feedback via data_manager: {e}")
+                    st.error(f"❌ Erreur lors de la sauvegarde: {e}")
+                    self.logger.error(f"Error saving feedback via data_manager: {e}")
 
             except Exception as e:
-                print(f"Error saving feedback via data_manager: {e}")
+                st.error(f"❌ Erreur lors de la sauvegarde du feedback: {e}")
+                self.logger.error(f"Error saving feedback via data_manager: {e}")
 
-            # Note: Removed st.rerun() to prevent callback interruption
+            # Force Streamlit to update the UI
+            st.rerun()
 
         try:
             feedback_response = streamlit_feedback(
                 feedback_type="thumbs",
                 optional_text_label="Comment (optional):",
                 align="flex-start",
-                key=f"feedback_widget_{content_hash}",
+                key=f"feedback_{conversation_id}_{content_hash}_{key_suffix}",
                 on_submit=feedback_callback,
             )
 

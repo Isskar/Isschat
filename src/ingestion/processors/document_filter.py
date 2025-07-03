@@ -49,7 +49,7 @@ class DocumentFilter:
         Returns:
             bool: True if document is valid
         """
-        content = document.page_content.strip()
+        content = document.content.strip()
 
         # Check length
         if len(content) < self.min_length or len(content) > self.max_length:

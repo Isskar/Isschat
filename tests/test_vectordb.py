@@ -1,15 +1,16 @@
 import pytest
 from unittest.mock import Mock, patch
-from src.vectordb.interface import VectorDatabase, Document, SearchResult
+from src.vectordb.interface import VectorDatabase
+from src.core.documents import VectorDocument, SearchResult
 from src.vectordb.weaviate_client import WeaviateVectorDB
 
 
-class TestDocument:
-    """Tests for Document dataclass."""
+class TestVectorDocument:
+    """Tests for VectorDocument dataclass."""
 
     def test_document_creation(self):
         """Test document creation."""
-        doc = Document(id="test-1", content="Test content", metadata={"source": "test"})
+        doc = VectorDocument(id="test-1", content="Test content", metadata={"source": "test"})
 
         assert doc.id == "test-1"
         assert doc.content == "Test content"
@@ -17,11 +18,11 @@ class TestDocument:
 
     def test_document_defaults(self):
         """Test document with default values."""
-        doc = Document()
+        doc = VectorDocument(content="Test", metadata={})
 
         assert doc.id is None
-        assert doc.content == ""
-        assert doc.metadata is None
+        assert doc.content == "Test"
+        assert doc.metadata == {}
 
 
 class TestSearchResult:
@@ -29,7 +30,7 @@ class TestSearchResult:
 
     def test_search_result_creation(self):
         """Test search result creation."""
-        doc = Document(id="test-1", content="Test content")
+        doc = VectorDocument(id="test-1", content="Test content", metadata={})
         result = SearchResult(document=doc, score=0.85)
 
         assert result.document == doc
@@ -71,7 +72,7 @@ class TestVectorDatabase:
         """Test mock implementation works correctly."""
         db = MockVectorDatabase()
 
-        docs = [Document(id="1", content="test")]
+        docs = [VectorDocument(id="1", content="test", metadata={})]
         embeddings = [[0.1, 0.2, 0.3]]
 
         db.add_documents(docs, embeddings)
@@ -175,7 +176,7 @@ class TestWeaviateVectorDB:
         """Test adding documents with mismatched embeddings length."""
         db = WeaviateVectorDB.__new__(WeaviateVectorDB)  # Skip __init__
 
-        docs = [Document(id="1", content="test")]
+        docs = [VectorDocument(id="1", content="test", metadata={})]
         embeddings = [[0.1, 0.2], [0.3, 0.4]]  # Different length
 
         with pytest.raises(ValueError, match="Number of documents != number of embeddings"):

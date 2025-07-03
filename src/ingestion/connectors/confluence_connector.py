@@ -136,7 +136,7 @@ class ConfluenceConnector(BaseConnector):
                     }
                 )
 
-                documents.append(Document(page_content=doc.text, metadata=metadata))
+                documents.append(Document(content=doc.text, metadata=metadata))
             except Exception as e:
                 self.logger.warning(f"Failed to convert document: {e}")
 

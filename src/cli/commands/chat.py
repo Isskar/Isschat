@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 
 from ...rag.pipeline import RAGPipelineFactory
+from ...storage.data_manager import get_data_manager
 
 
 class ChatSession:
@@ -14,6 +15,7 @@ class ChatSession:
 
     def __init__(self):
         self.pipeline = None
+        self.data_manager = None
         self.user_id = "cli_user"
         self.conversation_id = f"cli_{int(datetime.now().timestamp())}"
         self.history = []
@@ -23,6 +25,7 @@ class ChatSession:
         try:
             click.echo("🔧 Initializing RAG pipeline...")
             self.pipeline = RAGPipelineFactory.create_default_pipeline()
+            self.data_manager = get_data_manager()
 
             if not self.pipeline.is_ready():
                 click.echo("⚠️ Vector database empty or not accessible")
@@ -183,7 +186,7 @@ class ChatSession:
                 rating = rating_input.lower()
                 comment = input("   Comment (optional): ").strip()
 
-                success = self.pipeline.save_feedback(
+                success = self.data_manager.save_feedback(
                     user_id=self.user_id, conversation_id=self.conversation_id, rating=rating, comment=comment
                 )
 

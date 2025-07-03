@@ -9,7 +9,8 @@ import weaviate
 from weaviate.classes.config import Configure, Property, VectorDistances, DataType
 from weaviate.classes.query import Filter
 
-from .interface import VectorDatabase, Document, SearchResult
+from .interface import VectorDatabase
+from ..core.documents import VectorDocument, SearchResult
 from ..config import get_config
 from ..config.secrets import get_weaviate_api_key, get_weaviate_url
 
@@ -19,7 +20,7 @@ class WeaviateVectorDB(VectorDatabase):
 
     def __init__(self, collection_name: Optional[str] = None, embedding_dim: Optional[int] = None):
         """
-        Initialize Weaviate client with unified config
+        Initialize Weaviate client
 
         Args:
             collection_name: Collection name (otherwise uses config)
@@ -94,7 +95,7 @@ class WeaviateVectorDB(VectorDatabase):
         except Exception:
             return False
 
-    def add_documents(self, documents: List[Document], embeddings: List[List[float]]) -> None:
+    def add_documents(self, documents: List[VectorDocument], embeddings: List[List[float]]) -> None:
         """Add documents with embeddings optimized by batch"""
         if len(documents) != len(embeddings):
             raise ValueError("Number of documents != number of embeddings")
@@ -199,7 +200,7 @@ class WeaviateVectorDB(VectorDatabase):
                 # Remaining properties become metadata
                 metadata = properties
 
-                document = Document(id=original_doc_id, content=content, metadata=metadata)
+                document = VectorDocument(id=original_doc_id, content=content, metadata=metadata)
 
                 # Convert distance to similarity score (1 - distance for cosine)
                 score = 1.0 - obj.metadata.distance if obj.metadata.distance else 1.0

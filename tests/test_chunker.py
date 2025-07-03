@@ -24,22 +24,22 @@ class TestDocumentChunker:
     def test_chunk_documents_single_small_doc(self):
         """Test chunking single small document."""
         chunker = DocumentChunker()
-        doc = Document(page_content="Short content", metadata={"title": "Test"})
+        doc = Document(content="Short content", metadata={"title": "Test"})
 
         result = chunker.chunk_documents([doc])
 
         assert len(result) == 1
-        assert result[0].page_content == "Short content"
+        assert result[0].content == "Short content"
 
     def test_chunk_document_convenience_method(self):
         """Test chunk_document convenience method."""
         chunker = DocumentChunker()
-        doc = Document(page_content="Test content", metadata={"title": "Test"})
+        doc = Document(content="Test content", metadata={"title": "Test"})
 
         result = chunker.chunk_document(doc)
 
         assert len(result) == 1
-        assert result[0].page_content == "Test content"
+        assert result[0].content == "Test content"
 
     def test_chunk_documents_large_doc(self):
         """Test chunking large document."""
@@ -50,7 +50,7 @@ class TestDocumentChunker:
 
         # Create content longer than chunk_size
         long_content = "This is a very long document that should be split into multiple chunks. " * 10
-        doc = Document(page_content=long_content, metadata={"title": "Long Doc"})
+        doc = Document(content=long_content, metadata={"title": "Long Doc"})
 
         result = chunker.chunk_documents([doc])
 
@@ -63,11 +63,11 @@ class TestDocumentChunker:
     def test_get_chunking_stats(self):
         """Test chunking statistics calculation."""
         chunker = DocumentChunker()
-        original_docs = [Document(page_content="doc1", metadata={}), Document(page_content="doc2", metadata={})]
+        original_docs = [Document(content="doc1", metadata={}), Document(content="doc2", metadata={})]
         chunks = [
-            Document(page_content="chunk1", metadata={}),
-            Document(page_content="chunk2", metadata={}),
-            Document(page_content="chunk3", metadata={}),
+            Document(content="chunk1", metadata={}),
+            Document(content="chunk2", metadata={}),
+            Document(content="chunk3", metadata={}),
         ]
 
         stats = chunker.get_chunking_stats(original_docs, chunks)
@@ -128,7 +128,7 @@ class TestConfluenceChunker:
             chunker = ConfluenceChunker(strategy="confluence_sections")
             # Use longer content that meets minimum viable section length
             content = "# Header 1\n" + "Content 1 " * 20 + "\n# Header 2\n" + "Content 2 " * 20
-            doc = Document(page_content=content, metadata={"title": "Test"})
+            doc = Document(content=content, metadata={"title": "Test"})
 
             result = chunker.chunk_documents([doc])
 
@@ -144,7 +144,7 @@ class TestConfluenceChunker:
 
             chunker = ConfluenceChunker(strategy="hierarchical")
             doc = Document(
-                page_content="# Main Header\nContent under main\n## Sub Header\nSub content", metadata={"title": "Test"}
+                content="# Main Header\nContent under main\n## Sub Header\nSub content", metadata={"title": "Test"}
             )
 
             result = chunker.chunk_documents([doc])
