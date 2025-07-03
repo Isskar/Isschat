@@ -46,8 +46,15 @@ class WeaviateVectorDB(VectorDatabase):
             raise ValueError("WEAVIATE_API_KEY and WEAVIATE_URL must be configured")
 
         auth_credentials = weaviate.auth.AuthApiKey(api_key=weaviate_api_key)
+
+        # Configure timeouts to prevent "Deadline Exceeded" errors (connection, query)
+        timeout_config = weaviate.config.AdditionalConfig(timeout_config=(10, 60))
+
         self.client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=weaviate_url, auth_credentials=auth_credentials, skip_init_checks=True
+            cluster_url=weaviate_url,
+            auth_credentials=auth_credentials,
+            skip_init_checks=True,
+            additional_config=timeout_config,
         )
         self.logger.info(f"Weaviate client connected: localhost:{self.config.vectordb_port or 8080}")
 

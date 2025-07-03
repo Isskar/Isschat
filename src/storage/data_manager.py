@@ -270,18 +270,21 @@ class DataManager:
         entries = []
 
         try:
-            self.logger.info(f"Checking directory exists: {directory}")
+            # Use storage abstraction for directory existence check
+            relative_dir = directory.relative_to(self.path_manager.data_dir)
+            self.logger.info(f"Checking directory exists: {relative_dir}")
 
-            if directory.exists():
-                files = list(directory.glob(f"{file_prefix}*.jsonl"))
+            # Use storage service to check directory existence instead of local filesystem
+            if self.storage.directory_exists(str(relative_dir)):
+                # List files using storage service
+                files = self.storage.list_files(str(relative_dir), f"{file_prefix}*.jsonl")
                 self.logger.info(f"Found {len(files)} files matching pattern '{file_prefix}*.jsonl'")
 
                 for file_path in files:
-                    relative_path = file_path.relative_to(self.path_manager.data_dir)
-                    self.logger.info(f"Processing file: {relative_path}")
+                    self.logger.info(f"Processing file: {file_path}")
 
-                    if self.storage.file_exists(str(relative_path)):
-                        content = self.storage.load_text_file(str(relative_path))
+                    if self.storage.file_exists(file_path):
+                        content = self.storage.load_text_file(file_path)
                         if content:
                             lines = content.split("\n")
                             valid_lines = 0
@@ -293,13 +296,13 @@ class DataManager:
                                         valid_lines += 1
                                     except json.JSONDecodeError:
                                         continue
-                            self.logger.info(f"Loaded {valid_lines} entries from {relative_path}")
+                            self.logger.info(f"Loaded {valid_lines} entries from {file_path}")
                         else:
-                            self.logger.warning(f"File {relative_path} exists but content is empty")
+                            self.logger.warning(f"File {file_path} exists but content is empty")
                     else:
-                        self.logger.warning(f"File {relative_path} does not exist in storage")
+                        self.logger.warning(f"File {file_path} does not exist in storage")
             else:
-                self.logger.warning(f"Directory {directory} does not exist")
+                self.logger.info(f"Directory {relative_dir} does not exist or is empty")
 
         except Exception as e:
             self.logger.error(f"Error loading from {directory}: {e}")
