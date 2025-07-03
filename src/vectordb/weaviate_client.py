@@ -48,9 +48,7 @@ class WeaviateVectorDB(VectorDatabase):
         auth_credentials = weaviate.auth.AuthApiKey(api_key=weaviate_api_key)
 
         # Configure timeouts to prevent "Deadline Exceeded" errors (connection, query)
-        timeout_config = weaviate.config.AdditionalConfig(
-            timeout=weaviate.config.Timeout(init=10, query=60, insert=120)
-        )
+        timeout_config = weaviate.config.AdditionalConfig(weaviate.config.Timeout(init=10, query=60, insert=120))
 
         self.client = weaviate.connect_to_weaviate_cloud(
             cluster_url=weaviate_url,
