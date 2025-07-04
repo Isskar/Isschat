@@ -71,8 +71,8 @@ class WeaviateVectorDB(VectorDatabase):
                         bm25_k1=1.2,
                     ),
                     properties=[
-                        Property(name="content", data_type=wvc.config.DataType.TEXT),
-                        Property(name="original_doc_id", data_type=wvc.config.DataType.TEXT),
+                        Property(name="content", data_type=wvc.config.DataType.TEXT),  # type: ignore[unknown-argument]
+                        Property(name="original_doc_id", data_type=wvc.config.DataType.TEXT),  # type: ignore[unknown-argument]
                     ],
                 )
 
