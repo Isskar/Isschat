@@ -61,7 +61,8 @@ class GenerationTool:
             return "No relevant documents found."
 
         # Adjust max content length based on number of documents to fit in context window
-        max_content_per_doc = max(400, 2000 // len(documents)) if documents else 800
+        # Reduced for smaller Confluence pages to avoid truncation
+        max_content_per_doc = max(300, 1500 // len(documents)) if documents else 600
         context_parts = [doc.to_context_section(max_content_per_doc) for doc in documents]
         return "\n\n".join(context_parts)
 
@@ -69,18 +70,7 @@ class GenerationTool:
         """Build prompt based on context quality"""
         history_section = f"{history}\n" if history.strip() else ""
 
-        if avg_score < 0.3:
-            return PromptTemplates.get_no_context_template().format(query=query, history=history)
-
-        elif avg_score < 0.5:
-            return PromptTemplates.get_low_confidence_template().format(query=query, context=context, history=history)
-
-        elif avg_score > 0.8:
-            return PromptTemplates.get_high_confidence_template().format(
-                context=context, history=history_section, query=query
-            )
-        else:
-            return PromptTemplates.get_default_template().format(context=context, history=history_section, query=query)
+        return PromptTemplates.get_default_template().format(context=context, history=history_section, query=query)
 
     def _call_openrouter(self, prompt: str) -> Dict[str, Any]:
         """Call OpenRouter API"""

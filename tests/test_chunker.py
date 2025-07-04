@@ -10,8 +10,8 @@ class TestDocumentChunker:
         """Test initialization with default config."""
         chunker = DocumentChunker()
 
-        assert chunker.chunk_size == 1000
-        assert chunker.chunk_overlap == 200
+        assert chunker.chunk_size == 400
+        assert chunker.chunk_overlap == 80
 
     def test_init_custom_config(self):
         """Test initialization with custom config."""
