@@ -123,8 +123,9 @@ class AzureStorage(StorageInterface):
         try:
             container_client = self.blob_service_client.get_container_client(self.container_name)
             # Check if any blobs exist with this prefix
-            blobs = container_client.list_blobs(name_starts_with=directory_path, max_results=1)
-            return any(True for _ in blobs)
+            blobs = container_client.list_blobs(name_starts_with=directory_path)
+            # Take only the first result to check existence
+            return next(iter(blobs), None) is not None
         except Exception as e:
             logging.error(f"Error checking directory existence in Azure {directory_path}: {e}")
             return False

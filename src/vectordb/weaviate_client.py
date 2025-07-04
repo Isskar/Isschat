@@ -70,8 +70,8 @@ class WeaviateVectorDB(VectorDatabase):
                         bm25_k1=1.2,
                     ),
                     properties=[
-                        Property(name="content", dataType=DataType.TEXT),
-                        Property(name="original_doc_id", dataType=DataType.TEXT),
+                        Property(name="content", data_type=DataType.TEXT),
+                        Property(name="original_doc_id", data_type=DataType.TEXT),
                     ],
                 )
 
