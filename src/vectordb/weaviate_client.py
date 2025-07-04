@@ -6,7 +6,8 @@ import logging
 from typing import List, Dict, Any, Optional
 
 import weaviate
-from weaviate.classes.config import Configure, Property, VectorDistances, DataType
+from weaviate.classes.config import Configure, Property, VectorDistances
+import weaviate.classes as wvc
 from weaviate.classes.query import Filter
 
 from .interface import VectorDatabase
@@ -77,8 +78,8 @@ class WeaviateVectorDB(VectorDatabase):
                         bm25_k1=1.2,
                     ),
                     properties=[
-                        Property(name="content", dataType=DataType.TEXT),
-                        Property(name="original_doc_id", dataType=DataType.TEXT),
+                        Property(name="content", data_type=wvc.config.DataType.TEXT),  # type: ignore[unknown-argument]
+                        Property(name="original_doc_id", data_type=wvc.config.DataType.TEXT),  # type: ignore[unknown-argument]
                     ],
                 )
 
