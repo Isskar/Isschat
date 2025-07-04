@@ -9,8 +9,8 @@ class DocumentChunker:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
-        self.chunk_size = self.config.get("chunk_size", 1000)
-        self.chunk_overlap = self.config.get("chunk_overlap", 200)
+        self.chunk_size = self.config.get("chunk_size", 400)  # Reduced for Confluence pages
+        self.chunk_overlap = self.config.get("chunk_overlap", 80)  # Proportional reduction
 
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
         chunked_docs = []
@@ -46,7 +46,7 @@ class DocumentChunker:
             chunk_text = content[start:end].strip()
             if chunk_text:
                 chunk_metadata = document.metadata.copy()
-                chunk_metadata.update({"chunk_index": chunk_index, "chunk_size": len(chunk_text), "is_chunk": True})
+                chunk_metadata.update({"chunk_index": chunk_index, "chunk_size": self.chunk_size, "is_chunk": True})
 
                 # Add contextual information to chunk content
                 enriched_content = self._add_context_to_chunk(chunk_text, chunk_metadata)
@@ -87,18 +87,20 @@ class ConfluenceChunker(DocumentChunker):
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
 
         # Dynamic chunk sizes based on content type
-        # If chunk_size is provided, use it as the default for all content types
-        default_token_limit = self.config.get("text_chunk_tokens", 1000)
+        # Use token-based limits with fallback to character-based conversion
         if "chunk_size" in self.config:
             # Convert character-based chunk_size to approximate token limit
             # Rough approximation: 1 token ≈ 4 characters
-            default_token_limit = max(self.config["chunk_size"] // 4, 10)
+            default_token_limit = max(self.config["chunk_size"] // 4, 100)
+        else:
+            # Reduced default for Confluence pages (30-40 lines typically = 200-300 tokens)
+            default_token_limit = self.config.get("text_chunk_tokens", 250)
 
         self.content_type_limits = {
             "text": self.config.get("text_chunk_tokens", default_token_limit),
-            "table": self.config.get("table_chunk_tokens", int(default_token_limit * 2)),
-            "list": self.config.get("list_chunk_tokens", int(default_token_limit * 1.5)),
-            "code": self.config.get("code_chunk_tokens", int(default_token_limit * 1.5)),
+            "table": self.config.get("table_chunk_tokens", int(default_token_limit * 2)),  # 500 tokens
+            "list": self.config.get("list_chunk_tokens", int(default_token_limit * 1.5)),  # 375 tokens
+            "code": self.config.get("code_chunk_tokens", int(default_token_limit * 1.5)),  # 375 tokens
         }
 
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
@@ -823,12 +825,12 @@ class ConfluenceChunker(DocumentChunker):
                 "content_type": content_type,
                 "content_length": len(content),
                 "token_count": len(self.tokenizer.encode(content)),
+                "chunk_size": self.content_type_limits.get(content_type, self.content_type_limits["text"]),
                 "hierarchy_path": " > ".join(hierarchy_path) if hierarchy_path else "Root",
                 "header_level": header["level"] if header else 0,
                 "semantic_boundary": True,
                 "cross_references": cross_references,
                 "reference_count": len(cross_references),
-                "chunk_size": len(content),
                 "is_chunk": True,
             }
         )
