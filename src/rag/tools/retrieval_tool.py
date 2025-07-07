@@ -145,7 +145,7 @@ class RetrievalTool:
                 "query": test_query,
                 "results_count": len(results),
                 "scores": [r.score for r in results] if results else [],
-                "sample_content": results[0].document.content[:100] + "..." if results else None,
+                "sample_content": results[0].content[:100] + "..." if results else None,
             }
 
         except Exception as e:
