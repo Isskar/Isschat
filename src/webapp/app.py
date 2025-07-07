@@ -13,7 +13,6 @@ from typing import Optional
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from src.config.settings import get_config
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -25,6 +24,7 @@ except RuntimeError:
 from src.rag.pipeline import RAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
+from src.webapp.auth.azure_auth import AzureADAuth
 
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
 
@@ -101,16 +101,29 @@ def admin_required(func):
     return wrapper
 
 
+# Initialize Azure AD authentication globally
+@st.cache_resource
+def get_auth():
+    """Get Azure AD authentication instance"""
+    try:
+        return AzureADAuth()
+    except ValueError as e:
+        st.error(f"Authentication configuration error: {str(e)}")
+        st.stop()
+
+
 # User interface initialization
 def main():
-    if "user" not in st.session_state:
-        # Create or retrieve admin user immediately
-        config = get_config()
-        email = config.confluence_email or "admin@auto.login"
+    # Get authentication instance
+    auth = get_auth()
 
-        # Auto-create user session (simplified approach like in reference file)
-        st.session_state["user"] = {"email": email, "id": 1, "is_admin": True}
-        st.session_state["user_id"] = "user_1"
+    # Check if user is authenticated
+    if not auth.is_authenticated():
+        auth.show_login_page()
+        return
+
+    # Initialize page if not set
+    if "page" not in st.session_state:
         st.session_state["page"] = "chat"
 
     # Sidebar for navigation and options
@@ -118,7 +131,9 @@ def main():
         st.image("logo.png", width=300)
 
         # Always display user info
-        st.success(f"Connected as: {st.session_state['user']['email']}")
+        user_info = st.session_state.get("user", {})
+        if user_info:
+            st.success(f"🟢 Connecté en tant que: {user_info['email']}")
 
         # Main navigation
         st.subheader("Navigation")
@@ -147,8 +162,13 @@ def main():
                 st.session_state["page"] = "dashboard"
                 st.rerun()
 
-        # Close Button
+        # Logout Button
         st.divider()
+        if st.button("Logout", key="nav_logout", type="primary", use_container_width=True):
+            auth.logout()
+            st.rerun()
+
+        # Close Button
         if st.button("Close App", key="nav_close_app"):
             st.warning("Shutting down the Streamlit app...")
             time.sleep(1)

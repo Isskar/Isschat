@@ -25,6 +25,11 @@ SECRET_MAPPING = {
     # Azure Storage (these might be managed differently as they're often part of the infrastructure)
     "AZURE_STORAGE_ACCOUNT": "AZURE-STORAGE-ACCOUNT",
     "AZURE_BLOB_CONTAINER_NAME": "AZURE-BLOB-CONTAINER-NAME",
+    # Azure AD Authentication
+    "STREAMLIT_AZURE_CLIENT_ID": "STREAMLIT-AZURE-CLIENT-ID",
+    "STREAMLIT_AZURE_CLIENT_SECRET": "STREAMLIT-AZURE-CLIENT-SECRET",
+    "STREAMLIT_AZURE_TENANT_ID": "STREAMLIT-AZURE-TENANT-ID",
+    "STREAMLIT_AZURE_REDIRECT_URI": "STREAMLIT-AZURE-REDIRECT-URI",
 }
 
 
@@ -97,3 +102,24 @@ def get_azure_storage_account() -> Optional[str]:
 def get_azure_blob_container() -> Optional[str]:
     """Get Azure blob container name."""
     return get_secret_value("AZURE_BLOB_CONTAINER_NAME")
+
+
+# Azure AD Authentication secrets
+def get_azure_ad_client_id() -> Optional[str]:
+    """Get Azure AD client ID."""
+    return get_secret_value("STREAMLIT_AZURE_CLIENT_ID")
+
+
+def get_azure_ad_client_secret() -> Optional[str]:
+    """Get Azure AD client secret."""
+    return get_secret_value("STREAMLIT_AZURE_CLIENT_SECRET")
+
+
+def get_azure_ad_tenant_id() -> Optional[str]:
+    """Get Azure AD tenant ID."""
+    return get_secret_value("STREAMLIT_AZURE_TENANT_ID")
+
+
+def get_azure_ad_redirect_uri() -> Optional[str]:
+    """Get Azure AD redirect URI."""
+    return get_secret_value("STREAMLIT_AZURE_REDIRECT_URI")
