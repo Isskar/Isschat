@@ -97,8 +97,15 @@ class AzureStorage(StorageInterface):
                 return [blob.name for blob in blobs]
             else:
                 import fnmatch
+                import os
 
-                return [blob.name for blob in blobs if fnmatch.fnmatch(blob.name, pattern)]
+                # For pattern matching, we need to match against the filename only, not the full path
+                matched_blobs = []
+                for blob in blobs:
+                    blob_filename = os.path.basename(blob.name)
+                    if fnmatch.fnmatch(blob_filename, pattern):
+                        matched_blobs.append(blob.name)
+                return matched_blobs
         except Exception as e:
             logging.error(f"Error listing files in Azure {directory_path}: {e}")
             return []

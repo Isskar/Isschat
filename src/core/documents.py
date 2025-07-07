@@ -60,10 +60,26 @@ class SearchResult:
 
 
 @dataclass
-class RetrievalDocument(BaseDocument):
+class RetrievalDocument:
     """Document with retrieval score for RAG responses"""
 
+    content: str
+    metadata: Dict[str, Any]
     score: float
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert document to dictionary format"""
+        return {"content": self.content, "metadata": self.metadata, "score": self.score}
+
+    @property
+    def title(self) -> str:
+        """Get document title from metadata"""
+        return self.metadata.get("title", "Untitled Document")
+
+    @property
+    def url(self) -> Optional[str]:
+        """Get document URL from metadata"""
+        return self.metadata.get("url")
 
     def to_context_section(self, max_content_length: int = 800) -> str:
         """Format document as a context section for generation"""

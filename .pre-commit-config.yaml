@@ -9,8 +9,8 @@ repos:
   - repo: local
     hooks:
       - id: ty
-        name: ty check
-        entry: ty check . --ignore unresolved-import
+        name: ty-check
+        entry: uv run ty check .
         language: python
 
       - id: pytest

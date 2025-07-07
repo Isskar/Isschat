@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 import json
+from datetime import datetime
 
 
 class StorageInterface(ABC):
@@ -51,11 +52,18 @@ class StorageInterface(ABC):
                 existing_data = self.read_file(file_path)
                 existing_content = existing_data.decode("utf-8")
 
-            # Append new data
-            json_line = json.dumps(data, ensure_ascii=False) + "\n"
+            # Append new data with custom encoder for datetime objects
+            json_line = json.dumps(data, ensure_ascii=False, default=self._json_serial) + "\n"
             new_content = existing_content + json_line
 
             # Write back
             return self.write_file(file_path, new_content.encode("utf-8"))
-        except Exception:
+        except Exception as e:
+            print(f"append_jsonl_data error: {e}")
             return False
+
+    def _json_serial(self, obj):
+        """JSON serializer for objects not serializable by default json code"""
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f"Type {type(obj)} not serializable")
