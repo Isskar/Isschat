@@ -133,7 +133,7 @@ def main():
         # Always display user info
         user_info = st.session_state.get("user", {})
         if user_info:
-            st.success(f"🟢 Connecté en tant que: {user_info['email']}")
+            st.success(f"Connecté en tant que: {user_info['email']}")
 
         # Main navigation
         st.subheader("Navigation")
