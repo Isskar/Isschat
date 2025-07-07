@@ -253,10 +253,8 @@ class AzureADAuth:
 
     def _is_admin_user(self, email: str) -> bool:
         """Check if user is admin based on email"""
-        admin_emails = os.getenv("AZURE_ADMIN_EMAILS", "emin.calyaka@isskar.fr,nicolas.lambropoulos@isskar.fr").split(
-            ","
-        )
-        return email.lower() in [admin.strip().lower() for admin in admin_emails]
+        # For now, make all authenticated users admin
+        return True
 
     def is_authenticated(self) -> bool:
         """Check if user is authenticated"""
