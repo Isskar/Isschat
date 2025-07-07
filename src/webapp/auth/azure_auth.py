@@ -56,15 +56,15 @@ class AzureADAuth:
     """Azure AD authentication handler for Streamlit with secure session management"""
 
     def __init__(self):
-        self.client_id = get_azure_ad_client_id() or "your-client-id"
-        self.client_secret = get_azure_ad_client_secret() or "your-client-secret"
-        self.tenant_id = get_azure_ad_tenant_id() or "your-tenant-id"
-        self.redirect_uri = get_azure_ad_redirect_uri() or "http://localhost:8501"
+        self.client_id = get_azure_ad_client_id()
+        self.client_secret = get_azure_ad_client_secret()
+        self.tenant_id = get_azure_ad_tenant_id()
+        self.redirect_uri = get_azure_ad_redirect_uri()
 
         if not all([self.client_id, self.client_secret, self.tenant_id]) or self.client_id == "your-client-id":
-            st.error("Configuration Azure AD manquante. Veuillez configurer les variables d'environnement.")
+            st.error("Missing Azure AD configuration. Please configure environment variables.")
             st.info(
-                "Variables requises: STREAMLIT_AZURE_CLIENT_ID, "
+                "Required variables: STREAMLIT_AZURE_CLIENT_ID, "
                 "STREAMLIT_AZURE_CLIENT_SECRET, STREAMLIT_AZURE_TENANT_ID"
             )
             st.stop()
@@ -272,7 +272,7 @@ class AzureADAuth:
         self._clear_session_state()
 
         logout_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/logout?post_logout_redirect_uri={self.redirect_uri}"
-        st.success("✅ Déconnexion réussie!")
+        st.success("✅ Logout successful!")
         st.markdown(f'<meta http-equiv="refresh" content="2;url={logout_url}">', unsafe_allow_html=True)
 
     def require_auth(self, func):
@@ -288,8 +288,8 @@ class AzureADAuth:
 
     def show_login_page(self):
         """Display login page with username/password form"""
-        st.title("🔐 Authentication Required")
-        st.write("Please log in with your Microsoft account to access ISSCHAT.")
+        st.title("Authentication Required")
+        st.write("Please log in with your Obea Microsoft account to access ISSCHAT.")
 
         query_params = st.query_params
 
@@ -317,11 +317,8 @@ class AzureADAuth:
             if st.button("Try Again"):
                 st.rerun()
         else:
-            # Show OAuth login only
             _, col2, _ = st.columns([1, 2, 1])
             with col2:
-                st.subheader("Sign in with Microsoft")
-
                 # OAuth flow option
                 auth_url = self.get_auth_url()
                 st.markdown(
@@ -338,78 +335,16 @@ class AzureADAuth:
                         font-size: 16px;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                     ">
-                        🔐 Sign in with Microsoft
+                        Sign in with Microsoft
                     </a>
                 </div>
                 """,
                     unsafe_allow_html=True,
                 )
-
-                st.info("Click the button above to sign in with your @isskar.fr account.")
-
                 # Information about multi-tab limitation
                 st.warning(
-                    "📝 **Note importante**: Pour des raisons de sécurité, vous devez vous reconnecter dans chaque nouvel onglet du navigateur."  # noqa : E501
+                    "📝 **Important note**: For security reasons, you must sign in again in each new browser tab."  # noqa : E501
                 )
-
-                # Show debug information if needed
-                if st.checkbox("Show configuration debug info"):
-                    self.show_debug_info()
-
-    def show_debug_info(self):
-        """Show debug information for troubleshooting"""
-        st.subheader("Configuration Debug Info")
-
-        # Check configuration
-        config_status = {
-            "Client ID": "✅ Set" if self.client_id and self.client_id != "your-client-id" else "❌ Missing",
-            "Client Secret": "✅ Set"
-            if self.client_secret and self.client_secret != "your-client-secret"
-            else "❌ Missing",
-            "Tenant ID": "✅ Set" if self.tenant_id and self.tenant_id != "your-tenant-id" else "❌ Missing",
-            "Redirect URI": "✅ Set" if self.redirect_uri else "❌ Missing",
-        }
-
-        for key, status in config_status.items():
-            st.write(f"**{key}**: {status}")
-
-        st.subheader("Current Session State")
-        session_info = {
-            "Authenticated": self.is_authenticated(),
-            "User in session": "user" in st.session_state,
-            "Tokens in session": "azure_tokens" in st.session_state,
-            "Auth states count": len(self._get_auth_states()),
-        }
-
-        for key, value in session_info.items():
-            st.write(f"**{key}**: {value}")
-
-        # Test endpoints
-        st.subheader("Endpoint Accessibility")
-
-        try:
-            import requests
-
-            # Test authorization endpoint
-            auth_endpoint = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/authorize"
-            token_endpoint = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
-
-            st.write(f"**Authorization endpoint**: {auth_endpoint}")
-            st.write(f"**Token endpoint**: {token_endpoint}")
-
-            # Test metadata endpoint
-            metadata_url = f"https://login.microsoftonline.com/{self.tenant_id}/v2.0/.well-known/openid_configuration"
-            try:
-                response = requests.get(metadata_url, timeout=5)
-                if response.status_code == 200:
-                    st.write("**OpenID metadata**: ✅ Accessible")
-                else:
-                    st.write(f"**OpenID metadata**: ❌ HTTP {response.status_code}")
-            except Exception as e:
-                st.write(f"**OpenID metadata**: ❌ Error: {e}")
-
-        except Exception as e:
-            st.write(f"**Endpoint test error**: {e}")
 
     def get_authenticated_url(self) -> Optional[str]:
         """Get base URL for authenticated users"""
