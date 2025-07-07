@@ -48,14 +48,15 @@ class WeaviateVectorDB(VectorDatabase):
 
         auth_credentials = weaviate.auth.AuthApiKey(api_key=weaviate_api_key)
 
-        # Configure timeouts to prevent "Deadline Exceeded" errors (connection, query)
-        # ty ignore because unknown-argument of AdditionalConfig which is a basemodel
+        # Configure timeouts for REST API
         timeout_config = weaviate.config.AdditionalConfig(
             timeout=weaviate.config.Timeout(init=10, query=60, insert=120)  # ty : ignore
         )
 
+        # Use the REST endpoint for Weaviate Cloud
+        # The connect_to_weaviate_cloud method will handle both REST and gRPC automatically
         self.client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=weaviate_url,
+            cluster_url=f"https://{weaviate_url}",  # Ensure HTTPS for REST
             auth_credentials=auth_credentials,
             skip_init_checks=True,
             additional_config=timeout_config,
