@@ -50,7 +50,7 @@ class WeaviateVectorDB(VectorDatabase):
 
         # Configure timeouts to prevent "Deadline Exceeded" errors (connection, query)
         timeout_config = weaviate.config.AdditionalConfig(
-            timeout=weaviate.config.Timeout(init=10, query=60, insert=120)
+            timeout=weaviate.config.Timeout(init=10, query=60, insert=120)  # ty : ignore
         )
 
         self.client = weaviate.connect_to_weaviate_cloud(
