@@ -10,7 +10,7 @@ repos:
     hooks:
       - id: ty
         name: ty check
-        entry: ty check . --ignore unresolved-import
+        entry: ty check
         language: python
 
       - id: pytest
