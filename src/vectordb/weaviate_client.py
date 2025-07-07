@@ -49,6 +49,7 @@ class WeaviateVectorDB(VectorDatabase):
         auth_credentials = weaviate.auth.AuthApiKey(api_key=weaviate_api_key)
 
         # Configure timeouts for REST API
+        # ty ignore because unknown-argument of AdditionalConfig which is a basemodel
         timeout_config = weaviate.config.AdditionalConfig(
             timeout=weaviate.config.Timeout(init=10, query=60, insert=120)  # ty : ignore
         )
