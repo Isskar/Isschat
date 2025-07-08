@@ -6,7 +6,8 @@ import logging
 from typing import List, Dict, Any, Optional
 
 import weaviate
-from weaviate.classes.config import Configure, Property, VectorDistances, DataType
+from weaviate.classes.config import Configure, Property, VectorDistances
+import weaviate.classes as wvc
 from weaviate.classes.query import Filter
 
 from .interface import VectorDatabase
@@ -46,8 +47,20 @@ class WeaviateVectorDB(VectorDatabase):
             raise ValueError("WEAVIATE_API_KEY and WEAVIATE_URL must be configured")
 
         auth_credentials = weaviate.auth.AuthApiKey(api_key=weaviate_api_key)
+
+        # Configure timeouts for REST API
+        # ty ignore because unknown-argument of AdditionalConfig which is a basemodel
+        timeout_config = weaviate.config.AdditionalConfig(
+            timeout=weaviate.config.Timeout(init=10, query=60, insert=120)  # ty : ignore
+        )
+
+        # Use the REST endpoint for Weaviate Cloud
+        # The connect_to_weaviate_cloud method will handle both REST and gRPC automatically
         self.client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=weaviate_url, auth_credentials=auth_credentials, skip_init_checks=True
+            cluster_url=f"https://{weaviate_url}",  # Ensure HTTPS for REST
+            auth_credentials=auth_credentials,
+            skip_init_checks=True,
+            additional_config=timeout_config,
         )
         self.logger.info(f"Weaviate client connected: localhost:{self.config.vectordb_port or 8080}")
 
@@ -70,8 +83,8 @@ class WeaviateVectorDB(VectorDatabase):
                         bm25_k1=1.2,
                     ),
                     properties=[
-                        Property(name="content", dataType=DataType.TEXT),
-                        Property(name="original_doc_id", dataType=DataType.TEXT),
+                        Property(name="content", data_type=wvc.config.DataType.TEXT),  # type: ignore[unknown-argument]
+                        Property(name="original_doc_id", data_type=wvc.config.DataType.TEXT),  # type: ignore[unknown-argument]
                     ],
                 )
 

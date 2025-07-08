@@ -5,6 +5,7 @@ from llama_index.readers.confluence import ConfluenceReader
 
 
 from src.ingestion.connectors.base_connector import BaseConnector
+from src.ingestion.connectors.metadata_enricher import ConfluenceMetadataEnricher
 from src.core.interfaces import Document
 
 
@@ -17,6 +18,9 @@ class ConfluenceConnector(BaseConnector):
         self._validate_required_config()
         self.reader = self._create_reader()
 
+        self.enricher = None
+        self._setup_metadata_enricher()
+
     def _setup_connection_config(self, config: Dict[str, Any]) -> None:
         space_name = config.get("confluence_space_name", "")
         self.base_url = f"{space_name}/wiki"
@@ -26,6 +30,27 @@ class ConfluenceConnector(BaseConnector):
         self.space_key = config.get("confluence_space_key")
 
         self.include_attachments = None
+
+    def _setup_metadata_enricher(self) -> None:
+        """Configure the metadata enricher"""
+        try:
+            # Get the base URL without /wiki for the enricher
+            base_url_for_enricher = self.config.get("confluence_space_name", "")
+
+            self.enricher = ConfluenceMetadataEnricher(
+                base_url=base_url_for_enricher, username=self.username, api_token=self.api_token
+            )
+
+            # Test the connection
+            if self.enricher.test_connection():
+                self.logger.info("Metadata enricher initialized successfully")
+            else:
+                self.logger.warning("Metadata enricher not available (API inaccessible)")
+                self.enricher = None
+
+        except Exception as e:
+            self.logger.warning(f"Unable to initialize metadata enricher: {e}")
+            self.enricher = None
 
     def _validate_required_config(self) -> None:
         if not self.base_url:
@@ -127,6 +152,7 @@ class ConfluenceConnector(BaseConnector):
             try:
                 metadata = doc.metadata.copy()
 
+                # Base metadata
                 metadata.update(
                     {
                         "source": "confluence",
@@ -136,9 +162,19 @@ class ConfluenceConnector(BaseConnector):
                     }
                 )
 
+                if self.enricher:
+                    try:
+                        metadata = self.enricher.enrich_document_metadata(metadata)
+                        self.logger.debug(f"Enriched metadata for page {metadata.get('page_id', 'unknown')}")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to enrich metadata: {e}")
+
                 documents.append(Document(content=doc.text, metadata=metadata))
             except Exception as e:
                 self.logger.warning(f"Failed to convert document: {e}")
 
-        self.logger.info(f"Converted {len(documents)} documents")
+        if self.enricher:
+            self.logger.info(f"Converted {len(documents)} documents with enriched metadata")
+        else:
+            self.logger.info(f"Converted {len(documents)} documents")
         return documents

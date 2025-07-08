@@ -92,7 +92,9 @@ class TestWeaviateVectorDB:
     @patch("src.vectordb.weaviate_client.get_weaviate_url")
     @patch("src.vectordb.weaviate_client.get_config")
     @patch("src.vectordb.weaviate_client.weaviate.connect_to_weaviate_cloud")
-    def test_init_success(self, mock_connect, mock_config, mock_url, mock_key):
+    @patch("src.vectordb.weaviate_client.weaviate.config.AdditionalConfig")
+    @patch("src.vectordb.weaviate_client.weaviate.config.Timeout")
+    def test_init_success(self, mock_timeout, mock_additional_config, mock_connect, mock_config, mock_url, mock_key):
         """Test successful initialization."""
         mock_key.return_value = "test-key"
         mock_url.return_value = "https://test.weaviate.network"
@@ -108,6 +110,8 @@ class TestWeaviateVectorDB:
 
             assert db.collection_name == "Test_Collection"
             assert db.embedding_dim == 384
+            mock_timeout.assert_called_once_with(init=10, query=60, insert=120)
+            mock_additional_config.assert_called_once()
 
     @patch("src.vectordb.weaviate_client.get_weaviate_api_key")
     @patch("src.vectordb.weaviate_client.get_weaviate_url")
