@@ -5,6 +5,7 @@ from typing import Tuple, Dict, Any, Optional
 from ..config import get_config
 from ..storage.data_manager import get_data_manager
 from src.rag.tools import RetrievalTool, GenerationTool
+from src.rag.tools.numerical_query_processor import NumericalQueryProcessor
 
 
 class RAGPipeline:
@@ -15,6 +16,7 @@ class RAGPipeline:
 
         self.retrieval_tool = RetrievalTool()
         self.generation_tool = GenerationTool()
+        self.numerical_processor = NumericalQueryProcessor()
 
         self.logger.info("✅ RAG pipeline initialized")
 
@@ -53,10 +55,28 @@ class RAGPipeline:
             if verbose:
                 self.logger.info(f"📄 {len(search_results)} documents found")
 
-            if verbose:
-                self.logger.info("🤖 Step 2: Generating response")
+            # Check if this is a numerical query requiring special processing
+            is_numerical = self.numerical_processor.is_numerical_query(query)
 
-            generation_result = self.generation_tool.generate(query=query, documents=search_results, history=history)
+            if is_numerical:
+                if verbose:
+                    self.logger.info("🔢 Step 2: Processing numerical query")
+
+                # Process numerical query with extended retrieval for aggregation
+                extended_results = self.retrieval_tool.retrieve(query, k=self.config.search_fetch_k * 2)
+                numerical_result = self.numerical_processor.process_numerical_query(query, extended_results)
+
+                # Enhance the generation with numerical insights
+                generation_result = self.generation_tool.generate(
+                    query=query, documents=search_results, history=history, numerical_context=numerical_result
+                )
+            else:
+                if verbose:
+                    self.logger.info("🤖 Step 2: Generating response")
+
+                generation_result = self.generation_tool.generate(
+                    query=query, documents=search_results, history=history
+                )
 
             answer = generation_result["answer"]
             sources = generation_result["sources"]
