@@ -376,10 +376,14 @@ class ConfluenceChunker(DocumentChunker):
         if metadata.get("url"):
             context_parts.append(f"URL: {metadata['url']}")
 
-        if context_parts:
-            return f"[{' | '.join(context_parts)}]"
+        context_header = f"[{' | '.join(context_parts)}]" if context_parts else "[Document context]"
 
-        return "[Document context]"
+        # Add enriched hierarchy tree if available
+        if metadata.get("enriched_hierarchy_tree"):
+            hierarchy_tree = metadata["enriched_hierarchy_tree"]
+            return f"{context_header}\n\n**Document Structure:**\n{hierarchy_tree}\n"
+
+        return context_header
 
     def _chunk_by_paragraphs(self, document: Document) -> List[Document]:
         """Split document into paragraph-based chunks with metadata enrichment."""

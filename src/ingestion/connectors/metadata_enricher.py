@@ -29,6 +29,7 @@ class ConfluenceMetadataEnricher:
         # Cache to avoid repeated API calls
         self._page_cache = {}
         self._hierarchy_cache = {}
+        self._siblings_cache = {}
 
     def test_connection(self) -> bool:
         """Test connection to Confluence API"""
@@ -91,6 +92,7 @@ class ConfluenceMetadataEnricher:
                     "version_number": page_details.get("version_number"),
                     # Hierarchical path
                     "hierarchy_breadcrumb": self._format_hierarchy_breadcrumb(hierarchy_path),
+                    "enriched_hierarchy_tree": self._build_enriched_hierarchy_tree(page_id, hierarchy_path),
                     "parent_pages": [{"id": p["id"], "title": p["title"]} for p in hierarchy_path[:-1]],
                     "page_depth": len(hierarchy_path) - 1,
                     # Contributors
@@ -217,6 +219,115 @@ class ConfluenceMetadataEnricher:
         """Format hierarchical path into readable breadcrumb"""
         titles = [page["title"] for page in hierarchy_path]
         return " > ".join(titles)
+
+    def _build_enriched_hierarchy_tree(self, page_id: str, hierarchy_path: List[Dict[str, str]]) -> str:
+        """Build enriched hierarchy tree showing current page position with siblings"""
+        try:
+            # Get siblings for each level in the hierarchy
+            tree_lines = []
+
+            for i, page in enumerate(hierarchy_path):
+                is_current = page["id"] == page_id
+
+                # Get siblings for this level
+                if i == 0:
+                    # Root level - get children of parent space
+                    siblings = self._get_space_children(page["id"])
+                else:
+                    # Get children of the parent page
+                    parent_id = hierarchy_path[i - 1]["id"]
+                    siblings = self._get_page_children(parent_id)
+
+                # Build tree representation for this level
+                level_indent = "│   " * i
+
+                # Add siblings at this level
+                for sibling in siblings:
+                    is_selected = sibling["id"] == page["id"]
+                    is_folder = sibling.get("has_children", False)
+
+                    # Tree symbols
+                    if is_selected:
+                        marker = "├── " if not is_folder else "├── "
+                        status = " (sélectionné)" if is_current else " ✓"
+                    else:
+                        marker = "├── " if not is_folder else "├── "
+                        status = "/" if is_folder else ""
+
+                    line = f"{level_indent}{marker}{sibling['title']}{status}"
+                    tree_lines.append(line)
+
+                # If this is the current page, show its children with deeper indentation
+                if is_current and i == len(hierarchy_path) - 1:
+                    children = self._get_page_children(page["id"])
+                    child_indent = "│   " * (i + 1)
+                    for child in children:
+                        child_marker = "├── " if not child.get("has_children", False) else "├── "
+                        child_status = "/" if child.get("has_children", False) else ""
+                        child_line = f"{child_indent}{child_marker}{child['title']}{child_status}"
+                        tree_lines.append(child_line)
+
+            return "\n".join(tree_lines)
+
+        except Exception as e:
+            self.logger.error(f"Failed to build enriched hierarchy tree for {page_id}: {e}")
+            return self._format_hierarchy_breadcrumb(hierarchy_path)
+
+    def _get_space_children(self, space_id: str) -> List[Dict[str, Any]]:
+        """Get children pages of a space"""
+        cache_key = f"space_children_{space_id}"
+        if cache_key in self._siblings_cache:
+            return self._siblings_cache[cache_key]
+
+        try:
+            url = f"{self.api_base}/content"
+            params = {"spaceKey": space_id, "type": "page", "limit": 100, "expand": "children.page"}
+
+            response = self.session.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            children = []
+            for page in data.get("results", []):
+                has_children = len(page.get("children", {}).get("page", {}).get("results", [])) > 0
+                children.append(
+                    {"id": page["id"], "title": page["title"], "type": page["type"], "has_children": has_children}
+                )
+
+            self._siblings_cache[cache_key] = children
+            return children
+
+        except Exception as e:
+            self.logger.error(f"Failed to get space children for {space_id}: {e}")
+            return []
+
+    def _get_page_children(self, parent_id: str) -> List[Dict[str, Any]]:
+        """Get children pages of a parent page"""
+        cache_key = f"page_children_{parent_id}"
+        if cache_key in self._siblings_cache:
+            return self._siblings_cache[cache_key]
+
+        try:
+            url = f"{self.api_base}/content/{parent_id}/child/page"
+            params = {"limit": 100, "expand": "children.page"}
+
+            response = self.session.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            children = []
+            for page in data.get("results", []):
+                has_children = len(page.get("children", {}).get("page", {}).get("results", [])) > 0
+                children.append(
+                    {"id": page["id"], "title": page["title"], "type": page["type"], "has_children": has_children}
+                )
+
+            self._siblings_cache[cache_key] = children
+            return children
+
+        except Exception as e:
+            self.logger.error(f"Failed to get page children for {parent_id}: {e}")
+            return []
 
     def update_chunk_context(self, chunk_content: str, enriched_metadata: Dict[str, Any]) -> str:
         """Update chunk context with enriched metadata"""
