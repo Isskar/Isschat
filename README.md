@@ -14,6 +14,7 @@ An intelligent chatbot that interacts with Isskar Confluence knowledge base usin
 - User authentication system
 - Query history and user feedback
 - Performance and interaction analysis
+- **Evaluation Dashboard**: Interactive visualization of evaluation results with comparison capabilities
 
 ## Installation
 
@@ -129,7 +130,39 @@ isschat-cli chat
 # Query with detailed information
 isschat-cli query -q "How to configure authentication?" -k 3 --show-metadata --show-stats
 ```
-   
+
+## Evaluation Dashboard
+
+Isschat includes a comprehensive evaluation dashboard for analyzing test results and comparing different evaluation runs.
+
+### Features
+
+- **Interactive Visualization**: Professional UI with detailed test case analysis
+- **Multi-Category Support**: Robustness, Generation, Retrieval, Business Value, and Feedback tests
+- **Comparison Mode**: Compare metrics across multiple evaluation files
+- **Detailed Results**: Individual test case examination with scores, reasoning, and metadata
+- **Advanced Metrics**: Specialized retrieval metrics (Precision@K, MRR, MAP, NDCG)
+
+### Launch the Dashboard
+
+1. **Using the launcher script**:
+   ```bash
+   python run_dashboard.py
+   ```
+
+2. **Direct Streamlit command**:
+   ```bash
+   streamlit run evaluation_dashboard.py
+   ```
+
+### Dashboard Sections
+
+- **Overview**: Summary metrics and category breakdown for selected evaluation file
+- **Categories**: Detailed analysis by test category with filtering capabilities
+- **Retrieval Metrics**: Specialized metrics for document retrieval performance evaluation
+- **Comparison Mode**: Cross-evaluation comparison with interactive charts
+
+The dashboard automatically detects evaluation result files in the `evaluation_results/` directory and provides an intuitive interface for analyzing test performance.
 
 ## Architecture
 
@@ -171,6 +204,14 @@ Isschat/
 │           ├── features_manager.py # Feature management
 │           ├── history_manager.py # History management
 │           └── performance_dashboard.py # Performance dashboard
+├── rag_evaluation/            # RAG Evaluation System
+│   ├── core/                  # Core evaluation components
+│   ├── evaluators/            # Category-specific evaluators
+│   ├── config/                # Evaluation configuration and datasets
+│   └── report_generator.py    # HTML report generation
+├── evaluation_dashboard.py    # Interactive evaluation dashboard
+├── run_dashboard.py          # Dashboard launcher script
+├── evaluation_results/       # Generated evaluation results
 ├── .env.example              # Configuration example
 ├── pyproject.toml            # Project configuration (uv)
 ├── uv.lock                   # Dependency lock file
@@ -183,7 +224,13 @@ Isschat/
 - **Performance tracking**: Response time and accuracy metrics
 - **Feedback system**: User response evaluation
 - **Query history**: Previous search consultation
-- **RAG Evaluation**: (NOT IMPLEMENTED YET) Built-in evaluation system for assessing retrieval and generation quality
+- **RAG Evaluation System**: Comprehensive evaluation framework with multiple test categories
+  - **Robustness Tests**: Edge case handling, data validation, confidentiality protection
+  - **Generation Tests**: Conversational capabilities, context continuity, memory recall
+  - **Retrieval Tests**: Document retrieval performance with advanced metrics
+  - **Business Value Tests**: Impact assessment and efficiency measurement
+  - **Feedback Analysis**: User feedback classification and sentiment analysis
+- **Interactive Dashboard**: Professional evaluation results visualization with comparison capabilities
 - **Configurable Retrievers**: Factory pattern for different retrieval strategies
 - **Vector Store Abstraction**: Support for multiple vector storage backends (FAISS, etc.)
 - **Data Pipeline**: Automated document processing and embedding generation
