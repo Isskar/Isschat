@@ -64,8 +64,8 @@ class GenerationTool:
             return "No relevant documents found."
 
         # Adjust max content length based on number of documents to fit in context window
-        # Reduced for smaller Confluence pages to avoid truncation
-        max_content_per_doc = max(300, 1500 // len(documents)) if documents else 600
+        # Increased limits to preserve arborescence content
+        max_content_per_doc = max(800, 3000 // len(documents)) if documents else 1200
         context_parts = [doc.to_context_section(max_content_per_doc) for doc in documents]
         return "\n\n".join(context_parts)
 
@@ -87,15 +87,19 @@ class GenerationTool:
         if not numerical_context:
             return ""
 
+        # Handle case where numerical_context is a string (error case)
+        if isinstance(numerical_context, str):
+            return f"## Numerical Analysis\n**Note:** {numerical_context}\n"
+
         formatted_context = "## Numerical Analysis\n"
 
-        if numerical_context.aggregated_value is not None:
+        if hasattr(numerical_context, "aggregated_value") and numerical_context.aggregated_value is not None:
             formatted_context += f"**Aggregated Result:** {numerical_context.aggregated_value}\n"
 
-        if numerical_context.explanation:
+        if hasattr(numerical_context, "explanation") and numerical_context.explanation:
             formatted_context += f"**Explanation:** {numerical_context.explanation}\n"
 
-        if numerical_context.confidence > 0:
+        if hasattr(numerical_context, "confidence") and numerical_context.confidence > 0:
             formatted_context += f"**Confidence:** {numerical_context.confidence:.2f}\n"
 
         return formatted_context

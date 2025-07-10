@@ -5,7 +5,7 @@ Numerical query processor for handling queries that require aggregation across d
 import re
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-from ...core.interfaces import Document
+from ...core.documents import RetrievalDocument
 
 
 @dataclass
@@ -81,7 +81,7 @@ class NumericalQueryProcessor:
 
         return {"type": "general_numerical", "entity": None, "original_query": query, "pattern_match": None}
 
-    def process_numerical_query(self, query: str, retrieved_chunks: List[Document]) -> NumericalQueryResult:
+    def process_numerical_query(self, query: str, retrieved_chunks: List[RetrievalDocument]) -> NumericalQueryResult:
         """Process a numerical query and aggregate results from chunks."""
 
         # Extract query intent
@@ -96,7 +96,7 @@ class NumericalQueryProcessor:
         return aggregated_result
 
     def _extract_numerical_data_from_chunks(
-        self, chunks: List[Document], intent: Dict[str, Any]
+        self, chunks: List[RetrievalDocument], intent: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Extract numerical data from document chunks."""
         numerical_data = []
@@ -108,7 +108,7 @@ class NumericalQueryProcessor:
 
         return numerical_data
 
-    def _extract_numbers_from_chunk(self, chunk: Document, intent: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _extract_numbers_from_chunk(self, chunk: RetrievalDocument, intent: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Extract numerical values from a single chunk."""
         content = chunk.content
         metadata = chunk.metadata

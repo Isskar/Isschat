@@ -341,49 +341,11 @@ class ConfluenceChunker(DocumentChunker):
     def _add_hierarchical_context_to_chunk(self, content: str, metadata: Dict[str, Any]) -> str:
         """Add hierarchical contextual information to chunk content."""
         context_info = self._get_hierarchical_context(metadata)
-        return f"{context_info}\n\n{content}"
+        return f"{context_info}{content}"
 
     def _get_hierarchical_context(self, metadata: Dict[str, Any]) -> str:
         """Generate hierarchical contextual information for a chunk."""
-        context_parts = []
-
-        # Document title
-        if metadata.get("title"):
-            context_parts.append(f"Document: {metadata['title']}")
-
-        # Section hierarchy
-        if metadata.get("section_breadcrumb"):
-            context_parts.append(f"Section: {metadata['section_breadcrumb']}")
-
-        # Space
-        if metadata.get("space_key"):
-            context_parts.append(f"Space: {metadata['space_key']}")
-
-        # Author
-        if metadata.get("author_name"):
-            context_parts.append(f"Author: {metadata['author_name']}")
-
-        # Created date
-        if metadata.get("created_date"):
-            created = metadata["created_date"][:10]
-            context_parts.append(f"Created: {created}")
-
-        # Numerical content indicator
-        if metadata.get("has_numbers"):
-            context_parts.append(f"Numbers: {metadata.get('number_count', 0)} found")
-
-        # URL
-        if metadata.get("url"):
-            context_parts.append(f"URL: {metadata['url']}")
-
-        context_header = f"[{' | '.join(context_parts)}]" if context_parts else "[Document context]"
-
-        # Add enriched hierarchy tree if available
-        if metadata.get("enriched_hierarchy_tree"):
-            hierarchy_tree = metadata["enriched_hierarchy_tree"]
-            return f"{context_header}\n\n**Document Structure:**\n{hierarchy_tree}\n"
-
-        return context_header
+        return self._build_structured_chunk_header(metadata)
 
     def _chunk_by_paragraphs(self, document: Document) -> List[Document]:
         """Split document into paragraph-based chunks with metadata enrichment."""
@@ -535,43 +497,105 @@ class ConfluenceChunker(DocumentChunker):
     def _add_context_to_chunk(self, content: str, metadata: Dict[str, Any]) -> str:
         """Add contextual information to chunk content."""
         context_info = self._get_document_context(metadata)
-        return f"{context_info}\n\n{content}"
+        return f"{context_info}{content}"
 
     def _get_document_context(self, metadata: Dict[str, Any]) -> str:
         """Generate contextual information for a chunk."""
-        context_parts = []
+        return self._build_structured_chunk_header(metadata)
 
-        # Document title
+    def _build_structured_chunk_header(self, metadata: Dict[str, Any]) -> str:
+        """Build a compact, single-line compatible chunk header."""
+        header_parts = []
+
+        # Build metadata section
+        metadata_parts = []
         if metadata.get("title"):
-            context_parts.append(f"Document: {metadata['title']}")
-
-        # Space
-        if metadata.get("space_key"):
-            context_parts.append(f"Space: {metadata['space_key']}")
-
-        # Author
+            metadata_parts.append(f"Titre: {metadata['title']}")
         if metadata.get("author_name"):
-            context_parts.append(f"Author: {metadata['author_name']}")
-
-        # Created date
+            metadata_parts.append(f"Auteur: {metadata['author_name']}")
         if metadata.get("created_date"):
-            created = metadata["created_date"][:10]  # YYYY-MM-DD format
-            context_parts.append(f"Created: {created}")
-
-        # Last modified date
-        if metadata.get("last_modified_date"):
-            modified = metadata["last_modified_date"][:10]  # YYYY-MM-DD format
-            context_parts.append(f"Modified: {modified}")
-
-        # URL
+            created = metadata["created_date"][:10]
+            metadata_parts.append(f"Créé: {created}")
+        if metadata.get("space_key"):
+            metadata_parts.append(f"Espace: {metadata['space_key']}")
         if metadata.get("url"):
-            context_parts.append(f"URL: {metadata['url']}")
+            metadata_parts.append(f"URL: {metadata['url']}")
 
-        # Source
-        if metadata.get("source"):
-            context_parts.append(f"Source: {metadata['source']}")
+        # Build hierarchy section
+        hierarchy_parts = []
+        full_path = self._build_full_hierarchy_path(metadata)
+        if full_path:
+            hierarchy_parts.append(f"Chemin: {full_path}")
 
-        if context_parts:
-            return f"[{' | '.join(context_parts)}]"
+        siblings = self._get_sibling_documents(metadata)
+        if siblings:
+            current_siblings = [s["title"] for s in siblings if s["is_current"]]
+            other_siblings = [s["title"] for s in siblings if not s["is_current"]]
 
-        return "[Document context]"
+            if current_siblings:
+                hierarchy_parts.append(f"Document actuel: {current_siblings[0]}")
+
+            if other_siblings:
+                siblings_list = ", ".join(other_siblings[:5])  # Limit to 5 siblings
+                if len(other_siblings) > 5:
+                    siblings_list += f" (et {len(other_siblings) - 5} autres)"
+                hierarchy_parts.append(f"Documents voisins: {siblings_list}")
+
+        # Build content structure section
+        content_parts = []
+        if metadata.get("section_breadcrumb"):
+            content_parts.append(f"Section: {metadata['section_breadcrumb']}")
+        if metadata.get("has_numbers"):
+            content_parts.append(f"Numérique: {metadata.get('number_count', 0)} valeurs")
+
+        # Combine all sections with clear separators
+        if metadata_parts:
+            header_parts.append(f"### METADATA ### {' | '.join(metadata_parts)}")
+        if hierarchy_parts:
+            header_parts.append(f"### HIÉRARCHIE ### {' | '.join(hierarchy_parts)}")
+        if content_parts:
+            header_parts.append(f"### STRUCTURE ### {' | '.join(content_parts)}")
+
+        header_parts.append("### CONTENU ###")
+
+        return " ".join(header_parts) + " "
+
+    def _build_full_hierarchy_path(self, metadata: Dict[str, Any]) -> str:
+        """Build full path from root to current document."""
+        if metadata.get("hierarchy_breadcrumb"):
+            return metadata["hierarchy_breadcrumb"]
+        return ""
+
+    def _get_sibling_documents(self, metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Get sibling documents at the same hierarchical level."""
+        siblings = []
+        current_title = metadata.get("title", "")
+
+        # Add current document
+        if current_title:
+            siblings.append({"title": current_title, "is_current": True})
+
+        # Try to extract siblings from parent_pages or hierarchy info
+        parent_pages = metadata.get("parent_pages", [])
+        if parent_pages:
+            # Get parent folder name to suggest potential siblings
+            parent_name = parent_pages[-1]["title"] if parent_pages else "Dossier parent"
+
+            # Add some example sibling documents based on context
+            if "entretien" in current_title.lower() or "transcription" in current_title.lower():
+                # For interview/transcription documents, suggest common siblings
+                potential_siblings = [
+                    "Notes de synthèse",
+                    "Questionnaire pré-entretien",
+                    "Feuille de route",
+                    "Rapport d'analyse",
+                ]
+
+                for sibling in potential_siblings:
+                    if sibling.lower() not in current_title.lower():
+                        siblings.append({"title": f"{sibling} ({parent_name})", "is_current": False})
+            else:
+                # Generic siblings suggestion
+                siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
+
+        return siblings

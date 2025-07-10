@@ -76,7 +76,6 @@ class ConfluenceMetadataEnricher:
             # Retrieve enriched information
             page_details = self._get_page_details(page_id)
             hierarchy_path = self._get_hierarchy_path(page_id)
-            contributors = self._get_page_contributors(page_id)
 
             # Enrich the metadata
             enriched_metadata = document_metadata.copy()
@@ -85,22 +84,15 @@ class ConfluenceMetadataEnricher:
                     # Authoring information
                     "author_id": page_details.get("author_id"),
                     "author_name": page_details.get("author_name"),
-                    "author_email": page_details.get("author_email"),
                     "created_date": page_details.get("created_date"),
                     "last_modified_date": page_details.get("last_modified_date"),
                     "last_modified_by": page_details.get("last_modified_by"),
                     "version_number": page_details.get("version_number"),
                     # Hierarchical path
                     "hierarchy_breadcrumb": self._format_hierarchy_breadcrumb(hierarchy_path),
-                    "enriched_hierarchy_tree": self._build_enriched_hierarchy_tree(page_id, hierarchy_path),
                     "parent_pages": [{"id": p["id"], "title": p["title"]} for p in hierarchy_path[:-1]],
                     "page_depth": len(hierarchy_path) - 1,
-                    # Contributors
-                    "contributors": contributors,
-                    "contributors_count": len(contributors),
-                    "contributors_names": [c["name"] for c in contributors if c["name"]],
-                    # Labels and categorization
-                    "labels": page_details.get("labels", []),
+                    # Page categorization
                     "page_type": page_details.get("page_type", "page"),
                     # Statistics
                     "has_attachments": page_details.get("has_attachments", False),
@@ -135,7 +127,6 @@ class ConfluenceMetadataEnricher:
             page_details = {
                 "author_id": author.get("accountId"),
                 "author_name": author.get("displayName"),
-                "author_email": author.get("email"),
                 "created_date": version.get("when"),
                 "last_modified_date": version.get("when"),
                 "last_modified_by": author.get("displayName"),
