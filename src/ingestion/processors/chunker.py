@@ -76,6 +76,13 @@ class ConfluenceChunker(DocumentChunker):
         self.chunk_overlap = self.config.get("chunk_overlap", 60)
         self.strategy = strategy or "semantic_hierarchical"
         self.model_name = model_name
+        
+        # Initialize metadata enricher for sibling documents retrieval
+        try:
+            from ..connectors.metadata_enricher import MetadataEnricher
+            self.metadata_enricher = MetadataEnricher(config)
+        except ImportError:
+            self.metadata_enricher = None
 
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
         """Chunk documents using the specified strategy."""
@@ -570,32 +577,40 @@ class ConfluenceChunker(DocumentChunker):
         """Get sibling documents at the same hierarchical level."""
         siblings = []
         current_title = metadata.get("title", "")
+        current_page_id = metadata.get("page_id", "")
 
         # Add current document
         if current_title:
             siblings.append({"title": current_title, "is_current": True})
 
-        # Try to extract siblings from parent_pages or hierarchy info
+        # Try to get real sibling documents from parent pages
         parent_pages = metadata.get("parent_pages", [])
-        if parent_pages:
-            # Get parent folder name to suggest potential siblings
-            parent_name = parent_pages[-1]["title"] if parent_pages else "Dossier parent"
-
-            # Add some example sibling documents based on context
-            if "entretien" in current_title.lower() or "transcription" in current_title.lower():
-                # For interview/transcription documents, suggest common siblings
-                potential_siblings = [
-                    "Notes de synthèse",
-                    "Questionnaire pré-entretien",
-                    "Feuille de route",
-                    "Rapport d'analyse",
-                ]
-
-                for sibling in potential_siblings:
-                    if sibling.lower() not in current_title.lower():
-                        siblings.append({"title": f"{sibling} ({parent_name})", "is_current": False})
-            else:
-                # Generic siblings suggestion
+        if parent_pages and hasattr(self, 'metadata_enricher'):
+            # Get the immediate parent page ID
+            parent_page_id = parent_pages[-1].get("id") if parent_pages else None
+            parent_name = parent_pages[-1].get("title", "Dossier parent") if parent_pages else "Dossier parent"
+            
+            if parent_page_id:
+                try:
+                    # Get actual sibling pages from Confluence API
+                    children_pages = self.metadata_enricher._get_page_children(parent_page_id)
+                    
+                    # Add real sibling documents
+                    for page in children_pages:
+                        if page.get("id") != current_page_id:  # Don't add current document again
+                            siblings.append({"title": page["title"], "is_current": False})
+                    
+                    # If no siblings found, fallback to generic message
+                    if len(siblings) == 1:  # Only current document
+                        siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
+                        
+                except Exception as e:
+                    # Fallback to generic suggestion if API call fails
+                    siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
+        else:
+            # Fallback when no parent pages or metadata_enricher available
+            if parent_pages:
+                parent_name = parent_pages[-1].get("title", "Dossier parent") if parent_pages else "Dossier parent"
                 siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
 
         return siblings
