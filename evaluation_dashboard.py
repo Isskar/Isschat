@@ -27,7 +27,7 @@ st.markdown(
         border-top: 2px solid #dee2e6;
         text-align: right;
     }
-    
+
     .status-badge {
         padding: 4px 12px;
         border-radius: 20px;
@@ -35,39 +35,39 @@ st.markdown(
         font-weight: bold;
         text-transform: uppercase;
     }
-    
+
     .status-passed {
         background: #d4edda;
         color: #155724;
     }
-    
+
     .status-failed {
         background: #f8d7da;
         color: #721c24;
     }
-    
+
     .status-error {
         background: #fff3cd;
         color: #856404;
     }
-    
+
     .status-measured {
         background: #d1ecf1;
         color: #0c5460;
     }
-    
+
     .question-section {
         margin-bottom: 20px;
     }
-    
+
     .response-section {
         margin-bottom: 20px;
     }
-    
+
     .expected-section {
         margin-bottom: 20px;
     }
-    
+
     .section-label {
         font-weight: bold;
         color: #495057;
@@ -75,7 +75,7 @@ st.markdown(
         display: block;
         font-size: 0.95em;
     }
-    
+
     .question-text {
         background: #e3f2fd;
         padding: 15px;
@@ -84,26 +84,26 @@ st.markdown(
         font-style: italic;
         color: #1565c0;
     }
-    
+
     .response-text {
         padding: 15px;
         border-radius: 5px;
         white-space: pre-wrap;
         line-height: 1.5;
     }
-    
+
     .response-passed {
         background: #f1f8e9;
         border-left: 4px solid #4caf50;
         color: #2e7d32;
     }
-    
+
     .response-failed {
         background: #ffebee;
         border-left: 4px solid #f44336;
         color: #c62828;
     }
-    
+
     .expected-text {
         background: #fff3e0;
         padding: 15px;
@@ -112,7 +112,7 @@ st.markdown(
         font-size: 0.9em;
         color: #f57c00;
     }
-    
+
     .evaluation-details {
         background: #f8f9fa;
         padding: 15px;
@@ -120,20 +120,20 @@ st.markdown(
         margin-top: 15px;
         border: 1px solid #e9ecef;
     }
-    
+
     .score-display {
         display: flex;
         align-items: center;
         gap: 15px;
         margin-bottom: 10px;
     }
-    
+
     .score-value {
         font-size: 1.2em;
         font-weight: bold;
         color: #007bff;
     }
-    
+
     .reasoning {
         font-style: italic;
         color: #666;
@@ -143,14 +143,14 @@ st.markdown(
         border-left: 3px solid #007bff;
         margin-top: 10px;
     }
-    
+
     .metadata {
         display: flex;
         gap: 15px;
         margin-top: 15px;
         flex-wrap: wrap;
     }
-    
+
     .metadata-item {
         background: #e9ecef;
         padding: 5px 10px;
@@ -158,11 +158,11 @@ st.markdown(
         font-size: 0.85em;
         color: #495057;
     }
-    
+
     .sources {
         margin-top: 15px;
     }
-    
+
     .source-item {
         background: #f8f9fa;
         padding: 8px 12px;
@@ -172,7 +172,7 @@ st.markdown(
         border-left: 3px solid #6c757d;
         color: #495057;
     }
-    
+
     .error-message {
         background: #f8d7da;
         color: #721c24;
@@ -181,7 +181,7 @@ st.markdown(
         border-left: 4px solid #dc3545;
         margin-top: 10px;
     }
-    
+
     .category-description {
         background: #f8f9fa;
         border: 1px solid #dee2e6;
@@ -190,21 +190,21 @@ st.markdown(
         margin-bottom: 25px;
         border-left: 4px solid #007bff;
     }
-    
+
     .category-description h3 {
         margin-top: 0;
         font-size: 1.5em;
         margin-bottom: 10px;
         color: #007bff;
     }
-    
+
     .category-description p {
         margin-bottom: 0;
         font-size: 1.1em;
         line-height: 1.4;
         color: #495057;
     }
-    
+
     .no-data {
         text-align: center;
         color: #6c757d;
@@ -230,23 +230,38 @@ class EvaluationDashboard:
         self.category_descriptions = {
             "robustness": {
                 "title": "Robustness Tests",
-                "description": "Evaluates Isschat's ability to handle edge cases: invalid data validation, confidentiality protection, out-of-context question handling, and internal knowledge verification.",
+                "description": (
+                    "Evaluates Isschat's ability to handle edge cases: invalid data validation, "
+                    "confidentiality protection, out-of-context question handling, and internal knowledge verification."
+                ),
             },
             "generation": {
                 "title": "Conversational Generation Tests",
-                "description": "Tests Isschat's conversational capabilities: context continuity, conversational references, memory recall, clarifications, topic transitions, and French linguistic coherence.",
+                "description": (
+                    "Tests Isschat's conversational capabilities: context continuity, conversational references, "
+                    "memory recall, clarifications, topic transitions, and French linguistic coherence."
+                ),
             },
             "retrieval": {
                 "title": "Document Retrieval Metrics",
-                "description": "Measures document retrieval performance with advanced metrics: precision, recall, F1-score, Precision@K, MRR, MAP, and NDCG to evaluate ranking quality.",
+                "description": (
+                    "Measures document retrieval performance with advanced metrics: precision, recall, F1-score, "
+                    "Precision@K, MRR, MAP, and NDCG to evaluate ranking quality."
+                ),
             },
             "business_value": {
                 "title": "Business Value",
-                "description": "Evaluates Isschat's business impact by comparing response quality, processing time against human estimates, and efficiency across different complexity levels.",
+                "description": (
+                    "Evaluates Isschat's business impact by comparing response quality, processing time against "
+                    "human estimates, and efficiency across different complexity levels."
+                ),
             },
             "feedback": {
                 "title": "User Feedback Analysis",
-                "description": "Automatic analysis of user feedback with CamemBERT classification by themes to identify system strengths and weaknesses based on real user feedback.",
+                "description": (
+                    "Automatic analysis of user feedback with CamemBERT classification by themes to identify "
+                    "system strengths and weaknesses based on real user feedback."
+                ),
             },
         }
 
@@ -275,7 +290,7 @@ class EvaluationDashboard:
                 dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
                 return f"{dt.strftime('%Y-%m-%d %H:%M:%S')} - {file_path.name}"
             return file_path.name
-        except:
+        except Exception:
             return file_path.name
 
     def render_sidebar(self):
@@ -411,27 +426,28 @@ class EvaluationDashboard:
             cat_data = category_results.get(category, {})
 
             if cat_data:
-                category_data.append({"File": file_name, **cat_data})
+                category_data.append(cat_data)  # Remove file name from display
 
         if not category_data:
             st.info(f"No data available for category {category}")
             return
 
-        # Metrics display
-        cols = st.columns(len(category_data))
-        for i, (file_name, data) in enumerate([(d["File"], d) for d in category_data]):
-            with cols[i]:
-                st.markdown(f"**{file_name}**")
+        # Metrics display without file names
+        data = category_data[0]  # Single file mode
+        col1, col2, col3, col4 = st.columns(4)
 
-                # Key metrics
-                if "total_tests" in data:
-                    st.metric("Total Tests", data["total_tests"])
-                if "pass_rate" in data:
-                    st.metric("Pass Rate", f"{data['pass_rate']:.1%}")
-                if "average_score" in data:
-                    st.metric("Avg Score", f"{data['average_score']:.3f}")
-                if "average_response_time" in data:
-                    st.metric("Avg Time (s)", f"{data['average_response_time']:.2f}")
+        with col1:
+            if "total_tests" in data:
+                st.metric("Total Tests", data["total_tests"])
+        with col2:
+            if "pass_rate" in data:
+                st.metric("Pass Rate", f"{data['pass_rate']:.1%}")
+        with col3:
+            if "average_score" in data:
+                st.metric("Avg Score", f"{data['average_score']:.3f}")
+        with col4:
+            if "average_response_time" in data:
+                st.metric("Avg Time (s)", f"{data['average_response_time']:.2f}")
 
         # Detailed results for category
         self.render_detailed_results(results, category)
@@ -439,7 +455,9 @@ class EvaluationDashboard:
     def render_detailed_results(self, results: Dict[str, Dict[str, Any]], category: str):
         """Render detailed test results for a category using HTML-like cards"""
         st.subheader(
-            f"Detailed Results - {self.category_descriptions.get(category, {}).get('title', category.replace('_', ' ').title())}"
+            f"Detailed Results - {
+                self.category_descriptions.get(category, {}).get('title', category.replace('_', ' ').title())
+            }"
         )
 
         # Collect all test results for this category
@@ -474,39 +492,54 @@ class EvaluationDashboard:
             r for r in all_results if r["result"].get("status", "N/A") in status_filter and r["file"] in file_filter
         ]
 
-        # Display results as cards
+        # Display results as cards with question numbering and selective status removal
+        question_counter = 1
+
         for item in filtered_results:
             result = item["result"]
             file_name = item["file"]
+            category = result.get("category", "")
+
+            # Get evaluation details early for use in multiple sections
+            eval_details = result.get("evaluation_details", {})
+            score = result.get("score", 0)
 
             # Create test case card
-            test_id = result.get("test_id", "N/A")
+            # test_id = result.get("test_id", "N/A")  # Unused variable
             status = result.get("status", "N/A").lower()
 
-            # Test separator with status badge only
-            st.markdown(
-                f"""
-                <div class="test-separator">
-                    <span class="status-badge status-{status}">
-                        {status.upper()}
-                    </span>
-                </div>
-            """,
-                unsafe_allow_html=True,
-            )
+            # Only show status badge for retrieval category, hide for business_value, robustness, generation
+            if category not in ["business_value", "robustness", "generation"]:
+                st.markdown(
+                    f"""
+                    <div class="test-separator">
+                        <span class="status-badge status-{status}">
+                            {status.upper()}
+                        </span>
+                    </div>
+                """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                # Just add spacing for non-retrieval categories
+                st.markdown(
+                    '<div style="margin: 30px 0; padding: 10px 0;"></div>',
+                    unsafe_allow_html=True,
+                )
 
-            # Question section
+            # Question section with numbering
             question = result.get("question", "N/A")
             if question != "N/A":
                 st.markdown(
                     f"""
                 <div class="question-section">
-                    <span class="section-label">Question:</span>
+                    <span class="section-label">Question {question_counter}:</span>
                     <div class="question-text">{question}</div>
                 </div>
                 """,
                     unsafe_allow_html=True,
                 )
+                question_counter += 1
 
             # Response section with conditional coloring
             response = result.get("response", "")
@@ -550,62 +583,81 @@ class EvaluationDashboard:
                     unsafe_allow_html=True,
                 )
 
-            # Evaluation details
-            eval_details = result.get("evaluation_details", {})
-            score = result.get("score", 0)
-            category = result.get("category", "")
-
-            if eval_details or score:
+            # Show evaluation after Expected behavior for robustness and generation categories
+            if category in ["robustness", "generation"] and (eval_details or score):
                 reasoning = eval_details.get("reasoning", "")
                 passes_criteria = eval_details.get("passes_criteria")
 
                 st.markdown(
-                    f"""
-                <div class="evaluation-details">
-                    <div class="score-display">
-                        <span class="section-label">Score:</span>
-                        <span class="score-value">{score:.3f}</span>
-                """,
+                    '<div class="evaluation-details"><span class="section-label">Evaluation of Isschat answer:</span>',
                     unsafe_allow_html=True,
                 )
 
-                # For business_value and generation categories, show pass/fail below score
-                if category in ["business_value", "generation"] and passes_criteria is not None:
+                # Score first
+                st.markdown(
+                    f'<div class="score-display"><span class="section-label">Score:</span>'
+                    f'<span class="score-value">{score:.3f}</span></div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Reasoning second
+                if reasoning:
+                    st.markdown(
+                        f'<div class="reasoning"><strong>Reasoning:</strong> {reasoning}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                # Other metrics third (if any)
+                # TODO: Add other metrics here if needed
+
+                # Passed/Failed status last
+                if passes_criteria is not None:
                     status_text = "PASSED" if passes_criteria else "FAILED"
                     status_class = "passed" if passes_criteria else "failed"
                     st.markdown(
-                        f"""
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <span class="status-badge status-{status_class}">
-                            {status_text}
-                        </span>
-                    </div>
-                    """,
+                        f'<div style="margin-top: 10px;">'
+                        f'<span class="status-badge status-{status_class}">{status_text}</span></div>',
                         unsafe_allow_html=True,
                     )
-                else:
-                    # For other categories, show criteria as before but remove text
-                    if passes_criteria is not None and category not in ["business_value", "generation"]:
-                        criteria_class = "passed" if passes_criteria else "failed"
-                        criteria_text = "Criteria Met" if passes_criteria else "Criteria Not Met"
-                        st.markdown(
-                            f"""
-                            <span class="status-badge status-{criteria_class}">
-                                {criteria_text}
-                            </span>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-                    st.markdown("</div>", unsafe_allow_html=True)
 
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            # Note: Evaluation details are now shown in appropriate sections above
+
+            # Only show evaluation here for business_value and other categories (not robustness/generation)
+            if category not in ["robustness", "generation"] and (eval_details or score):
+                reasoning = eval_details.get("reasoning", "")
+                passes_criteria = eval_details.get("passes_criteria")
+
+                st.markdown(
+                    '<div class="evaluation-details"><span class="section-label">Evaluation of Isschat answer:</span>',
+                    unsafe_allow_html=True,
+                )
+
+                # Score first
+                st.markdown(
+                    f'<div class="score-display"><span class="section-label">Score:</span>'
+                    f'<span class="score-value">{score:.3f}</span></div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Reasoning second
                 if reasoning:
                     st.markdown(
-                        f"""
-                    <div class="reasoning">
-                        <strong>Reasoning:</strong> {reasoning}
-                    </div>
-                    """,
+                        f'<div class="reasoning"><strong>Reasoning:</strong> {reasoning}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                # Other metrics third (if any)
+                # TODO: Add other metrics here if needed
+
+                # Passed/Failed status last
+                if passes_criteria is not None:
+                    status_text = "PASSED" if passes_criteria else "FAILED"
+                    status_class = "passed" if passes_criteria else "failed"
+                    st.markdown(
+                        f'<div style="margin-top: 10px;">'
+                        f'<span class="status-badge status-{status_class}">{status_text}</span></div>',
                         unsafe_allow_html=True,
                     )
 
@@ -627,7 +679,8 @@ class EvaluationDashboard:
                 for key, value in metadata.items():
                     if key not in ["response_time"]:  # Avoid duplicating response_time
                         st.markdown(
-                            f'<span class="metadata-item"><strong>{key.replace("_", " ").title()}:</strong> {value}</span>',
+                            f'<span class="metadata-item"><strong>'
+                            f"{key.replace('_', ' ').title()}:</strong> {value}</span>",
                             unsafe_allow_html=True,
                         )
 
