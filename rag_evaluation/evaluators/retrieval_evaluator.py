@@ -55,17 +55,13 @@ class RetrievalEvaluator(BaseEvaluator):
         """Evaluate retrieval performance using metrics"""
         # Get retrieved docs from the stored metadata
         retrieved_docs = getattr(self, "_retrieved_docs", [])
+        expected_docs = test_case.metadata.get("expected_documents", [])
 
         # Calculate retrieval metrics
-        metrics = self._calculate_retrieval_metrics(test_case.metadata.get("expected_documents", []), retrieved_docs)
+        metrics = self._calculate_retrieval_metrics(expected_docs, retrieved_docs)
 
-        # Determine if test passes criteria based on CI mode
-        if hasattr(self.config, "ci_mode") and self.config.ci_mode:
-            ci_threshold = getattr(self.config, "ci_threshold", 0.5)
-            passes_criteria = metrics["overall_score"] >= ci_threshold
-        else:
-            # In non-CI mode, we just measure metrics without pass/fail
-            passes_criteria = True  # Always passes for measurement mode
+        # Determine if test passes criteria: at least one expected document was retrieved
+        passes_criteria = self._has_at_least_one_expected_document(expected_docs, retrieved_docs)
 
         return {
             "passes_criteria": passes_criteria,
@@ -82,13 +78,9 @@ class RetrievalEvaluator(BaseEvaluator):
         response_time: float,
         sources: Optional[List[str]] = None,
     ) -> EvaluationResult:
-        """Create a successful evaluation result with MEASURED status support"""
-        # Determine status based on CI mode
-        if hasattr(self.config, "ci_mode") and self.config.ci_mode:
-            status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED
-        else:
-            # In non-CI mode, use MEASURED status for metrics collection
-            status = EvaluationStatus.MEASURED
+        """Create a successful evaluation result with PASSED/FAILED status based on document retrieval"""
+        # Always use PASSED/FAILED based on whether at least one expected document was retrieved
+        status = EvaluationStatus.PASSED if evaluation["passes_criteria"] else EvaluationStatus.FAILED
 
         return EvaluationResult(
             test_id=test_case.test_id,
@@ -261,6 +253,52 @@ class RetrievalEvaluator(BaseEvaluator):
             ndcg_scores[f"ndcg_at_{k}"] = dcg / idcg if idcg > 0 else 0.0
 
         return ndcg_scores
+
+    def _has_at_least_one_expected_document(self, expected_docs: List[Dict], retrieved_docs: List[Dict]) -> bool:
+        """Check if at least one expected document was retrieved using flexible URL matching"""
+        if not expected_docs:
+            # If no expected documents, consider it a pass (empty test case)
+            return True
+
+        if not retrieved_docs:
+            # If no documents retrieved but some were expected, it's a fail
+            return False
+
+        # Get expected URLs
+        expected_urls = [doc.get("url", "") for doc in expected_docs]
+
+        # Get retrieved URLs
+        retrieved_urls = [doc.get("url", "") for doc in retrieved_docs]
+
+        # Check for flexible matches
+        for expected_url in expected_urls:
+            for retrieved_url in retrieved_urls:
+                if self._urls_match_flexibly(expected_url, retrieved_url):
+                    return True
+
+        return False
+
+    def _urls_match_flexibly(self, url1: str, url2: str) -> bool:
+        """Check if two URLs match using flexible criteria"""
+        if not url1 or not url2:
+            return False
+
+        # Exact match
+        if url1 == url2:
+            return True
+
+        # One URL contains the other (handles cases like /pages/123 vs /pages/123/Title)
+        if url1 in url2 or url2 in url1:
+            return True
+
+        # Same page ID (extract page ID and compare)
+        page_id1 = self._extract_page_id(url1)
+        page_id2 = self._extract_page_id(url2)
+
+        if page_id1 and page_id2 and page_id1 == page_id2:
+            return True
+
+        return False
 
     def _calculate_ranking_score(self, expected_docs: List[Dict], retrieved_docs: List[Dict]) -> float:
         """Calculate ranking quality score"""

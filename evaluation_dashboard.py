@@ -7,7 +7,6 @@ Provides interactive visualization and comparison of evaluation results
 import streamlit as st
 import pandas as pd
 import json
-import plotly.express as px
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
@@ -293,6 +292,121 @@ class EvaluationDashboard:
         except Exception:
             return file_path.name
 
+    def _extract_page_id(self, url: str) -> str:
+        """Extract page ID from URL"""
+        if not url:
+            return ""
+
+        # Extract pages/number from URL
+        import re
+
+        match = re.search(r"pages/(\d+)", url)
+        return match.group(1) if match else url
+
+    def _format_retrieved_documents(self, sources: list) -> str:
+        """Format retrieved documents for display"""
+        if not sources:
+            return "No documents retrieved"
+
+        formatted_docs = []
+        for i, source in enumerate(sources[:5], 1):  # Show top 5
+            formatted_docs.append(f"{i}. {source}")
+
+        return "<br>".join(formatted_docs)
+
+    def _urls_match_flexibly(self, url1: str, url2: str) -> bool:
+        """Check if two URLs match using flexible criteria"""
+        if not url1 or not url2:
+            return False
+
+        # Exact match
+        if url1 == url2:
+            return True
+
+        # One URL contains the other (handles cases like /pages/123 vs /pages/123/Title)
+        if url1 in url2 or url2 in url1:
+            return True
+
+        # Same page ID (extract page ID and compare)
+        page_id1 = self._extract_page_id(url1)
+        page_id2 = self._extract_page_id(url2)
+
+        if page_id1 and page_id2 and page_id1 == page_id2:
+            return True
+
+        return False
+
+    def _find_matching_retrieved_url(self, expected_url: str, retrieved_sources: list) -> str | None:
+        """Find a retrieved URL that matches the expected URL using flexible matching"""
+        for retrieved_url in retrieved_sources:
+            if self._urls_match_flexibly(expected_url, retrieved_url):
+                return retrieved_url
+        return None
+
+    def _create_document_comparison(self, expected_docs: list, retrieved_sources: list) -> str:
+        """Create HTML comparison between expected and retrieved documents using flexible URL matching"""
+        comparison_html = []
+        comparison_html.append('<div style="margin-top: 10px;">')
+
+        matched_retrieved_urls = set()
+
+        # Show expected documents section (without green background)
+        if expected_docs:
+            comparison_html.append(
+                '<div style="margin-bottom: 15px; padding: 15px; border-left: 4px solid #6c757d; background: #f8f9fa;">'
+            )
+            comparison_html.append('<strong style="color: #495057;">Expected Documents:</strong>')
+            for doc in expected_docs:
+                expected_url = doc.get("url", "")
+                title = doc.get("title", "Untitled Document")
+
+                # Find matching retrieved URL using flexible matching
+                matching_retrieved_url = self._find_matching_retrieved_url(expected_url, retrieved_sources)
+
+                if matching_retrieved_url:
+                    matched_retrieved_urls.add(matching_retrieved_url)
+
+                comparison_html.append(
+                    f'<div style="padding: 8px; margin: 5px 0; border-radius: 3px; '
+                    f'background: white; border: 1px solid #dee2e6;">'
+                    f'{title}<br><small style="color: #6c757d;">{expected_url}</small></div>'
+                )
+            comparison_html.append("</div>")
+
+        # Show retrieved documents section with color coding
+        comparison_html.append(
+            '<div style="margin-bottom: 15px; padding: 15px; border-left: 4px solid #6c757d; background: #f8f9fa;">'
+        )
+        comparison_html.append('<strong style="color: #495057;">Retrieved Documents:</strong>')
+
+        if not retrieved_sources:
+            comparison_html.append(
+                '<div style="color: #666; font-style: italic; padding: 8px;">No documents retrieved</div>'
+            )
+        else:
+            for url in retrieved_sources:
+                # Check if this retrieved document matches any expected document
+                is_expected = url in matched_retrieved_urls
+
+                if is_expected:
+                    # Green for expected documents
+                    comparison_html.append(
+                        f'<div style="color: #155724; background: #d4edda; padding: 8px; margin: 5px 0; '
+                        f'border-radius: 3px; border: 1px solid #c3e6cb;">✓ Expected document<br>'
+                        f"<small>{url}</small></div>"
+                    )
+                else:
+                    # Yellow for unexpected documents
+                    comparison_html.append(
+                        f'<div style="color: #856404; background: #fff3cd; padding: 8px; margin: 5px 0; '
+                        f'border-radius: 3px; border: 1px solid #ffeaa7;">⚠ Unexpected document<br>'
+                        f"<small>{url}</small></div>"
+                    )
+
+        comparison_html.append("</div>")
+        comparison_html.append("</div>")
+        return "".join(comparison_html)
+
     def render_sidebar(self):
         """Render sidebar with file selection"""
         st.sidebar.title("Evaluation Dashboard")
@@ -508,7 +622,7 @@ class EvaluationDashboard:
             # test_id = result.get("test_id", "N/A")  # Unused variable
             status = result.get("status", "N/A").lower()
 
-            # Only show status badge for retrieval category, hide for business_value, robustness, generation
+            # Hide status badge for business_value, robustness, generation categories
             if category not in ["business_value", "robustness", "generation"]:
                 st.markdown(
                     f"""
@@ -521,7 +635,7 @@ class EvaluationDashboard:
                     unsafe_allow_html=True,
                 )
             else:
-                # Just add spacing for non-retrieval categories
+                # Just add spacing for categories without status badges
                 st.markdown(
                     '<div style="margin: 30px 0; padding: 10px 0;"></div>',
                     unsafe_allow_html=True,
@@ -541,164 +655,212 @@ class EvaluationDashboard:
                 )
                 question_counter += 1
 
-            # Response section with conditional coloring
-            response = result.get("response", "")
-            error_message = result.get("error_message", "")
+            # Special layout for retrieval category: Question → Document Comparison → Score → Status → Metrics
+            if category == "retrieval":
+                sources = result.get("sources", [])
+                expected_docs = result.get("metadata", {}).get("expected_documents", [])
 
-            # Determine response class based on criteria
-            eval_details = result.get("evaluation_details", {})
-            passes_criteria = eval_details.get("passes_criteria")
-            response_class = "response-passed" if passes_criteria else "response-failed"
-
-            if error_message:
+                # Document comparison right after question
                 st.markdown(
-                    f"""
-                <div class="error-message">
-                    <strong>Error:</strong> {error_message}
-                </div>
-                """,
-                    unsafe_allow_html=True,
-                )
-            elif response:
-                st.markdown(
-                    f"""
-                <div class="response-section">
-                    <span class="section-label">Isschat Response:</span>
-                    <div class="response-text {response_class}">{response}</div>
-                </div>
-                """,
+                    '<div class="evaluation-details"><span class="section-label">Document Comparison:</span>',
                     unsafe_allow_html=True,
                 )
 
-            # Expected behavior section
-            expected = result.get("expected_behavior", "")
-            if expected:
-                st.markdown(
-                    f"""
-                <div class="expected-section">
-                    <span class="section-label">Expected Behavior:</span>
-                    <div class="expected-text">{expected}</div>
-                </div>
-                """,
-                    unsafe_allow_html=True,
-                )
+                comparison_html = self._create_document_comparison(expected_docs, sources)
+                st.markdown(comparison_html, unsafe_allow_html=True)
 
-            # Show evaluation after Expected behavior for robustness and generation categories
-            if category in ["robustness", "generation"] and (eval_details or score):
-                reasoning = eval_details.get("reasoning", "")
-                passes_criteria = eval_details.get("passes_criteria")
-
+                # Score
                 st.markdown(
-                    '<div class="evaluation-details"><span class="section-label">Evaluation of Isschat answer:</span>',
-                    unsafe_allow_html=True,
-                )
-
-                # Score first
-                st.markdown(
-                    f'<div class="score-display"><span class="section-label">Score:</span>'
+                    f'<div style="margin-top: 15px;"><span class="section-label">Score:</span> '
                     f'<span class="score-value">{score:.3f}</span></div>',
                     unsafe_allow_html=True,
                 )
 
-                # Reasoning second
-                if reasoning:
-                    st.markdown(
-                        f'<div class="reasoning"><strong>Reasoning:</strong> {reasoning}</div>',
-                        unsafe_allow_html=True,
-                    )
-
-                # Other metrics third (if any)
-                # TODO: Add other metrics here if needed
-
-                # Passed/Failed status last
-                if passes_criteria is not None:
-                    status_text = "PASSED" if passes_criteria else "FAILED"
-                    status_class = "passed" if passes_criteria else "failed"
-                    st.markdown(
-                        f'<div style="margin-top: 10px;">'
-                        f'<span class="status-badge status-{status_class}">{status_text}</span></div>',
-                        unsafe_allow_html=True,
-                    )
-
-                st.markdown("</div>", unsafe_allow_html=True)
-
-            # Note: Evaluation details are now shown in appropriate sections above
-
-            # Only show evaluation here for business_value and other categories (not robustness/generation)
-            if category not in ["robustness", "generation"] and (eval_details or score):
-                reasoning = eval_details.get("reasoning", "")
+                # Status
                 passes_criteria = eval_details.get("passes_criteria")
-
-                st.markdown(
-                    '<div class="evaluation-details"><span class="section-label">Evaluation of Isschat answer:</span>',
-                    unsafe_allow_html=True,
-                )
-
-                # Score first
-                st.markdown(
-                    f'<div class="score-display"><span class="section-label">Score:</span>'
-                    f'<span class="score-value">{score:.3f}</span></div>',
-                    unsafe_allow_html=True,
-                )
-
-                # Reasoning second
-                if reasoning:
-                    st.markdown(
-                        f'<div class="reasoning"><strong>Reasoning:</strong> {reasoning}</div>',
-                        unsafe_allow_html=True,
-                    )
-
-                # Other metrics third (if any)
-                # TODO: Add other metrics here if needed
-
-                # Passed/Failed status last
                 if passes_criteria is not None:
                     status_text = "PASSED" if passes_criteria else "FAILED"
                     status_class = "passed" if passes_criteria else "failed"
                     st.markdown(
-                        f'<div style="margin-top: 10px;">'
-                        f'<span class="status-badge status-{status_class}">{status_text}</span></div>',
+                        f'<div style="margin-top: 10px;"><span class="status-badge '
+                        f'status-{status_class}">{status_text}</span></div>',
                         unsafe_allow_html=True,
                     )
 
-                st.markdown("</div>", unsafe_allow_html=True)
-
-            # Metadata
-            metadata = result.get("metadata", {})
-            response_time = result.get("response_time", 0)
-
-            if metadata or response_time:
-                st.markdown('<div class="metadata">', unsafe_allow_html=True)
-
+                # Metrics (response time only for retrieval)
+                response_time = result.get("response_time", 0)
                 if response_time:
                     st.markdown(
-                        f'<span class="metadata-item"><strong>Response Time:</strong> {response_time:.2f}s</span>',
+                        f'<div style="margin-top: 10px;"><span class="metadata-item">'
+                        f"<strong>Response Time:</strong> {response_time:.2f}s</span></div>",
                         unsafe_allow_html=True,
                     )
 
-                for key, value in metadata.items():
-                    if key not in ["response_time"]:  # Avoid duplicating response_time
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            else:
+                # For other categories, keep original structure
+                response = result.get("response", "")
+                error_message = result.get("error_message", "")
+
+                # Determine response class based on criteria
+                passes_criteria = eval_details.get("passes_criteria")
+                response_class = "response-passed" if passes_criteria else "response-failed"
+
+                if error_message:
+                    st.markdown(
+                        f"""
+                    <div class="error-message">
+                        <strong>Error:</strong> {error_message}
+                    </div>
+                    """,
+                        unsafe_allow_html=True,
+                    )
+                elif response:
+                    st.markdown(
+                        f"""
+                    <div class="response-section">
+                        <span class="section-label">Isschat Response:</span>
+                        <div class="response-text {response_class}">{response}</div>
+                    </div>
+                    """,
+                        unsafe_allow_html=True,
+                    )
+
+                # Expected behavior section - only for non-retrieval categories
+                expected = result.get("expected_behavior", "")
+                if expected:
+                    st.markdown(
+                        f"""
+                    <div class="expected-section">
+                        <span class="section-label">Expected Behavior:</span>
+                        <div class="expected-text">{expected}</div>
+                    </div>
+                    """,
+                        unsafe_allow_html=True,
+                    )
+
+                # Show evaluation after Expected behavior for robustness and generation categories
+                if category in ["robustness", "generation"] and (eval_details or score):
+                    reasoning = eval_details.get("reasoning", "")
+                    passes_criteria = eval_details.get("passes_criteria")
+
+                    st.markdown(
+                        '<div class="evaluation-details"><span class="section-label">'
+                        "Evaluation of Isschat answer:</span>",
+                        unsafe_allow_html=True,
+                    )
+
+                    # Score first
+                    st.markdown(
+                        f'<div class="score-display"><span class="section-label">Score:</span>'
+                        f'<span class="score-value">{score:.3f}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    # Reasoning second
+                    if reasoning:
                         st.markdown(
-                            f'<span class="metadata-item"><strong>'
-                            f"{key.replace('_', ' ').title()}:</strong> {value}</span>",
+                            f'<div class="reasoning"><strong>Reasoning:</strong> {reasoning}</div>',
                             unsafe_allow_html=True,
                         )
 
-                st.markdown("</div>", unsafe_allow_html=True)
+                    # Other metrics third (if any)
+                    # TODO: Add other metrics here if needed
 
-            # Sources
-            sources = result.get("sources", [])
-            if sources:
-                st.markdown(
-                    """
-                <div class="sources">
-                    <span class="section-label">Sources:</span>
-                """,
-                    unsafe_allow_html=True,
-                )
-                for source in sources:
-                    st.markdown(f'<div class="source-item">{source}</div>', unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
+                    # Passed/Failed status last
+                    if passes_criteria is not None:
+                        status_text = "PASSED" if passes_criteria else "FAILED"
+                        status_class = "passed" if passes_criteria else "failed"
+                        st.markdown(
+                            f'<div style="margin-top: 10px;">'
+                            f'<span class="status-badge status-{status_class}">{status_text}</span></div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+                # Only show evaluation here for business_value and other categories
+                # (not robustness/generation/retrieval)
+                elif category not in ["robustness", "generation", "retrieval"] and (eval_details or score):
+                    reasoning = eval_details.get("reasoning", "")
+                    passes_criteria = eval_details.get("passes_criteria")
+
+                    st.markdown(
+                        '<div class="evaluation-details"><span class="section-label">'
+                        "Evaluation of Isschat answer:</span>",
+                        unsafe_allow_html=True,
+                    )
+
+                    # Score first
+                    st.markdown(
+                        f'<div class="score-display"><span class="section-label">Score:</span>'
+                        f'<span class="score-value">{score:.3f}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    # Reasoning second
+                    if reasoning:
+                        st.markdown(
+                            f'<div class="reasoning"><strong>Reasoning:</strong> {reasoning}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    # Other metrics third (if any)
+                    # TODO: Add other metrics here if needed
+
+                    # Passed/Failed status last
+                    if passes_criteria is not None:
+                        status_text = "PASSED" if passes_criteria else "FAILED"
+                        status_class = "passed" if passes_criteria else "failed"
+                        st.markdown(
+                            f'<div style="margin-top: 10px;">'
+                            f'<span class="status-badge status-{status_class}">{status_text}</span></div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+                # Metadata - only for non-retrieval categories to avoid showing Expected Documents
+                metadata = result.get("metadata", {})
+                response_time = result.get("response_time", 0)
+
+                if metadata or response_time:
+                    st.markdown('<div class="metadata">', unsafe_allow_html=True)
+
+                    if response_time:
+                        st.markdown(
+                            f'<span class="metadata-item"><strong>Response Time:</strong> {response_time:.2f}s</span>',
+                            unsafe_allow_html=True,
+                        )
+
+                    for key, value in metadata.items():
+                        if key not in [
+                            "response_time",
+                            "expected_documents",
+                        ]:  # Avoid duplicating and hide expected_documents
+                            st.markdown(
+                                f'<span class="metadata-item"><strong>'
+                                f"{key.replace('_', ' ').title()}:</strong> {value}</span>",
+                                unsafe_allow_html=True,
+                            )
+
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+            # Sources (only show for non-retrieval categories since retrieval shows them as Retrieved Documents)
+            if category != "retrieval":
+                sources = result.get("sources", [])
+                if sources:
+                    st.markdown(
+                        """
+                    <div class="sources">
+                        <span class="section-label">Sources:</span>
+                    """,
+                        unsafe_allow_html=True,
+                    )
+                    for source in sources:
+                        st.markdown(f'<div class="source-item">{source}</div>', unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
 
             # Add spacing after each test case
             st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
@@ -757,8 +919,8 @@ class EvaluationDashboard:
             st.dataframe(df, use_container_width=True, hide_index=True)
 
     def show_comparison_modal(self):
-        """Show comparison of all evaluation files"""
-        st.subheader("All Evaluations Comparison")
+        """Show comparison of two selected evaluation files"""
+        st.subheader("Evaluation Comparison")
 
         # Load all available files
         all_results = {}
@@ -772,9 +934,32 @@ class EvaluationDashboard:
             st.warning("At least 2 evaluation files are required to perform a comparison.")
             return
 
-        # Create comparison dataframe
+        # Selection of two files to compare
+        col1, col2 = st.columns(2)
+
+        file_options = list(all_results.keys())
+
+        with col1:
+            file1 = st.selectbox("Select first evaluation:", options=file_options, index=0, key="comparison_file1")
+
+        with col2:
+            # Filter out the first selected file from second selection
+            file2_options = [f for f in file_options if f != file1]
+            file2 = (
+                st.selectbox("Select second evaluation:", options=file2_options, index=0, key="comparison_file2")
+                if file2_options
+                else None
+            )
+
+        if not file2:
+            st.warning("Please select two different evaluation files.")
+            return
+
+        # Create comparison dataframe for selected files only
+        selected_results = {file1: all_results[file1], file2: all_results[file2]}
+
         comparison_data = []
-        for file_name, data in all_results.items():
+        for file_name, data in selected_results.items():
             overall_stats = data.get("overall_stats", {})
             comparison_data.append(
                 {
@@ -791,53 +976,15 @@ class EvaluationDashboard:
         df = pd.DataFrame(comparison_data)
 
         # Display comparison table
+        st.subheader("Overall Comparison")
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-        # Visualizations
-        col1, col2 = st.columns(2)
-
-        with col1:
-            # Test count comparison
-            fig_pass_rate = px.bar(
-                df,
-                x="File",
-                y="Total Tests",
-                title="Test Count Comparison",
-                labels={"Total Tests": "Number of Tests", "File": "Evaluation"},
-            )
-            fig_pass_rate.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(fig_pass_rate, use_container_width=True)
-
-        with col2:
-            # Test distribution
-            test_data = []
-            for _, row in df.iterrows():
-                test_data.extend(
-                    [
-                        {"File": row["File"], "Type": "Passed", "Count": row["Passed"]},
-                        {"File": row["File"], "Type": "Failed", "Count": row["Failed"]},
-                        {"File": row["File"], "Type": "Measured", "Count": row["Measured"]},
-                    ]
-                )
-            test_df = pd.DataFrame(test_data)
-
-            fig_tests = px.bar(
-                test_df,
-                x="File",
-                y="Count",
-                color="Type",
-                title="Results Distribution by Type",
-                labels={"Count": "Number of Tests", "File": "Evaluation"},
-            )
-            fig_tests.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(fig_tests, use_container_width=True)
-
-        # Category comparison if available
+        # Category comparison for selected files
         st.subheader("Category Comparison")
 
-        # Get all categories across all files
+        # Get all categories across selected files
         all_categories = set()
-        for data in all_results.values():
+        for data in selected_results.values():
             category_results = data.get("category_results", {})
             all_categories.update(category_results.keys())
 
@@ -850,7 +997,7 @@ class EvaluationDashboard:
 
             if selected_category:
                 category_comparison_data = []
-                for file_name, data in all_results.items():
+                for file_name, data in selected_results.items():
                     category_results = data.get("category_results", {})
                     cat_data = category_results.get(selected_category, {})
 
@@ -868,6 +1015,10 @@ class EvaluationDashboard:
                 if category_comparison_data:
                     cat_df = pd.DataFrame(category_comparison_data)
                     st.dataframe(cat_df, use_container_width=True, hide_index=True)
+                else:
+                    st.info(f"No data available for category '{selected_category}' in the selected files.")
+        else:
+            st.info("No categories available for comparison in the selected files.")
 
     def run(self):
         """Run the dashboard"""
