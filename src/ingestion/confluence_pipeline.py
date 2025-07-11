@@ -27,6 +27,12 @@ class ConfluenceIngestionPipeline(BaseIngestionPipeline):
             "list_chunk_tokens": getattr(self.config, "confluence_list_chunk_tokens", 1500),
             "code_chunk_tokens": getattr(self.config, "confluence_code_chunk_tokens", 1500),
             "chunk_overlap_tokens": getattr(self.config, "confluence_chunk_overlap_tokens", 50),
+            # Add Confluence API configuration for metadata enricher
+            "confluence_private_api_key": self.config.confluence_api_key,
+            "confluence_space_key": self.config.confluence_space_key,
+            "confluence_space_name": self.config.confluence_space_name,
+            "confluence_email_address": self.config.confluence_email,
+            "confluence_url": self.config.confluence_url,
         }
 
         self.chunker = ConfluenceChunker(
