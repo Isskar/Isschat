@@ -21,34 +21,11 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-    .test-case-container {
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .test-header {
-        background: #f8f9fa;
-        padding: 15px 20px;
-        border-bottom: 1px solid #dee2e6;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .test-id {
-        font-weight: bold;
-        color: #495057;
-        font-size: 0.9em;
-    }
-    
-    .test-name {
-        color: #007bff;
-        font-weight: 500;
-        margin-left: 10px;
+    .test-separator {
+        margin: 30px 0;
+        padding: 10px 0;
+        border-top: 2px solid #dee2e6;
+        text-align: right;
     }
     
     .status-badge {
@@ -77,10 +54,6 @@ st.markdown(
     .status-measured {
         background: #d1ecf1;
         color: #0c5460;
-    }
-    
-    .test-content {
-        padding: 20px;
     }
     
     .question-section {
@@ -113,13 +86,22 @@ st.markdown(
     }
     
     .response-text {
-        background: #f1f8e9;
         padding: 15px;
         border-radius: 5px;
-        border-left: 4px solid #4caf50;
         white-space: pre-wrap;
-        color: #2e7d32;
         line-height: 1.5;
+    }
+    
+    .response-passed {
+        background: #f1f8e9;
+        border-left: 4px solid #4caf50;
+        color: #2e7d32;
+    }
+    
+    .response-failed {
+        background: #ffebee;
+        border-left: 4px solid #f44336;
+        color: #c62828;
     }
     
     .expected-text {
@@ -501,19 +483,14 @@ class EvaluationDashboard:
             test_id = result.get("test_id", "N/A")
             status = result.get("status", "N/A").lower()
 
-            # Test header
+            # Test separator with status badge only
             st.markdown(
                 f"""
-            <div class="test-case-container">
-                <div class="test-header">
-                    <div>
-                        <span class="test-id">{test_id}</span>
-                    </div>
+                <div class="test-separator">
                     <span class="status-badge status-{status}">
                         {status.upper()}
                     </span>
                 </div>
-                <div class="test-content">
             """,
                 unsafe_allow_html=True,
             )
@@ -531,9 +508,14 @@ class EvaluationDashboard:
                     unsafe_allow_html=True,
                 )
 
-            # Response section
+            # Response section with conditional coloring
             response = result.get("response", "")
             error_message = result.get("error_message", "")
+
+            # Determine response class based on criteria
+            eval_details = result.get("evaluation_details", {})
+            passes_criteria = eval_details.get("passes_criteria")
+            response_class = "response-passed" if passes_criteria else "response-failed"
 
             if error_message:
                 st.markdown(
@@ -549,7 +531,7 @@ class EvaluationDashboard:
                     f"""
                 <div class="response-section">
                     <span class="section-label">Isschat Response:</span>
-                    <div class="response-text">{response}</div>
+                    <div class="response-text {response_class}">{response}</div>
                 </div>
                 """,
                     unsafe_allow_html=True,
@@ -571,6 +553,7 @@ class EvaluationDashboard:
             # Evaluation details
             eval_details = result.get("evaluation_details", {})
             score = result.get("score", 0)
+            category = result.get("category", "")
 
             if eval_details or score:
                 reasoning = eval_details.get("reasoning", "")
@@ -586,19 +569,35 @@ class EvaluationDashboard:
                     unsafe_allow_html=True,
                 )
 
-                if passes_criteria is not None:
-                    criteria_class = "passed" if passes_criteria else "failed"
-                    criteria_text = "Criteria Met" if passes_criteria else "Criteria Not Met"
+                # For business_value and generation categories, show pass/fail below score
+                if category in ["business_value", "generation"] and passes_criteria is not None:
+                    status_text = "PASSED" if passes_criteria else "FAILED"
+                    status_class = "passed" if passes_criteria else "failed"
                     st.markdown(
                         f"""
-                        <span class="status-badge status-{criteria_class}">
-                            {criteria_text}
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <span class="status-badge status-{status_class}">
+                            {status_text}
                         </span>
+                    </div>
                     """,
                         unsafe_allow_html=True,
                     )
-
-                st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    # For other categories, show criteria as before but remove text
+                    if passes_criteria is not None and category not in ["business_value", "generation"]:
+                        criteria_class = "passed" if passes_criteria else "failed"
+                        criteria_text = "Criteria Met" if passes_criteria else "Criteria Not Met"
+                        st.markdown(
+                            f"""
+                            <span class="status-badge status-{criteria_class}">
+                                {criteria_text}
+                            </span>
+                        """,
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown("</div>", unsafe_allow_html=True)
 
                 if reasoning:
                     st.markdown(
@@ -648,8 +647,8 @@ class EvaluationDashboard:
                     st.markdown(f'<div class="source-item">{source}</div>', unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            # Close test case container
-            st.markdown("</div></div>", unsafe_allow_html=True)
+            # Add spacing after each test case
+            st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
     def render_retrieval_metrics(self, results: Dict[str, Dict[str, Any]]):
         """Render specialized retrieval metrics"""
@@ -848,17 +847,14 @@ class EvaluationDashboard:
             st.error("No valid evaluation data found")
             return
 
-        # Main content tabs
-        tab1, tab2, tab3 = st.tabs(["Overview", "Categories", "Retrieval Metrics"])
+        # Main content tabs (removed Retrieval Metrics tab)
+        tab1, tab2 = st.tabs(["Overview", "Categories"])
 
         with tab1:
             self.render_overview_metrics(results)
 
         with tab2:
             self.render_category_details(results)
-
-        with tab3:
-            self.render_retrieval_metrics(results)
 
         # Footer
         st.markdown("---")
