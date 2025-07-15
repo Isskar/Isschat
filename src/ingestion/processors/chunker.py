@@ -78,32 +78,34 @@ class ConfluenceChunker(DocumentChunker):
         self.model_name = model_name
 
         # Initialize metadata enricher for sibling documents retrieval
+        self.metadata_enricher = self._initialize_metadata_enricher(config)
+
+    def _initialize_metadata_enricher(self, config: Optional[Dict[str, Any]]):
+        """Initialize the Confluence metadata enricher."""
+        if not config:
+            return None
+
         try:
             from ..connectors.metadata_enricher import ConfluenceMetadataEnricher
 
-            if config:
-                # Check for direct confluence config or nested config
-                if "confluence" in config:
-                    confluence_config = config["confluence"]
-                    base_url = confluence_config.get("base_url", "")
-                    username = confluence_config.get("username", "")
-                    api_token = confluence_config.get("api_token", "")
-                else:
-                    # Check for confluence config keys at root level
-                    base_url = config.get("confluence_url", "")
-                    username = config.get("confluence_email_address", "")
-                    api_token = config.get("confluence_private_api_key", "")
-
-                if base_url and username and api_token:
-                    self.metadata_enricher = ConfluenceMetadataEnricher(
-                        base_url=base_url, username=username, api_token=api_token
-                    )
-                else:
-                    self.metadata_enricher = None
+            # Extract configuration parameters
+            if "confluence" in config:
+                confluence_config = config["confluence"]
+                base_url = confluence_config.get("base_url", "")
+                username = confluence_config.get("username", "")
+                api_token = confluence_config.get("api_token", "")
             else:
-                self.metadata_enricher = None
+                base_url = config.get("confluence_url", "")
+                username = config.get("confluence_email_address", "")
+                api_token = config.get("confluence_private_api_key", "")
+
+            if base_url and username and api_token:
+                return ConfluenceMetadataEnricher(base_url=base_url, username=username, api_token=api_token)
+
         except (ImportError, KeyError):
-            self.metadata_enricher = None
+            pass
+
+        return None
 
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
         """Chunk documents using the specified strategy."""
@@ -324,7 +326,7 @@ class ConfluenceChunker(DocumentChunker):
         )
 
         # Add contextual information to chunk content
-        enriched_content = self._add_hierarchical_context_to_chunk(content, metadata)
+        enriched_content = self._add_enriched_context_to_chunk(content, metadata)
 
         return Document(content=enriched_content, metadata=metadata)
 
@@ -366,14 +368,10 @@ class ConfluenceChunker(DocumentChunker):
 
         return numbers
 
-    def _add_hierarchical_context_to_chunk(self, content: str, metadata: Dict[str, Any]) -> str:
-        """Add hierarchical contextual information to chunk content."""
-        context_info = self._get_hierarchical_context(metadata)
-        return f"{context_info}{content}"
-
-    def _get_hierarchical_context(self, metadata: Dict[str, Any]) -> str:
-        """Generate hierarchical contextual information for a chunk."""
-        return self._build_structured_chunk_header(metadata)
+    def _add_enriched_context_to_chunk(self, content: str, metadata: Dict[str, Any]) -> str:
+        """Add enriched contextual information to chunk content."""
+        context_header = self._build_structured_chunk_header(metadata)
+        return f"{context_header}{content}"
 
     def _chunk_by_paragraphs(self, document: Document) -> List[Document]:
         """Split document into paragraph-based chunks with metadata enrichment."""
@@ -518,18 +516,9 @@ class ConfluenceChunker(DocumentChunker):
         )
 
         # Add contextual information to chunk content
-        enriched_content = self._add_context_to_chunk(content, metadata)
+        enriched_content = self._add_enriched_context_to_chunk(content, metadata)
 
         return Document(content=enriched_content, metadata=metadata)
-
-    def _add_context_to_chunk(self, content: str, metadata: Dict[str, Any]) -> str:
-        """Add contextual information to chunk content."""
-        context_info = self._get_document_context(metadata)
-        return f"{context_info}{content}"
-
-    def _get_document_context(self, metadata: Dict[str, Any]) -> str:
-        """Generate contextual information for a chunk."""
-        return self._build_structured_chunk_header(metadata)
 
     def _build_structured_chunk_header(self, metadata: Dict[str, Any]) -> str:
         """Build a compact, single-line compatible chunk header."""
@@ -614,66 +603,74 @@ class ConfluenceChunker(DocumentChunker):
 
     def _get_sibling_documents(self, metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Get sibling documents at the same hierarchical level."""
-        siblings = []
         current_title = metadata.get("title", "")
         current_page_id = metadata.get("page_id", "")
 
-        # Add current document
-        if current_title:
-            siblings.append({"title": current_title, "is_current": True})
+        # Initialize with current document
+        siblings = [{"title": current_title, "is_current": True}] if current_title else []
 
-        # Try to get real sibling documents from parent pages
-        parent_pages = metadata.get("parent_pages", [])
-        parent_page_id = None
-        parent_name = "Dossier parent"
-
-        if parent_pages:
-            # Get the immediate parent page ID and name
-            parent_page_id = parent_pages[-1].get("id")
-            parent_name = parent_pages[-1].get("title", "Dossier parent")
-        elif self.metadata_enricher and current_page_id:
-            # If parent_pages not available, try to get parent from API
-            try:
-                url = f"{self.metadata_enricher.api_base}/content/{current_page_id}"
-                params = {"expand": "ancestors"}
-                response = self.metadata_enricher.session.get(url, params=params)
-
-                if response.status_code == 200:
-                    page_data = response.json()
-                    ancestors = page_data.get("ancestors", [])
-                    if ancestors:
-                        parent = ancestors[-1]  # Last ancestor is direct parent
-                        parent_page_id = parent["id"]
-                        parent_name = parent["title"]
-
-            except Exception:
-                pass  # Continue with fallback
+        # Get parent information
+        parent_page_id, parent_name = self._get_parent_info(metadata, current_page_id)
 
         if not parent_page_id:
             siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
             return siblings
 
-        # Try to get actual sibling pages from Confluence API
-        if self.metadata_enricher:
-            try:
-                children_pages = self.metadata_enricher._get_page_children(parent_page_id)
+        # Retrieve actual sibling documents
+        return self._fetch_sibling_documents(siblings, parent_page_id, parent_name, current_page_id)
 
-                # Add real sibling documents (excluding current document)
-                sibling_titles = []
-                for page in children_pages:
-                    if page.get("id") != current_page_id:
-                        sibling_titles.append(page["title"])
-                        siblings.append({"title": page["title"], "is_current": False})
+    def _get_parent_info(self, metadata: Dict[str, Any], current_page_id: str) -> tuple[str, str]:
+        """Extract parent page ID and name from metadata or API."""
+        parent_pages = metadata.get("parent_pages", [])
 
-                # If no siblings found, add generic message
-                if not sibling_titles:
-                    siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
+        if parent_pages:
+            parent = parent_pages[-1]
+            return parent.get("id"), parent.get("title", "Dossier parent")
 
-            except Exception:
-                # Fallback to generic suggestion if API call fails
+        if self.metadata_enricher and current_page_id:
+            return self._fetch_parent_from_api(current_page_id)
+
+        return "", "Dossier parent"
+
+    def _fetch_parent_from_api(self, page_id: str) -> tuple[str, str]:
+        """Fetch parent information from Confluence API."""
+        try:
+            url = f"{self.metadata_enricher.api_base}/content/{page_id}"
+            response = self.metadata_enricher.session.get(url, params={"expand": "ancestors"})
+
+            if response.status_code == 200:
+                ancestors = response.json().get("ancestors", [])
+                if ancestors:
+                    parent = ancestors[-1]
+                    return parent["id"], parent["title"]
+        except Exception:
+            pass
+
+        return "", "Dossier parent"
+
+    def _fetch_sibling_documents(
+        self, siblings: List[Dict[str, Any]], parent_page_id: str, parent_name: str, current_page_id: str
+    ) -> List[Dict[str, Any]]:
+        """Fetch actual sibling documents from Confluence API."""
+        if not self.metadata_enricher:
+            siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
+            return siblings
+
+        try:
+            children_pages = self.metadata_enricher._get_page_children(parent_page_id)
+
+            # Filter out current document and add siblings
+            sibling_titles = []
+            for page in children_pages:
+                if page.get("id") != current_page_id:
+                    sibling_titles.append(page["title"])
+                    siblings.append({"title": page["title"], "is_current": False})
+
+            # Add fallback message if no siblings found
+            if not sibling_titles:
                 siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
-        else:
-            # Fallback when metadata_enricher is not available
+
+        except Exception:
             siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
 
         return siblings
