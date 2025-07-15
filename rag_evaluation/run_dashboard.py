@@ -17,7 +17,7 @@ def main():
         return 1
 
     # Check if evaluation_results directory exists
-    results_dir = Path(__file__).parent / "evaluation_results"
+    results_dir = Path(__file__).parent / "../evaluation_results"
     if not results_dir.exists():
         print(f"❌ evaluation_results directory not found: {results_dir}")
         return 1
