@@ -76,12 +76,33 @@ class ConfluenceChunker(DocumentChunker):
         self.chunk_overlap = self.config.get("chunk_overlap", 60)
         self.strategy = strategy or "semantic_hierarchical"
         self.model_name = model_name
-        
+
         # Initialize metadata enricher for sibling documents retrieval
         try:
-            from ..connectors.metadata_enricher import MetadataEnricher
-            self.metadata_enricher = MetadataEnricher(config)
-        except ImportError:
+            from ..connectors.metadata_enricher import ConfluenceMetadataEnricher
+
+            if config:
+                # Check for direct confluence config or nested config
+                if "confluence" in config:
+                    confluence_config = config["confluence"]
+                    base_url = confluence_config.get("base_url", "")
+                    username = confluence_config.get("username", "")
+                    api_token = confluence_config.get("api_token", "")
+                else:
+                    # Check for confluence config keys at root level
+                    base_url = config.get("confluence_url", "")
+                    username = config.get("confluence_email_address", "")
+                    api_token = config.get("confluence_private_api_key", "")
+
+                if base_url and username and api_token:
+                    self.metadata_enricher = ConfluenceMetadataEnricher(
+                        base_url=base_url, username=username, api_token=api_token
+                    )
+                else:
+                    self.metadata_enricher = None
+            else:
+                self.metadata_enricher = None
+        except (ImportError, KeyError):
             self.metadata_enricher = None
 
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
@@ -516,17 +537,25 @@ class ConfluenceChunker(DocumentChunker):
 
         # Build metadata section
         metadata_parts = []
-        if metadata.get("title"):
-            metadata_parts.append(f"Titre: {metadata['title']}")
-        if metadata.get("author_name"):
-            metadata_parts.append(f"Auteur: {metadata['author_name']}")
-        if metadata.get("created_date"):
-            created = metadata["created_date"][:10]
-            metadata_parts.append(f"Créé: {created}")
-        if metadata.get("space_key"):
-            metadata_parts.append(f"Espace: {metadata['space_key']}")
-        if metadata.get("url"):
-            metadata_parts.append(f"URL: {metadata['url']}")
+        title = metadata.get("title")
+        if title:
+            metadata_parts.append(f"Titre: {title}")
+
+        author = metadata.get("author_name")
+        if author:
+            metadata_parts.append(f"Auteur: {author}")
+
+        created = metadata.get("created_date")
+        if created:
+            metadata_parts.append(f"Créé: {created[:10]}")
+
+        space_key = metadata.get("space_key")
+        if space_key:
+            metadata_parts.append(f"Espace: {space_key}")
+
+        url = metadata.get("url")
+        if url:
+            metadata_parts.append(f"URL: {url}")
 
         # Build hierarchy section
         hierarchy_parts = []
@@ -536,24 +565,34 @@ class ConfluenceChunker(DocumentChunker):
 
         siblings = self._get_sibling_documents(metadata)
         if siblings:
-            current_siblings = [s["title"] for s in siblings if s["is_current"]]
-            other_siblings = [s["title"] for s in siblings if not s["is_current"]]
+            current_doc = None
+            other_siblings = []
 
-            if current_siblings:
-                hierarchy_parts.append(f"Document actuel: {current_siblings[0]}")
+            for sibling in siblings:
+                if sibling["is_current"]:
+                    current_doc = sibling["title"]
+                else:
+                    other_siblings.append(sibling["title"])
+
+            if current_doc:
+                hierarchy_parts.append(f"Document actuel: {current_doc}")
 
             if other_siblings:
-                siblings_list = ", ".join(other_siblings[:5])  # Limit to 5 siblings
+                # Limit to 5 siblings for readability
+                siblings_list = ", ".join(other_siblings[:5])
                 if len(other_siblings) > 5:
                     siblings_list += f" (et {len(other_siblings) - 5} autres)"
                 hierarchy_parts.append(f"Documents voisins: {siblings_list}")
 
         # Build content structure section
         content_parts = []
-        if metadata.get("section_breadcrumb"):
-            content_parts.append(f"Section: {metadata['section_breadcrumb']}")
+        section_breadcrumb = metadata.get("section_breadcrumb")
+        if section_breadcrumb:
+            content_parts.append(f"Section: {section_breadcrumb}")
+
         if metadata.get("has_numbers"):
-            content_parts.append(f"Numérique: {metadata.get('number_count', 0)} valeurs")
+            number_count = metadata.get("number_count", 0)
+            content_parts.append(f"Numérique: {number_count} valeurs")
 
         # Combine all sections with clear separators
         if metadata_parts:
@@ -585,32 +624,56 @@ class ConfluenceChunker(DocumentChunker):
 
         # Try to get real sibling documents from parent pages
         parent_pages = metadata.get("parent_pages", [])
-        if parent_pages and hasattr(self, 'metadata_enricher'):
-            # Get the immediate parent page ID
-            parent_page_id = parent_pages[-1].get("id") if parent_pages else None
-            parent_name = parent_pages[-1].get("title", "Dossier parent") if parent_pages else "Dossier parent"
-            
-            if parent_page_id:
-                try:
-                    # Get actual sibling pages from Confluence API
-                    children_pages = self.metadata_enricher._get_page_children(parent_page_id)
-                    
-                    # Add real sibling documents
-                    for page in children_pages:
-                        if page.get("id") != current_page_id:  # Don't add current document again
-                            siblings.append({"title": page["title"], "is_current": False})
-                    
-                    # If no siblings found, fallback to generic message
-                    if len(siblings) == 1:  # Only current document
-                        siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
-                        
-                except Exception as e:
-                    # Fallback to generic suggestion if API call fails
+        parent_page_id = None
+        parent_name = "Dossier parent"
+
+        if parent_pages:
+            # Get the immediate parent page ID and name
+            parent_page_id = parent_pages[-1].get("id")
+            parent_name = parent_pages[-1].get("title", "Dossier parent")
+        elif self.metadata_enricher and current_page_id:
+            # If parent_pages not available, try to get parent from API
+            try:
+                url = f"{self.metadata_enricher.api_base}/content/{current_page_id}"
+                params = {"expand": "ancestors"}
+                response = self.metadata_enricher.session.get(url, params=params)
+
+                if response.status_code == 200:
+                    page_data = response.json()
+                    ancestors = page_data.get("ancestors", [])
+                    if ancestors:
+                        parent = ancestors[-1]  # Last ancestor is direct parent
+                        parent_page_id = parent["id"]
+                        parent_name = parent["title"]
+
+            except Exception:
+                pass  # Continue with fallback
+
+        if not parent_page_id:
+            siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
+            return siblings
+
+        # Try to get actual sibling pages from Confluence API
+        if self.metadata_enricher:
+            try:
+                children_pages = self.metadata_enricher._get_page_children(parent_page_id)
+
+                # Add real sibling documents (excluding current document)
+                sibling_titles = []
+                for page in children_pages:
+                    if page.get("id") != current_page_id:
+                        sibling_titles.append(page["title"])
+                        siblings.append({"title": page["title"], "is_current": False})
+
+                # If no siblings found, add generic message
+                if not sibling_titles:
                     siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
-        else:
-            # Fallback when no parent pages or metadata_enricher available
-            if parent_pages:
-                parent_name = parent_pages[-1].get("title", "Dossier parent") if parent_pages else "Dossier parent"
+
+            except Exception:
+                # Fallback to generic suggestion if API call fails
                 siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
+        else:
+            # Fallback when metadata_enricher is not available
+            siblings.append({"title": f"[Autres documents de {parent_name}]", "is_current": False})
 
         return siblings
