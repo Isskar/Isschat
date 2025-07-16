@@ -211,23 +211,23 @@ class EvaluationDashboard:
         # Category descriptions based on evaluator configuration
         self.category_descriptions = {
             "robustness": {
-                "title": "Model Robustness Tests",
+                "title": "Robustness",
                 "description": "Tests for model knowledge, data validation, and context handling",
             },
             "generation": {
-                "title": "Generation Tests",
+                "title": "Generation",
                 "description": "Tests for conversational generation capabilities and context handling",
             },
             "retrieval": {
-                "title": "Retrieval Performance Tests",
+                "title": "Retrieval performance",
                 "description": "Tests for document retrieval accuracy and ranking quality",
             },
             "business_value": {
-                "title": "Business Value Tests",
+                "title": "Business value",
                 "description": "Tests for measuring Isschat's business impact and efficiency",
             },
             "feedback": {
-                "title": "Feedback Analysis",
+                "title": "User feedback analysis",
                 "description": (
                     "Analyzes user feedback using CamemBERT classification to identify strengths and weaknesses"
                 ),
@@ -391,10 +391,207 @@ class EvaluationDashboard:
         comparison_html.append("</div>")
         return "".join(comparison_html)
 
+    def render_feedback_analysis(self, result: Dict[str, Any], eval_details: Dict[str, Any]):
+        """Render feedback analysis with custom dashboard layout"""
+        feedback_metrics = eval_details.get("feedback_metrics", {})
+
+        if not feedback_metrics or feedback_metrics.get("total_feedbacks", 0) == 0:
+            st.markdown(
+                '<div class="evaluation-details">'
+                '<div style="text-align: center; color: #666; padding: 20px;">'
+                "<h3>Aucun feedback disponible</h3>"
+                "<p>Aucune donnée de feedback n'a été trouvée pour l'analyse.</p>"
+                "</div></div>",
+                unsafe_allow_html=True,
+            )
+            return
+
+        # Main metrics overview
+        total_feedbacks = feedback_metrics.get("total_feedbacks", 0)
+        overall_satisfaction = feedback_metrics.get("overall_satisfaction", 0)
+
+        st.markdown(
+            f"""
+            <div class="evaluation-details">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h3 style="color: #1f77b4; margin-bottom: 10px;">Analyse des feedbacks utilisateurs (in french)</h3>
+                    <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 20px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; font-weight: bold; color: #1f77b4;">{total_feedbacks}</div>
+                            <div style="color: #666; font-size: 0.9em;">Total Feedbacks</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; font-weight: bold; color: #28a745;">
+                                {overall_satisfaction:.0%}
+                            </div>
+                            <div style="color: #666; font-size: 0.9em;">Satisfaction Globale</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Topic breakdown
+        topic_breakdown = feedback_metrics.get("topic_breakdown", {})
+        if topic_breakdown:
+            st.markdown(
+                '<div class="evaluation-details" style="margin-top: 15px;">'
+                '<span class="section-label">Répartition par Thème (Classification CamemBERT):</span>',
+                unsafe_allow_html=True,
+            )
+
+            # Sort topics by count
+            sorted_topics = sorted(topic_breakdown.items(), key=lambda x: x[1]["total_count"], reverse=True)
+
+            for topic_id, topic_data in sorted_topics:
+                topic_name = topic_data["topic_name"]
+                total_count = topic_data["total_count"]
+                satisfaction_rate = topic_data["satisfaction_rate"]
+                positive_count = topic_data["positive_count"]
+                negative_count = topic_data["negative_count"]
+
+                # Color based on satisfaction rate
+                if satisfaction_rate >= 0.7:
+                    color = "#28a745"  # Green
+                elif satisfaction_rate <= 0.4:
+                    color = "#dc3545"  # Red
+                else:
+                    color = "#ffc107"  # Yellow
+
+                topic_style = (
+                    f"margin: 10px 0; padding: 15px; border-left: 4px solid {color}; "
+                    f"background: #f8f9fa; border-radius: 5px;"
+                )
+                feedback_details = (
+                    f"{total_count} feedback(s) • {positive_count} positif(s) • {negative_count} négatif(s)"
+                )
+                satisfaction_style = f"font-size: 1.2em; font-weight: bold; color: {color};"
+
+                st.markdown(
+                    f"""
+                    <div style="{topic_style}">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-weight: bold; color: #333;">{topic_name}</span>
+                                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                                    {feedback_details}
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="{satisfaction_style}">{satisfaction_rate:.0%}</div>
+                                <div style="font-size: 0.8em; color: #666;">satisfaction</div>
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        # Strengths and weaknesses - fix logic to avoid duplicates
+        topic_breakdown = feedback_metrics.get("topic_breakdown", {})
+
+        if topic_breakdown:
+            # Create proper strengths and weaknesses from topic breakdown
+            strengths = []
+            weaknesses = []
+
+            for topic_id, topic_data in topic_breakdown.items():
+                satisfaction_rate = topic_data["satisfaction_rate"]
+
+                if satisfaction_rate >= 0.7:
+                    strengths.append(topic_data)
+                elif satisfaction_rate <= 0.4:
+                    weaknesses.append(topic_data)
+                # Skip neutral topics (between 40% and 70%)
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown(
+                    '<div class="evaluation-details"><span class="section-label">Points Forts:</span>',
+                    unsafe_allow_html=True,
+                )
+
+                if strengths:
+                    for strength in strengths:
+                        strength_style = (
+                            "margin: 8px 0; padding: 10px; background: #d4edda; "
+                            "border-radius: 5px; border-left: 3px solid #28a745;"
+                        )
+                        strength_details = (
+                            f"{strength['total_count']} feedback(s) • {strength['satisfaction_rate']:.0%} satisfaction"
+                        )
+
+                        st.markdown(
+                            f"""
+                            <div style="{strength_style}">
+                                <div style="font-weight: bold; color: #155724;">
+                                    {strength["topic_name"]}
+                                </div>
+                                <div style="font-size: 0.9em; color: #155724;">
+                                    {strength_details}
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                else:
+                    st.markdown(
+                        '<div style="font-style: italic; color: #666;">Aucun point fort identifié</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            with col2:
+                st.markdown(
+                    '<div class="evaluation-details"><span class="section-label">Points d\'Amélioration:</span>',
+                    unsafe_allow_html=True,
+                )
+
+                if weaknesses:
+                    for weakness in weaknesses:
+                        weakness_style = (
+                            "margin: 8px 0; padding: 10px; background: #f8d7da; "
+                            "border-radius: 5px; border-left: 3px solid #dc3545;"
+                        )
+                        weakness_details = (
+                            f"{weakness['total_count']} feedback(s) • {weakness['satisfaction_rate']:.0%} satisfaction"
+                        )
+
+                        st.markdown(
+                            f"""
+                            <div style="{weakness_style}">
+                                <div style="font-weight: bold; color: #721c24;">
+                                    {weakness["topic_name"]}
+                                </div>
+                                <div style="font-size: 0.9em; color: #721c24;">
+                                    {weakness_details}
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                else:
+                    st.markdown(
+                        '<div style="font-style: italic; color: #666;">'
+                        "Aucun point d'amélioration critique identifié"
+                        "</div>",
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown("</div>", unsafe_allow_html=True)
+
+        # Skip response time display for feedback analysis
+
     def render_sidebar(self):
         """Render sidebar with file selection"""
         # File selection
-        st.sidebar.header("Results Selection")
+        st.sidebar.header("Results selection")
 
         if not self.available_files:
             st.sidebar.error("No result files found in evaluation_results/")
@@ -422,7 +619,7 @@ class EvaluationDashboard:
             st.rerun()
 
         # Add new evaluation button
-        if st.sidebar.button("New Evaluation", use_container_width=True):
+        if st.sidebar.button("New evaluation", use_container_width=True):
             # Reset other states and set new evaluation
             st.session_state.show_comparison = False
             st.session_state.show_evaluation_launcher = False
@@ -432,7 +629,7 @@ class EvaluationDashboard:
             st.rerun()
 
         # Add comparison button
-        if st.sidebar.button("Compare Evaluations", use_container_width=True):
+        if st.sidebar.button("Compare evaluations", use_container_width=True):
             # Reset other states and set comparison
             st.session_state.show_new_evaluation = False
             st.session_state.show_evaluation_launcher = False
@@ -445,7 +642,7 @@ class EvaluationDashboard:
 
     def render_overview_metrics(self, results: Dict[str, Dict[str, Any]]):
         """Render overview metrics for selected files"""
-        st.header("Metrics Overview")
+        st.header("Metrics overview")
 
         # Always single file view now
         file_name = list(results.keys())[0]
@@ -473,7 +670,7 @@ class EvaluationDashboard:
             st.metric("Pass Rate", f"{pass_rate:.1%}")
 
         # Category breakdown
-        st.subheader("Category Breakdown")
+        st.subheader("Category breakdown")
         category_results = overall_stats.get("category_results", {})
 
         if category_results:
@@ -501,7 +698,7 @@ class EvaluationDashboard:
 
     def render_category_details(self, results: Dict[str, Dict[str, Any]]):
         """Render detailed category analysis"""
-        st.header("Category Analysis")
+        st.header("Category analysis")
 
         # Get all categories from all files
         all_categories = set()
@@ -575,12 +772,6 @@ class EvaluationDashboard:
 
     def render_detailed_results(self, results: Dict[str, Dict[str, Any]], category: str):
         """Render detailed test results for a category using HTML-like cards"""
-        st.subheader(
-            f"Detailed Results - {
-                self.category_descriptions.get(category, {}).get('title', category.replace('_', ' ').title())
-            }"
-        )
-
         # Collect all test results for this category
         all_results = []
         for file_name, data in results.items():
@@ -597,21 +788,25 @@ class EvaluationDashboard:
             )
             return
 
-        # Add filters
-        col1, col2 = st.columns(2)
+        # Add filters (skip for feedback category)
+        if category != "feedback":
+            col1, col2 = st.columns(2)
 
-        with col1:
-            all_statuses = list(set(r["result"].get("status", "N/A") for r in all_results))
-            status_filter = st.multiselect("Filter by Status:", options=all_statuses, default=all_statuses)
+            with col1:
+                all_statuses = list(set(r["result"].get("status", "N/A") for r in all_results))
+                status_filter = st.multiselect("Filter by status:", options=all_statuses, default=all_statuses)
 
-        with col2:
-            # Single file mode, no file filter needed
-            file_filter = [list(results.keys())[0]]
+            with col2:
+                # Single file mode, no file filter needed
+                file_filter = [list(results.keys())[0]]
 
-        # Apply filters
-        filtered_results = [
-            r for r in all_results if r["result"].get("status", "N/A") in status_filter and r["file"] in file_filter
-        ]
+            # Apply filters
+            filtered_results = [
+                r for r in all_results if r["result"].get("status", "N/A") in status_filter and r["file"] in file_filter
+            ]
+        else:
+            # For feedback category, no filters needed
+            filtered_results = all_results
 
         # Display results as cards with question numbering and selective status removal
         question_counter = 1
@@ -629,8 +824,8 @@ class EvaluationDashboard:
             # test_id = result.get("test_id", "N/A")  # Unused variable
             status = result.get("status", "N/A").lower()
 
-            # Hide status badge for business_value, robustness, generation categories
-            if category not in ["business_value", "robustness", "generation"]:
+            # Hide status badge for business_value, robustness, generation, feedback categories
+            if category not in ["business_value", "robustness", "generation", "feedback"]:
                 st.markdown(
                     f"""
                     <div class="test-separator">
@@ -648,9 +843,9 @@ class EvaluationDashboard:
                     unsafe_allow_html=True,
                 )
 
-            # Question section with numbering
+            # Question section with numbering (skip for feedback category)
             question = result.get("question", "N/A")
-            if question != "N/A":
+            if question != "N/A" and category != "feedback":
                 st.markdown(
                     f"""
                 <div class="question-section">
@@ -704,6 +899,10 @@ class EvaluationDashboard:
                     )
 
                 st.markdown("</div>", unsafe_allow_html=True)
+
+            # Special layout for feedback category: Display feedback metrics dashboard
+            elif category == "feedback":
+                self.render_feedback_analysis(result, eval_details)
 
             else:
                 # For other categories, keep original structure
@@ -1305,7 +1504,7 @@ class EvaluationDashboard:
 
     def run(self):
         """Run the dashboard"""
-        st.title("Isschat Evaluation Dashboard")
+        st.title("Isschat evaluation dashboard")
 
         # Always render sidebar
         selected_files = self.render_sidebar()
