@@ -181,28 +181,6 @@ st.markdown(
         margin-top: 10px;
     }
 
-    .category-description {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 25px;
-        border-left: 4px solid #007bff;
-    }
-
-    .category-description h3 {
-        margin-top: 0;
-        font-size: 1.5em;
-        margin-bottom: 10px;
-        color: #007bff;
-    }
-
-    .category-description p {
-        margin-bottom: 0;
-        font-size: 1.1em;
-        line-height: 1.4;
-        color: #495057;
-    }
 
     .no-data {
         text-align: center;
@@ -225,42 +203,27 @@ class EvaluationDashboard:
         self.available_files = []
         self.load_available_files()
 
-        # Category descriptions based on evaluator analysis
+        # Category descriptions based on evaluator configuration
         self.category_descriptions = {
             "robustness": {
-                "title": "Robustness Tests",
-                "description": (
-                    "Evaluates Isschat's ability to handle edge cases: invalid data validation, "
-                    "confidentiality protection, out-of-context question handling, and internal knowledge verification."
-                ),
+                "title": "Model Robustness Tests",
+                "description": "Tests for model knowledge, data validation, and context handling",
             },
             "generation": {
-                "title": "Conversational Generation Tests",
-                "description": (
-                    "Tests Isschat's conversational capabilities: context continuity, conversational references, "
-                    "memory recall, clarifications, topic transitions, and French linguistic coherence."
-                ),
+                "title": "Generation Tests",
+                "description": "Tests for conversational generation capabilities and context handling",
             },
             "retrieval": {
-                "title": "Document Retrieval Metrics",
-                "description": (
-                    "Measures document retrieval performance with advanced metrics: precision, recall, F1-score, "
-                    "Precision@K, MRR, MAP, and NDCG to evaluate ranking quality."
-                ),
+                "title": "Retrieval Performance Tests",
+                "description": "Tests for document retrieval accuracy and ranking quality",
             },
             "business_value": {
-                "title": "Business Value",
-                "description": (
-                    "Evaluates Isschat's business impact by comparing response quality, processing time against "
-                    "human estimates, and efficiency across different complexity levels."
-                ),
+                "title": "Business Value Tests",
+                "description": "Tests for measuring Isschat's business impact and efficiency",
             },
             "feedback": {
-                "title": "User Feedback Analysis",
-                "description": (
-                    "Automatic analysis of user feedback with CamemBERT classification by themes to identify "
-                    "system strengths and weaknesses based on real user feedback."
-                ),
+                "title": "Feedback Analysis",
+                "description": "Analyzes user feedback using CamemBERT classification to identify strengths and weaknesses",
             },
         }
 
@@ -526,9 +489,9 @@ class EvaluationDashboard:
             desc = self.category_descriptions[category]
             st.markdown(
                 f"""
-            <div class="category-description">
-                <h3>{desc["title"]}</h3>
-                <p>{desc["description"]}</p>
+            <div style="margin-bottom: 15px; padding: 15px; border-left: 4px solid #6c757d; background: #f8f9fa;">
+                <strong style="color: #495057;">{desc["title"]}:</strong>
+                <div style="margin-top: 8px; color: #495057;">{desc["description"]}</div>
             </div>
             """,
                 unsafe_allow_html=True,
@@ -881,9 +844,9 @@ class EvaluationDashboard:
             desc = self.category_descriptions["retrieval"]
             st.markdown(
                 f"""
-            <div class="category-description">
-                <h3>{desc["title"]}</h3>
-                <p>{desc["description"]}</p>
+            <div style="margin-bottom: 15px; padding: 15px; border-left: 4px solid #6c757d; background: #f8f9fa;">
+                <strong style="color: #495057;">{desc["title"]}:</strong>
+                <div style="margin-top: 8px; color: #495057;">{desc["description"]}</div>
             </div>
             """,
                 unsafe_allow_html=True,

@@ -34,7 +34,7 @@ def main():
     # Launch Streamlit
     try:
         subprocess.run(
-            [sys.executable, "-m", "streamlit", "run", str(dashboard_path), "--server.headless", "false"], check=True
+            [sys.executable, "-m", "streamlit", "run", str(dashboard_path), "--server.port", "8501"], check=True
         )
     except subprocess.CalledProcessError as e:
         print(f"❌ Error launching dashboard: {e}")
