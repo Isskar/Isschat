@@ -16,7 +16,6 @@ from typing import Dict, Any
 # Page configuration
 st.set_page_config(page_title="Evaluation Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# Enhanced CSS for better styling inspired by HTML report
 st.markdown(
     """
 <style>
@@ -502,11 +501,10 @@ class EvaluationDashboard:
             for topic_id, topic_data in topic_breakdown.items():
                 satisfaction_rate = topic_data["satisfaction_rate"]
 
-                if satisfaction_rate >= 0.7:
+                if satisfaction_rate >= 0.5:
                     strengths.append(topic_data)
-                elif satisfaction_rate <= 0.4:
+                elif satisfaction_rate <= 0.5:
                     weaknesses.append(topic_data)
-                # Skip neutral topics (between 40% and 70%)
 
             col1, col2 = st.columns(2)
 
@@ -586,8 +584,6 @@ class EvaluationDashboard:
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-        # Skip response time display for feedback analysis
-
     def render_sidebar(self):
         """Render sidebar with file selection"""
         # File selection
@@ -607,7 +603,6 @@ class EvaluationDashboard:
             help="Select an evaluation file to analyze",
         )
 
-        # Add dashboard button
         st.sidebar.markdown("---")
         if st.sidebar.button("Dashboard", use_container_width=True):
             # Reset all page states to go back to main dashboard
@@ -618,7 +613,6 @@ class EvaluationDashboard:
             st.session_state.evaluation_result = None
             st.rerun()
 
-        # Add new evaluation button
         if st.sidebar.button("New evaluation", use_container_width=True):
             # Reset other states and set new evaluation
             st.session_state.show_comparison = False
@@ -628,7 +622,6 @@ class EvaluationDashboard:
             st.session_state.show_new_evaluation = True
             st.rerun()
 
-        # Add comparison button
         if st.sidebar.button("Compare evaluations", use_container_width=True):
             # Reset other states and set comparison
             st.session_state.show_new_evaluation = False
@@ -644,7 +637,6 @@ class EvaluationDashboard:
         """Render overview metrics for selected files"""
         st.header("Metrics overview")
 
-        # Always single file view now
         file_name = list(results.keys())[0]
         data = results[file_name]
         self.render_single_file_metrics(data, file_name)
@@ -676,7 +668,7 @@ class EvaluationDashboard:
         if category_results:
             category_data = []
             for category, stats in category_results.items():
-                if stats:  # Skip empty categories
+                if stats:
                     category_data.append(
                         {
                             "Category": self.category_descriptions.get(category, {}).get(
@@ -821,7 +813,6 @@ class EvaluationDashboard:
             score = result.get("score", 0)
 
             # Create test case card
-            # test_id = result.get("test_id", "N/A")  # Unused variable
             status = result.get("status", "N/A").lower()
 
             # Hide status badge for business_value, robustness, generation, feedback categories
@@ -946,7 +937,6 @@ class EvaluationDashboard:
                         unsafe_allow_html=True,
                     )
 
-                # Show evaluation after Expected behavior for robustness and generation categories
                 if category in ["robustness", "generation"] and (eval_details or score):
                     reasoning = eval_details.get("reasoning", "")
                     passes_criteria = eval_details.get("passes_criteria")
@@ -1009,9 +999,6 @@ class EvaluationDashboard:
                             f'<div class="reasoning"><strong>Reasoning:</strong> {reasoning}</div>',
                             unsafe_allow_html=True,
                         )
-
-                    # Other metrics third (if any)
-                    # TODO: Add other metrics here if needed
 
                     # Passed/Failed status last
                     if passes_criteria is not None:
