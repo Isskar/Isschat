@@ -7,14 +7,14 @@ Provides interactive visualization and comparison of evaluation results
 import streamlit as st
 import pandas as pd
 import json
+import subprocess
+import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
 
 # Page configuration
-st.set_page_config(
-    page_title="Isschat Evaluation Dashboard", page_icon="📊", layout="wide", initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Evaluation Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 # Enhanced CSS for better styling inspired by HTML report
 st.markdown(
@@ -203,6 +203,11 @@ class EvaluationDashboard:
         self.available_files = []
         self.load_available_files()
 
+        # Load evaluation config once at initialization
+        self.evaluation_config = None
+        self.available_categories = []
+        self._load_evaluation_config()
+
         # Category descriptions based on evaluator configuration
         self.category_descriptions = {
             "robustness": {
@@ -223,13 +228,29 @@ class EvaluationDashboard:
             },
             "feedback": {
                 "title": "Feedback Analysis",
-                "description": "Analyzes user feedback using CamemBERT classification to identify strengths and weaknesses",
+                "description": (
+                    "Analyzes user feedback using CamemBERT classification to identify strengths and weaknesses"
+                ),
             },
         }
 
+    def _load_evaluation_config(self):
+        """Load evaluation configuration once at initialization"""
+        try:
+            # Import here to avoid circular dependency
+            sys.path.append(str(Path(__file__).parent.parent))
+            from rag_evaluation.config import EvaluationConfig
+
+            self.evaluation_config = EvaluationConfig()
+            self.available_categories = self.evaluation_config.get_all_categories()
+        except Exception as e:
+            print(f"Error loading evaluation config: {str(e)}")
+            self.evaluation_config = None
+            self.available_categories = []
+
     def load_available_files(self):
         """Load available evaluation result files"""
-        results_dir = Path("evaluation_results")
+        results_dir = Path(__file__).parent.parent / "evaluation_results"
         if results_dir.exists():
             self.available_files = list(results_dir.glob("*.json"))
             self.available_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
@@ -372,8 +393,6 @@ class EvaluationDashboard:
 
     def render_sidebar(self):
         """Render sidebar with file selection"""
-        st.sidebar.title("Evaluation Dashboard")
-
         # File selection
         st.sidebar.header("Results Selection")
 
@@ -391,9 +410,34 @@ class EvaluationDashboard:
             help="Select an evaluation file to analyze",
         )
 
-        # Add comparison button
+        # Add dashboard button
         st.sidebar.markdown("---")
-        if st.sidebar.button("Compare Evaluations", type="primary"):
+        if st.sidebar.button("Dashboard", use_container_width=True):
+            # Reset all page states to go back to main dashboard
+            st.session_state.show_new_evaluation = False
+            st.session_state.show_comparison = False
+            st.session_state.show_evaluation_launcher = False
+            st.session_state.evaluation_running = False
+            st.session_state.evaluation_result = None
+            st.rerun()
+
+        # Add new evaluation button
+        if st.sidebar.button("New Evaluation", use_container_width=True):
+            # Reset other states and set new evaluation
+            st.session_state.show_comparison = False
+            st.session_state.show_evaluation_launcher = False
+            st.session_state.evaluation_running = False
+            st.session_state.evaluation_result = None
+            st.session_state.show_new_evaluation = True
+            st.rerun()
+
+        # Add comparison button
+        if st.sidebar.button("Compare Evaluations", use_container_width=True):
+            # Reset other states and set comparison
+            st.session_state.show_new_evaluation = False
+            st.session_state.show_evaluation_launcher = False
+            st.session_state.evaluation_running = False
+            st.session_state.evaluation_result = None
             st.session_state.show_comparison = True
             st.rerun()
 
@@ -728,24 +772,22 @@ class EvaluationDashboard:
                             unsafe_allow_html=True,
                         )
 
-                    # Other metrics third (if any)
-                    # TODO: Add other metrics here if needed
-
-                    # Passed/Failed status last
+                    # Status third (like retrieval)
                     if passes_criteria is not None:
                         status_text = "PASSED" if passes_criteria else "FAILED"
                         status_class = "passed" if passes_criteria else "failed"
                         st.markdown(
-                            f'<div style="margin-top: 10px;">'
-                            f'<span class="status-badge status-{status_class}">{status_text}</span></div>',
+                            f'<div style="margin-top: 10px;"><span class="status-badge '
+                            f'status-{status_class}">{status_text}</span></div>',
                             unsafe_allow_html=True,
                         )
 
                     st.markdown("</div>", unsafe_allow_html=True)
 
-                # Only show evaluation here for business_value and other categories
-                # (not robustness/generation/retrieval)
-                elif category not in ["robustness", "generation", "retrieval"] and (eval_details or score):
+                # Only show evaluation here for other categories (not robustness/generation/retrieval/business_value)
+                elif category not in ["robustness", "generation", "retrieval", "business_value"] and (
+                    eval_details or score
+                ):
                     reasoning = eval_details.get("reasoning", "")
                     passes_criteria = eval_details.get("passes_criteria")
 
@@ -779,6 +821,43 @@ class EvaluationDashboard:
                         st.markdown(
                             f'<div style="margin-top: 10px;">'
                             f'<span class="status-badge status-{status_class}">{status_text}</span></div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+                # Show evaluation for business_value with status badge in evaluation details
+                elif category == "business_value" and (eval_details or score):
+                    reasoning = eval_details.get("reasoning", "")
+                    passes_criteria = eval_details.get("passes_criteria")
+
+                    st.markdown(
+                        '<div class="evaluation-details"><span class="section-label">'
+                        "Evaluation of Isschat answer:</span>",
+                        unsafe_allow_html=True,
+                    )
+
+                    # Score first
+                    st.markdown(
+                        f'<div class="score-display"><span class="section-label">Score:</span>'
+                        f'<span class="score-value">{score:.3f}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    # Reasoning second
+                    if reasoning:
+                        st.markdown(
+                            f'<div class="reasoning"><strong>Reasoning:</strong> {reasoning}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    # Status third (like retrieval)
+                    if passes_criteria is not None:
+                        status_text = "PASSED" if passes_criteria else "FAILED"
+                        status_class = "passed" if passes_criteria else "failed"
+                        st.markdown(
+                            f'<div style="margin-top: 10px;"><span class="status-badge '
+                            f'status-{status_class}">{status_text}</span></div>',
                             unsafe_allow_html=True,
                         )
 
@@ -983,21 +1062,270 @@ class EvaluationDashboard:
         else:
             st.info("No categories available for comparison in the selected files.")
 
+    def show_new_evaluation_page(self):
+        """Show the new evaluation configuration page"""
+        st.header("Run New Evaluation")
+
+        # Check if evaluation config is loaded
+        if not self.evaluation_config or not self.available_categories:
+            st.error("Error loading evaluation configuration. Please refresh the page.")
+            return
+
+        # Category selection
+        st.subheader("Select Categories:")
+        selected_categories = st.multiselect(
+            "Choose which evaluation categories to run:",
+            options=self.available_categories,
+            default=self.available_categories,
+            help="Select one or more categories to evaluate",
+        )
+
+        # CI mode toggle
+        ci_mode = st.checkbox("CI Mode", value=False, help="Run in CI mode with pass/fail thresholds")
+
+        # Output file name
+        st.subheader("Output Configuration:")
+        output_name = st.text_input(
+            "Output File Name (optional):",
+            placeholder="evaluation_results_custom.json",
+            help="Custom name for output file (leave empty for auto-generated timestamp)",
+        )
+
+        # Action button
+        if st.button("Run Evaluation", type="primary"):
+            if selected_categories:
+                st.session_state.show_evaluation_launcher = True
+                st.session_state.evaluation_params = {
+                    "categories": selected_categories,
+                    "ci_mode": ci_mode,
+                    "output_name": output_name,
+                }
+                st.rerun()
+            else:
+                st.error("Please select at least one category")
+
+    def run_evaluation_launcher(self):
+        """Show evaluation execution page and run evaluation"""
+        st.header("Evaluation Execution")
+
+        params = st.session_state.evaluation_params
+
+        # Display selected parameters
+        st.subheader("Selected Parameters")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.write(f"**Categories:** {', '.join(params['categories'])}")
+            st.write(f"**CI Mode:** {'Yes' if params['ci_mode'] else 'No'}")
+
+        with col2:
+            output_file = params["output_name"] if params["output_name"] else "Auto-generated timestamp"
+            st.write(f"**Output File:** {output_file}")
+
+        # Progress and status
+        if "evaluation_running" not in st.session_state:
+            st.session_state.evaluation_running = False
+
+        if "evaluation_result" not in st.session_state:
+            st.session_state.evaluation_result = None
+
+        # Action buttons
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Start Evaluation", type="primary") and not st.session_state.evaluation_running:
+                st.session_state.evaluation_running = True
+                st.session_state.evaluation_result = None
+                st.rerun()
+
+        with col2:
+            if st.button("Back to Configuration"):
+                st.session_state.show_evaluation_launcher = False
+                st.session_state.show_new_evaluation = True
+                st.session_state.evaluation_running = False
+                st.session_state.evaluation_result = None
+                st.rerun()
+
+        # Run evaluation if started
+        if st.session_state.evaluation_running:
+            self.run_evaluation_process(params)
+
+        # Show results if evaluation completed
+        if st.session_state.evaluation_result:
+            self.show_evaluation_results(st.session_state.evaluation_result)
+
+    def run_evaluation_process(self, params):
+        """Run the evaluation process"""
+        # Create progress bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        output_lines = []
+        process = None
+
+        try:
+            # Build command
+            cmd = [sys.executable, "-m", "rag_evaluation.main"]
+
+            # Add categories
+            if params["categories"]:
+                cmd.extend(["--categories"] + params["categories"])
+
+            # Add CI mode
+            if params["ci_mode"]:
+                cmd.append("--ci")
+
+            # Add output file
+            if params["output_name"]:
+                # Use absolute path to ensure it goes to the correct directory
+                output_path = Path(__file__).parent.parent / "evaluation_results" / params["output_name"]
+                cmd.extend(["--output", str(output_path)])
+
+            status_text.text("Starting evaluation process...")
+            progress_bar.progress(10)
+
+            # Run evaluation
+            status_text.text("Running evaluation... This may take several minutes.")
+            progress_bar.progress(30)
+
+            # Execute the command
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                cwd=Path(__file__).parent.parent,
+            )
+
+            # Show output in real-time
+            output_container = st.empty()
+
+            # Read output line by line
+            while True:
+                line = process.stdout.readline()
+                if not line:
+                    break
+
+                output_lines.append(line.rstrip())
+                # Show last 10 lines
+                recent_output = "\n".join(output_lines[-10:])
+                output_container.code(recent_output)
+
+                # Update progress based on output
+                if "Starting" in line:
+                    progress_bar.progress(40)
+                elif "evaluation" in line.lower() and "completed" in line.lower():
+                    progress_bar.progress(80)
+                elif "Results saved" in line:
+                    progress_bar.progress(90)
+
+            # Wait for process to complete
+            return_code = process.wait()
+
+            if return_code == 0:
+                status_text.text("Evaluation completed successfully!")
+                progress_bar.progress(100)
+
+                # Find the most recent results file
+                results_dir = Path(__file__).parent.parent / "evaluation_results"
+                if results_dir.exists():
+                    result_files = list(results_dir.glob("*.json"))
+                    if result_files:
+                        latest_file = max(result_files, key=lambda x: x.stat().st_mtime)
+                        st.session_state.evaluation_result = {
+                            "success": True,
+                            "output_file": latest_file,
+                            "output": "\n".join(output_lines),
+                        }
+                    else:
+                        st.session_state.evaluation_result = {
+                            "success": False,
+                            "error": "No result files found",
+                            "output": "\n".join(output_lines),
+                        }
+                else:
+                    st.session_state.evaluation_result = {
+                        "success": False,
+                        "error": "Results directory not found",
+                        "output": "\n".join(output_lines),
+                    }
+            else:
+                status_text.text("Evaluation failed!")
+                st.session_state.evaluation_result = {
+                    "success": False,
+                    "error": f"Process exited with code {return_code}",
+                    "output": "\n".join(output_lines),
+                }
+
+        except Exception as e:
+            status_text.text(f"Error running evaluation: {str(e)}")
+            st.session_state.evaluation_result = {
+                "success": False,
+                "error": str(e),
+                "output": output_lines if output_lines else [],
+            }
+
+        finally:
+            # Ensure process and file handles are properly closed
+            if process and process.stdout:
+                process.stdout.close()
+            if process and process.poll() is None:
+                process.terminate()
+                process.wait()
+
+            st.session_state.evaluation_running = False
+            st.rerun()
+
+    def show_evaluation_results(self, result):
+        """Show evaluation results"""
+        st.markdown("---")
+        st.subheader("Evaluation Results")
+
+        if result["success"]:
+            st.success("Evaluation completed successfully!")
+
+            if "output_file" in result:
+                st.info(f"Results saved to: {result['output_file']}")
+
+                # Add button to view results
+                if st.button("View Results"):
+                    # Reload available files and switch to results view
+                    self.load_available_files()
+                    st.session_state.show_evaluation_launcher = False
+                    st.session_state.show_new_evaluation = False
+                    st.session_state.evaluation_result = None
+                    st.rerun()
+        else:
+            st.error(f"Evaluation failed: {result['error']}")
+
+        # Show output log
+        if result["output"]:
+            with st.expander("Show Evaluation Log"):
+                st.code(result["output"])
+
     def run(self):
         """Run the dashboard"""
         st.title("Isschat Evaluation Dashboard")
 
+        # Always render sidebar
+        selected_files = self.render_sidebar()
+
+        # Check if we're in evaluation launcher mode
+        if "show_evaluation_launcher" in st.session_state and st.session_state.show_evaluation_launcher:
+            self.run_evaluation_launcher()
+            return
+
+        # Check if we're in new evaluation configuration mode
+        if "show_new_evaluation" in st.session_state and st.session_state.show_new_evaluation:
+            self.show_new_evaluation_page()
+            return
+
         # Check if we're in comparison mode
         if "show_comparison" in st.session_state and st.session_state.show_comparison:
             self.show_comparison_modal()
-            if st.button("Back to Individual Analysis"):
-                st.session_state.show_comparison = False
-                st.rerun()
             return
 
-        # Sidebar
-        selected_files = self.render_sidebar()
-
+        # Main dashboard content
         if not selected_files:
             st.info("Please select an evaluation file from the sidebar")
             return

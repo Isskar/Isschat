@@ -355,11 +355,8 @@ def main():
             if saved_results_path:
                 print("\nGenerating HTML report...")
                 try:
-                    # Lazy import to avoid circular dependency issues
-                    from rag_evaluation.report_generator import generate_html_report
-
-                    report_path = generate_html_report(saved_results_path)
-                    print(f"✅ HTML report generated: {report_path}")
+                    # HTML report generator has been removed
+                    print("⚠️ HTML report generation is no longer available. Use the Streamlit dashboard instead.")
                 except Exception as e:
                     print(f"❌ Error generating HTML report: {e}")
             else:
