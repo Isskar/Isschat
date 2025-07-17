@@ -26,7 +26,7 @@ Historique des échanges :
 -----
 
 === SOURCES DOCUMENTAIRES ===
-Documents fournies :
+Documents fournies : (ce sont les chunks forunies par le RAG)
 -----
 {context}
 -----
