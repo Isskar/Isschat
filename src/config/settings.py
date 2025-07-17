@@ -30,6 +30,19 @@ class IsschatConfig:
     search_k: int = 3
     search_fetch_k: int = 5
 
+    # Semantic understanding configuration
+    use_semantic_features: bool = True
+    semantic_expansion_enabled: bool = True
+    semantic_reranking_enabled: bool = True
+    semantic_similarity_threshold: float = 0.7
+    query_expansion_max_variations: int = 5
+    intent_classification_enabled: bool = True
+    
+    # Source filtering configuration
+    source_filtering_enabled: bool = True
+    min_source_score_threshold: float = 0.4
+    min_source_relevance_threshold: float = 0.3
+
     confluence_api_key: str = ""
     confluence_space_key: str = ""
     confluence_space_name: str = ""
@@ -68,6 +81,15 @@ class IsschatConfig:
             llm_max_tokens=int(os.getenv("LLM_MAX_TOKENS", str(defaults.llm_max_tokens))),
             search_k=int(os.getenv("SEARCH_K", str(defaults.search_k))),
             search_fetch_k=int(os.getenv("SEARCH_FETCH_K", str(defaults.search_fetch_k))),
+            use_semantic_features=os.getenv("USE_SEMANTIC_FEATURES", str(defaults.use_semantic_features)).lower() == "true",
+            semantic_expansion_enabled=os.getenv("SEMANTIC_EXPANSION_ENABLED", str(defaults.semantic_expansion_enabled)).lower() == "true",
+            semantic_reranking_enabled=os.getenv("SEMANTIC_RERANKING_ENABLED", str(defaults.semantic_reranking_enabled)).lower() == "true",
+            semantic_similarity_threshold=float(os.getenv("SEMANTIC_SIMILARITY_THRESHOLD", str(defaults.semantic_similarity_threshold))),
+            query_expansion_max_variations=int(os.getenv("QUERY_EXPANSION_MAX_VARIATIONS", str(defaults.query_expansion_max_variations))),
+            intent_classification_enabled=os.getenv("INTENT_CLASSIFICATION_ENABLED", str(defaults.intent_classification_enabled)).lower() == "true",
+            source_filtering_enabled=os.getenv("SOURCE_FILTERING_ENABLED", str(defaults.source_filtering_enabled)).lower() == "true",
+            min_source_score_threshold=float(os.getenv("MIN_SOURCE_SCORE_THRESHOLD", str(defaults.min_source_score_threshold))),
+            min_source_relevance_threshold=float(os.getenv("MIN_SOURCE_RELEVANCE_THRESHOLD", str(defaults.min_source_relevance_threshold))),
             confluence_api_key=secrets.get_confluence_api_key() or defaults.confluence_api_key,
             confluence_space_key=secrets.get_confluence_space_key() or defaults.confluence_space_key,
             confluence_space_name=secrets.get_confluence_space_name() or defaults.confluence_space_name,
@@ -128,6 +150,14 @@ def get_debug_info() -> dict:
             "openrouter_api_key_configured": bool(config.openrouter_api_key),
             "use_azure_storage": config.use_azure_storage,
             "data_dir": str(config.data_dir),
+            "semantic_features": {
+                "use_semantic_features": config.use_semantic_features,
+                "semantic_expansion_enabled": config.semantic_expansion_enabled,
+                "semantic_reranking_enabled": config.semantic_reranking_enabled,
+                "semantic_similarity_threshold": config.semantic_similarity_threshold,
+                "query_expansion_max_variations": config.query_expansion_max_variations,
+                "intent_classification_enabled": config.intent_classification_enabled,
+            },
         }
     except Exception as e:
         return {"error": str(e)}

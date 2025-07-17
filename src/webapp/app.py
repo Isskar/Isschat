@@ -22,6 +22,7 @@ except RuntimeError:
     pass
 
 from src.rag.pipeline import RAGPipelineFactory
+from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
 from src.webapp.auth.azure_auth import AzureADAuth
@@ -60,7 +61,8 @@ def get_model(rebuild_db=False):
                 **Configuration**:
                 debug_info: {debug_info}""")
         try:
-            pipeline = RAGPipelineFactory.create_default_pipeline()
+            # Use semantic pipeline for enhanced understanding
+            pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(use_semantic_features=True)
             return pipeline
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")
