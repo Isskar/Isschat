@@ -6,7 +6,6 @@ import click
 import os
 from datetime import datetime
 
-from ...rag.pipeline import RAGPipelineFactory
 from ...rag.semantic_pipeline import SemanticRAGPipelineFactory
 from ...storage.data_manager import get_data_manager
 

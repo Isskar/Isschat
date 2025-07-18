@@ -21,7 +21,6 @@ try:
 except RuntimeError:
     pass
 
-from src.rag.pipeline import RAGPipelineFactory
 from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
