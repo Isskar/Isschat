@@ -26,7 +26,7 @@ from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
 from src.webapp.auth.azure_auth import AzureADAuth
 
-st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
 
 
 # Initialize embedder at startup
@@ -134,7 +134,7 @@ def main():
         # Always display user info
         user_info = st.session_state.get("user", {})
         if user_info:
-            st.success(f"Connecté en tant que: {user_info['email']}")
+            st.success(f"Connected as : {user_info['email']}")
 
         # Main navigation
         st.subheader("Navigation")
@@ -212,19 +212,6 @@ def chat_page():
 
     features = st.session_state["features_manager"]
 
-    # Create layout
-    st.title("Welcome to ISSCHAT")
-
-    # Sidebar for advanced options
-    with st.sidebar:
-        st.subheader("Advanced Options")
-        show_feedback = st.toggle("Enable feedback", value=True)
-
-        if st.button("New Chat", key="new_chat_button"):
-            st.session_state["messages"] = []
-            st.session_state["current_conversation_id"] = str(uuid.uuid4())
-            st.rerun()
-
     # Initialize current_conversation_id if not present or messages are empty (new chat)
     if "current_conversation_id" not in st.session_state or not st.session_state.get("messages"):
         if (
@@ -284,7 +271,7 @@ def chat_page():
                 st.write(msg["content"])
 
                 # Add feedback widget for assistant messages (except welcome)
-                if i > 0 and show_feedback and features and "question_data" in msg:
+                if i > 0 and features and "question_data" in msg:
                     features.add_feedback_widget(
                         st,
                         msg["question_data"]["question"],

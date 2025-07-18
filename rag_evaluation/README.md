@@ -1,9 +1,20 @@
 # Isschat Evaluation System
 
-A streamlined evaluation system for testing Isschat's performance with automatic configuration and easy evaluator extension.
+A comprehensive evaluation system for testing Isschat's performance with automatic configuration, interactive dashboard, and easy evaluator extension.
 
-## 🚀 Quick Start
+## Quick Start
 
+### Interactive Dashboard
+ - **View evaluation results**
+ - **Compare multiple evaluations**
+ - **Launch new evaluations directly from UI**
+
+```bash
+# Launch Streamlit dashboard
+uv run streamlit run rag_evaluation/evaluation_dashboard.py
+```
+ 
+### Command Line Usage
 ```bash
 # Run all evaluations
 uv run --extra evaluation rag_evaluation/run_evaluation.py
@@ -14,34 +25,56 @@ uv run --extra evaluation rag_evaluation/run_evaluation.py --categories robustne
 # CI mode (critical tests only)
 uv run --extra evaluation rag_evaluation/run_evaluation.py --ci
 
-# Run evaluation and generate an HTML report
-uv run --extra evaluation rag_evaluation/main.py --html-report
+# Save results to custom file
+uv run --extra evaluation rag_evaluation/main.py --output custom_results.json
 ```
 
-## 📊 Available Evaluators
+## Available Evaluators
 
 ### Robustness (`robustness`)
-- Internal Isschat knowledge tests
-- Data validation (invalid dates)
-- Confidentiality handling
+- **Internal Isschat knowledge tests**: Tests system's knowledge about itself
+- **Data validation**: Handling of invalid dates and malformed inputs
+- **Confidentiality handling**: Proper handling of sensitive information
+- **Status**: Pass/Fail evaluation with LLM judge
 
-### Conversational (`generation`)
-- Context continuity
-- Language consistency (French)
-- Memory recall
-- Topic transitions
+### Generation (`generation`)
+- **Context continuity**: Maintaining conversation context across turns
+- **Language consistency**: Consistent French language usage
+- **Memory recall**: Remembering previous conversation elements
+- **Topic transitions**: Smooth handling of topic changes
+- **Status**: Pass/Fail evaluation with LLM judge
 
+### Retrieval Performance (`retrieval`)
+- **Document retrieval accuracy**: Precision and recall of relevant documents
+- **Ranking quality**: NDCG, MAP, MRR metrics for result ranking
+- **Response time**: Retrieval latency measurement
+- **Status**: Measured with detailed metrics (P@1, P@3, P@5, F1-Score)
 
-## 💡 Key Features
+### Business Value (`business_value`)
+- **Business impact measurement**: ROI and efficiency metrics
+- **User productivity**: Time-saving and task completion rates
+- **Cost-effectiveness**: Resource utilization and optimization
+- **Status**: Pass/Fail evaluation with LLM judge
+
+### User Feedback Analysis (`feedback`)
+- **CamemBERT classification**:Topic classification of user feedback
+- **Sentiment analysis**: Positive/negative feedback identification
+- **Satisfaction metrics**: Overall and per-topic satisfaction rates
+- **Actionable insights**: Automated identification of strengths and weaknesses
+- **Status**: Measured with satisfaction percentages and topic breakdown
+
+## Key Features
 
 - **Auto-configuration**: System dynamically loads all configured evaluators
 - **LLM Judge**: Uses Claude 4 Sonnet for response evaluation
 - **CI Mode**: Critical tests only for fast feedback
+- **Interactive Dashboard**: Streamlit-based UI for evaluation management
+- **Real-time Feedback Analysis**: CamemBERT-powered user feedback insights
 - **Easy Extension**: Add evaluators in 3 simple steps
 - **Full Traceability**: Timestamped results with complete details
 - **Dataset Versioning**: DVC integration with Azure Blob Storage for test dataset management
 
-## 📦 Dataset Versioning with DVC
+## Dataset Versioning with DVC
 
 ### Installation
 
