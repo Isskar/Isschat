@@ -10,7 +10,7 @@ from typing import List, Tuple, Dict, Optional
 # Add src to path to import RAGPipeline
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.rag.pipeline import RAGPipelineFactory
+from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
 
 
 class IsschatClient:
@@ -20,7 +20,7 @@ class IsschatClient:
         self.conversation_memory = conversation_memory
         self.conversation_history = []
         try:
-            self.rag_pipeline = RAGPipelineFactory.create_default_pipeline()
+            self.rag_pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline()
             print("✅ Isschat client initialized successfully")
         except Exception as e:
             error_msg = str(e)
