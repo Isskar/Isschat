@@ -15,7 +15,9 @@ class GenerationTool:
         if not self.config.openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY required for generation")
 
-    def generate(self, query: str, documents: List[RetrievalDocument], history: str = "") -> Dict[str, Any]:
+    def generate(
+        self, query: str, documents: List[RetrievalDocument], history: str = "", numerical_context: Any = None
+    ) -> Dict[str, Any]:
         """
         Generate response from query and retrieved documents
 
@@ -23,6 +25,7 @@ class GenerationTool:
             query: User query
             documents: Retrieved documents with scores
             history: Conversation history
+            numerical_context: Optional numerical query processing result
 
         Returns:
             Dict with answer, sources, etc.
@@ -31,7 +34,7 @@ class GenerationTool:
             context = self._prepare_context(documents)
 
             avg_score = sum(doc.score for doc in documents) / len(documents) if documents else 0.0
-            prompt = self._build_prompt(query, context, history, avg_score)
+            prompt = self._build_prompt(query, context, history, avg_score, numerical_context)
 
             llm_response = self._call_openrouter(prompt)
 
@@ -61,16 +64,45 @@ class GenerationTool:
             return "No relevant documents found."
 
         # Adjust max content length based on number of documents to fit in context window
-        # Reduced for smaller Confluence pages to avoid truncation
-        max_content_per_doc = max(300, 1500 // len(documents)) if documents else 600
+        # Increased limits to preserve arborescence content
+        max_content_per_doc = max(800, 3000 // len(documents)) if documents else 1200
         context_parts = [doc.to_context_section(max_content_per_doc) for doc in documents]
         return "\n\n".join(context_parts)
 
-    def _build_prompt(self, query: str, context: str, history: str = "", avg_score: float = 0.0) -> str:
+    def _build_prompt(
+        self, query: str, context: str, history: str = "", avg_score: float = 0.0, numerical_context: Any = None
+    ) -> str:
         """Build prompt based on context quality"""
         history_section = f"{history}\n" if history.strip() else ""
 
+        # Add numerical context if available
+        if numerical_context:
+            numerical_info = self._format_numerical_context(numerical_context)
+            context = f"{context}\n\n{numerical_info}"
+
         return PromptTemplates.get_default_template().format(context=context, history=history_section, query=query)
+
+    def _format_numerical_context(self, numerical_context: Any) -> str:
+        """Format numerical context for inclusion in prompt"""
+        if not numerical_context:
+            return ""
+
+        # Handle case where numerical_context is a string (error case)
+        if isinstance(numerical_context, str):
+            return f"## Numerical Analysis\n**Note:** {numerical_context}\n"
+
+        formatted_context = "## Numerical Analysis\n"
+
+        if hasattr(numerical_context, "aggregated_value") and numerical_context.aggregated_value is not None:
+            formatted_context += f"**Aggregated Result:** {numerical_context.aggregated_value}\n"
+
+        if hasattr(numerical_context, "explanation") and numerical_context.explanation:
+            formatted_context += f"**Explanation:** {numerical_context.explanation}\n"
+
+        if hasattr(numerical_context, "confidence") and numerical_context.confidence > 0:
+            formatted_context += f"**Confidence:** {numerical_context.confidence:.2f}\n"
+
+        return formatted_context
 
     def _call_openrouter(self, prompt: str) -> Dict[str, Any]:
         """Call OpenRouter API"""
