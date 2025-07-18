@@ -113,9 +113,9 @@ def test(component: str):
         if component in ["rag", "all"]:
             click.echo("\n🤖 RAG pipeline test:")
             try:
-                from ..rag.pipeline import RAGPipelineFactory
+                from ..rag.semantic_pipeline import SemanticRAGPipelineFactory
 
-                pipeline = RAGPipelineFactory.create_default_pipeline()
+                pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline()
 
                 if pipeline.is_ready():
                     result = pipeline.check_pipeline()

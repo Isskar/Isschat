@@ -6,7 +6,7 @@ import click
 import os
 from datetime import datetime
 
-from ...rag.pipeline import RAGPipelineFactory
+from ...rag.semantic_pipeline import SemanticRAGPipelineFactory
 from ...storage.data_manager import get_data_manager
 
 
@@ -24,7 +24,7 @@ class ChatSession:
         """Initialize the RAG pipeline"""
         try:
             click.echo("🔧 Initializing RAG pipeline...")
-            self.pipeline = RAGPipelineFactory.create_default_pipeline()
+            self.pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(use_semantic_features=True)
             self.data_manager = get_data_manager()
 
             if not self.pipeline.is_ready():

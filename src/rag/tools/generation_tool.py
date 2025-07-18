@@ -1,6 +1,7 @@
 from typing import Dict, Any, List
 import logging
 import requests
+import re
 
 from ...config import get_config
 from src.rag.tools.prompt_templates import PromptTemplates
@@ -31,14 +32,19 @@ class GenerationTool:
             Dict with answer, sources, etc.
         """
         try:
-            context = self._prepare_context(documents)
+            # Filter documents based on relevance
+            relevant_documents = self._filter_relevant_documents(query, documents)
+
+            # Prepare context from relevant documents
+            context = self._prepare_context(relevant_documents)
 
             avg_score = sum(doc.score for doc in documents) / len(documents) if documents else 0.0
             prompt = self._build_prompt(query, context, history, avg_score, numerical_context)
 
             llm_response = self._call_openrouter(prompt)
 
-            sources = self._format_sources(documents)
+            # Only show sources if documents are relevant
+            sources = self._format_sources(relevant_documents) if relevant_documents else ""
 
             return {
                 "answer": llm_response["answer"],
@@ -52,7 +58,7 @@ class GenerationTool:
             self.logger.error(f"Generation failed: {e}")
             return {
                 "answer": f"Sorry, an error occurred during generation: {str(e)}",
-                "sources": "Error",
+                "sources": "",
                 "token_count": 0,
                 "generation_time": 0.0,
                 "success": False,
@@ -141,7 +147,7 @@ class GenerationTool:
     def _format_sources(self, documents: List[RetrievalDocument]) -> str:
         """Format sources for display"""
         if not documents:
-            return "No sources"
+            return ""
         # Deduplicate sources based on title and URL
         seen_sources = set()
         unique_sources = []
@@ -169,3 +175,171 @@ class GenerationTool:
                 "api_key_configured": bool(self.config.openrouter_api_key),
             },
         }
+
+    def _filter_relevant_documents(self, query: str, documents: List[RetrievalDocument]) -> List[RetrievalDocument]:
+        """
+        Filter documents based on relevance to the query.
+        Returns only documents that are truly relevant to avoid showing irrelevant sources.
+        """
+        if not documents:
+            return []
+
+        # If source filtering is disabled, return all documents
+        if not self.config.source_filtering_enabled:
+            return documents
+
+        # Normalize query for analysis
+        query_lower = query.lower().strip()
+
+        # Define patterns for different query types
+        greeting_patterns = [
+            r"^(hello|hi|hey|bonjour|salut|coucou)$",
+            r"^(hello|hi|hey|bonjour|salut|coucou)\s*[!.]*$",
+            r"^(comment\s+ça\s+va|how\s+are\s+you|ça\s+va).*$",
+            r"^(merci|thank\s+you|thanks).*$",
+            r"^(au\s+revoir|bye|goodbye|à\s+bientôt).*$",
+        ]
+
+        # Define generic terms that shouldn't show sources
+        generic_terms = {
+            "test",
+            "tests",
+            "testing",
+            "exemple",
+            "example",
+            "demo",
+            "sample",
+            "ok",
+            "okay",
+            "oui",
+            "yes",
+            "non",
+            "no",
+            "bien",
+            "good",
+            "bad",
+            "help",
+            "aide",
+            "info",
+            "information",
+        }
+
+        # Check if query is a simple greeting/social interaction
+        is_greeting = any(re.match(pattern, query_lower) for pattern in greeting_patterns)
+
+        # Check if query is a single generic term
+        is_generic_term = query_lower.strip() in generic_terms
+
+        if is_greeting or is_generic_term:
+            # For greetings and generic terms, don't show any sources
+            return []
+
+        # Calculate relevance scores
+        relevant_documents = []
+
+        # Extract meaningful keywords from query (excluding stop words)
+        stop_words = {
+            "le",
+            "la",
+            "les",
+            "un",
+            "une",
+            "des",
+            "du",
+            "de",
+            "et",
+            "ou",
+            "est",
+            "sont",
+            "avec",
+            "sur",
+            "dans",
+            "pour",
+            "par",
+            "qui",
+            "que",
+            "quoi",
+            "comment",
+            "où",
+            "quand",
+            "pourquoi",
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "is",
+            "are",
+            "with",
+            "on",
+            "in",
+            "for",
+            "by",
+            "who",
+            "what",
+            "where",
+            "when",
+            "why",
+            "how",
+            "this",
+            "that",
+            "can",
+            "could",
+            "should",
+        }
+
+        query_keywords = [word for word in query_lower.split() if word not in stop_words and len(word) > 2]
+
+        # If no meaningful keywords, likely a general query
+        if not query_keywords:
+            return []
+
+        # Calculate relevance for each document
+        for doc in documents:
+            relevance_score = self._calculate_document_relevance(query_keywords, doc)
+
+            # Apply thresholds from configuration
+            min_score_threshold = self.config.min_source_score_threshold
+            min_relevance_threshold = self.config.min_source_relevance_threshold
+
+            # Document is relevant if it meets both criteria
+            if doc.score >= min_score_threshold and relevance_score >= min_relevance_threshold:
+                relevant_documents.append(doc)
+
+        # Sort by combined score (similarity + relevance)
+        relevant_documents.sort(key=lambda doc: doc.score, reverse=True)
+
+        # Log filtering results
+        self.logger.debug(f"Filtered {len(documents)} documents to {len(relevant_documents)} relevant ones")
+
+        return relevant_documents
+
+    def _calculate_document_relevance(self, query_keywords: List[str], document: RetrievalDocument) -> float:
+        """
+        Calculate how relevant a document is to the query keywords.
+        Returns a score between 0 and 1.
+        """
+        if not query_keywords:
+            return 0.0
+
+        # Get document content and metadata
+        content = document.content.lower()
+        title = document.metadata.get("title", "").lower()
+
+        # Count keyword matches
+        content_matches = sum(1 for keyword in query_keywords if keyword in content)
+        title_matches = sum(1 for keyword in query_keywords if keyword in title)
+
+        # Calculate relevance score
+        # Title matches are weighted higher than content matches
+        relevance_score = (title_matches * 2 + content_matches) / (len(query_keywords) * 2)
+
+        # Additional boost for exact phrase matches
+        query_phrase = " ".join(query_keywords)
+        if query_phrase in content:
+            relevance_score += 0.2
+
+        if query_phrase in title:
+            relevance_score += 0.3
+
+        return min(1.0, relevance_score)

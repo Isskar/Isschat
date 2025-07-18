@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 from src.config import get_config
 from src.ingestion import create_confluence_pipeline
-from src.rag.pipeline import RAGPipelineFactory
+from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
 
 
 @click.command()
@@ -118,7 +118,7 @@ def _check_ingestion_status(verbose: bool) -> Dict[str, Any]:
 def _check_rag_status(verbose: bool) -> Dict[str, Any]:
     """Check RAG pipeline status"""
     try:
-        pipeline = RAGPipelineFactory.create_default_pipeline()
+        pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline()
 
         # Test du pipeline
         test_results = pipeline.check_pipeline()
