@@ -21,7 +21,7 @@ class ConversationHistoryManager:
         self.colors = {
             "primary": "#2E86AB",
             "secondary": "#A23B72",
-            "success": "#F18F01",
+            "success": "#2149F3",
             "warning": "#C73E1D",
             "info": "#6A994E",
         }
@@ -42,8 +42,8 @@ class ConversationHistoryManager:
         }
 
         .search-highlight {
-            background-color: #F18F01;
-            color: #000000;
+            background-color: #2149F3;
+            color: #ffffff;
             padding: 2px 4px;
             border-radius: 3px;
         }

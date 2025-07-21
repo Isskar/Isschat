@@ -151,7 +151,7 @@ def main():
 
     # Sidebar for navigation and options
     with st.sidebar:
-        st.image("logo.png", width=300)
+        st.image("logo.png")
 
         # Main navigation
         st.subheader("Navigation")
