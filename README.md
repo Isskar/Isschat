@@ -1,19 +1,37 @@
-# RAG Chatbot with Confluence
+# Isschat - Enterprise RAG Chatbot
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Isskar/Isschat/blob/main/LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
 
-An intelligent chatbot that interacts with Isskar Confluence knowledge base using RAG (Retrieval-Augmented Generation) technology.
+A chatbot that provides semantic search and conversational AI capabilities for Confluence knowledge bases using advanced RAG (Retrieval-Augmented Generation) technology with semantic understanding.
 
-## Features
+## Key Features
 
-- Semantic search in Confluence documentation
-- Intuitive conversational interface with Streamlit
-- Embedding caching for improved performance
-- Admin dashboard
-- User authentication system
-- Query history and user feedback
-- Performance and interaction analysis
+### Core RAG Capabilities
+- **Semantic RAG Pipeline**: Advanced semantic understanding with intent classification and query expansion
+- **Dual Pipeline Architecture**: Both standard and semantic-enhanced RAG processing
+- **Intelligent Query Processing**: Handles misleading keywords and provides contextually accurate responses
+- **Multi-Query Retrieval**: Semantic query expansion with domain-specific mappings
+- **Semantic Re-ranking**: Re-ranks results based on semantic similarity and intent matching
+
+### Advanced Semantic Features  
+- **Intent Classification**: Automatically detects query intent (team_info, project_info, technical_info, feature_info)
+- **Query Expansion**: Generates semantic variations using domain-specific terminology
+- **Multilingual Support**: Optimized for French and English content with synonym handling
+- **Contextual Understanding**: Maintains document hierarchy awareness for numerical and structured queries
+
+### Enterprise Features
+- **Azure AD Authentication**: Secure OAuth 2.0 integration with domain validation
+- **Performance Monitoring**: Real-time metrics tracking and analytics dashboard
+- **Conversation History**: Persistent chat history with search capabilities
+- **User Feedback System**: Integrated feedback collection and analysis
+- **Admin Dashboard**: System management and configuration interface
+
+### Evaluation & Quality Assurance
+- **Comprehensive Evaluation Framework**: Multi-category testing (retrieval, generation, business value, robustness)
+- **LLM-based Automated Evaluation**: Automated scoring with confidence metrics
+- **CI/CD Integration**: Automated testing with configurable quality thresholds
+- **Performance Metrics**: Response time, accuracy, and user satisfaction tracking
 
 ## Installation
 
@@ -40,19 +58,36 @@ An intelligent chatbot that interacts with Isskar Confluence knowledge base usin
 3. **Configure environment variables**
    Copy `.env.example` to `.env` file at root with:
    
-   - Confluence API key got from:
-     https://id.atlassian.com/manage-profile/security/api-tokens)
+   ```bash
+   # Required - Confluence Configuration
+   CONFLUENCE_API_KEY=your_confluence_api_key
+   CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
+   CONFLUENCE_EMAIL_ADDRESS=firstname.lastname@your_company.com
    
-   - Confluence space URL
-     CONFLUENCE_SPACE_NAME=https://your_company.atlassian.net
+   # Required - LLM Configuration
+   OPENROUTER_API_KEY=your_openrouter_api_key
    
-   - Your login email
-     CONFLUENCE_EMAIL_ADDRESS=firstname.lastname@your_company.com
+   # Optional - Advanced Configuration
+   LLM_MODEL=google/gemini-2.5-flash-lite-preview-06-17
+   EMBEDDINGS_MODEL=intfloat/multilingual-e5-small
+   CHUNK_SIZE=1000
+   SEARCH_K=3
    
-   - OpenRouter API key (for AI model access)
-     OPENROUTER_API_KEY=your_openrouter_api_key
-   - Get your API key from :
-     https://openrouter.ai/
+   # Optional - Semantic Features
+   USE_SEMANTIC_FEATURES=true
+   SEMANTIC_EXPANSION_ENABLED=true
+   SEMANTIC_RERANKING_ENABLED=true
+   
+   # Optional - Azure Integration (for production)
+   USE_AZURE_STORAGE=false
+   AZURE_STORAGE_ACCOUNT=your_storage_account
+   AZURE_BLOB_CONTAINER_NAME=your_container
+   KEY_VAULT_URL=https://your-keyvault.vault.azure.net/
+   ```
+   
+   **Get your API keys from:**
+   - Confluence API: https://id.atlassian.com/manage-profile/security/api-tokens
+   - OpenRouter API: https://openrouter.ai/
 
 
 ## Launch
@@ -117,93 +152,201 @@ Isschat provides a powerful CLI tool for managing and querying your knowledge ba
 #### Example Usage
 
 ```bash
-# Check system status
-isschat-cli status --verbose
+# Check system status and configuration
+uv run python -m src.cli.main status --verbose
 
 # Ingest data from Confluence
-isschat-cli ingest --source confluence --verbose
+uv run python -m src.cli.main ingest --source confluence --verbose
 
-# Start interactive chat
-isschat-cli chat
+# Start interactive chat session
+uv run python -m src.cli.main chat
 
 # Query with detailed information
-isschat-cli query -q "How to configure authentication?" -k 3 --show-metadata --show-stats
+uv run python -m src.cli.main query -q "How to configure authentication?" -k 3 --show-metadata --show-stats
+
+# Query without LLM generation (retrieval only)
+uv run python -m src.cli.main query -q "project management" --no-llm --show-stats
+```
+
+### Evaluation System
+
+Run comprehensive RAG evaluation:
+
+```bash
+# Run all evaluation categories
+uv run python rag_evaluation/run_evaluation.py
+
+# Run specific evaluation category
+uv run python rag_evaluation/run_evaluation.py --category retrieval
+
+# View evaluation dashboard
+uv run python rag_evaluation/evaluation_dashboard.py
 ```
    
 
 ## Architecture
 
+The system is built with a modular, enterprise-grade architecture supporting both local and cloud deployment:
+
 ```
 Isschat/
 ├── src/
-│   ├── core/                    # Core configuration and interfaces
-│   │   ├── config.py           # Configuration management
-│   │   ├── data_manager.py     # Data management
-│   │   ├── exceptions.py       # Custom exceptions
-│   │   └── interfaces.py       # Abstract interfaces
-│   ├── data_pipeline/          # Data processing pipeline
-│   │   ├── embeddings/         # Embedding models
-│   │   ├── extractors/         # Data extractors (Confluence, etc.)
-│   │   └── processors/         # Document processing
-│   ├── evaluation/             # Evaluation system
-│   │   └── evaluator.py        # RAG evaluation (NOT IMPLEMENTED YET)
-│   ├── generation/             # Text generation
-│   │   ├── base_generator.py   # Base generator interface
-│   │   ├── openrouter_generator.py # OpenRouter integration
-│   │   └── prompt_templates.py # Prompt templates
-│   ├── rag_system/            # RAG pipeline
-│   │   ├── query_processor.py  # Query processing
-│   │   ├── rag_pipeline.py     # Main RAG pipeline
-│   │   └── response_formatter.py # Response formatting
-│   ├── retrieval/             # Document retrieval
-│   │   ├── base_retriever.py   # Base retriever interface
-│   │   ├── retriever_factory.py # Retriever factory
-│   │   └── simple_retriever.py # Simple retrieval implementation
-│   ├── vector_store/          # Vector storage
-│   │   ├── base_store.py       # Base store interface
-│   │   ├── faiss_store.py      # FAISS implementation
-│   │   └── store_factory.py    # Store factory
-│   └── webapp/                # Streamlit web application
-│       ├── app.py             # Main Streamlit app
-│       ├── cache_manager.py   # Cache management
-│       └── components/        # UI components
-│           ├── auth_manager.py # Authentication
-│           ├── features_manager.py # Feature management
-│           ├── history_manager.py # History management
-│           └── performance_dashboard.py # Performance dashboard
-├── .env.example              # Configuration example
-├── pyproject.toml            # Project configuration (uv)
-├── uv.lock                   # Dependency lock file
-└── README.md                 # This file
+│   ├── cli/                    # Command-line interface
+│   │   ├── commands/          # CLI commands (status, ingest, chat, query)
+│   │   └── main.py            # CLI entry point
+│   ├── config/                # Configuration management
+│   │   ├── settings.py        # Main configuration with environment support
+│   │   ├── secrets.py         # Secret management (Azure Key Vault)
+│   │   └── keyvault.py        # Azure Key Vault integration
+│   ├── core/                  # Core abstractions and interfaces
+│   │   ├── documents.py       # Document models
+│   │   ├── exceptions.py      # Custom exceptions
+│   │   └── interfaces.py      # Abstract interfaces
+│   ├── embeddings/            # Embedding service
+│   │   ├── models.py          # Embedding models
+│   │   └── service.py         # Embedding service implementation
+│   ├── ingestion/             # Data ingestion pipeline
+│   │   ├── base_pipeline.py   # Abstract ingestion framework
+│   │   ├── confluence_pipeline.py # Confluence-specific ingestion
+│   │   ├── connectors/        # Data source connectors
+│   │   └── processors/        # Document processing (chunking, filtering)
+│   ├── rag/                   # RAG pipeline implementation
+│   │   ├── pipeline.py        # Standard RAG pipeline
+│   │   ├── semantic_pipeline.py # Semantic-enhanced RAG pipeline
+│   │   ├── query_processor.py # Advanced query processing
+│   │   └── tools/             # RAG tools (retrieval, generation)
+│   ├── storage/               # Storage abstraction
+│   │   ├── storage_factory.py # Storage factory (local/Azure)
+│   │   ├── azure_storage.py   # Azure Blob Storage
+│   │   └── local_storage.py   # Local file storage
+│   ├── vectordb/              # Vector database abstraction
+│   │   ├── interface.py       # Vector database interface
+│   │   ├── weaviate_client.py # Weaviate implementation
+│   │   └── factory.py         # Vector database factory
+│   └── webapp/                # Web application
+│       ├── app.py             # Main Streamlit application
+│       ├── auth/              # Authentication (Azure AD)
+│       ├── components/        # UI components
+│       └── pages/             # Multi-page application
+├── rag_evaluation/            # Comprehensive evaluation framework
+│   ├── core/                  # Evaluation core (LLM judge, base evaluator)
+│   ├── evaluators/            # Specialized evaluators
+│   ├── config/                # Evaluation configuration and test datasets
+│   └── evaluation_dashboard.py # Evaluation dashboard
+├── tests/                     # Test suite
+├── .env.example              # Configuration template
+├── pyproject.toml            # Project configuration (uv package manager)
+├── Dockerfile                # Container deployment
+└── README.md                 # This documentation
 ```
+
+### Key Architectural Components
+
+- **Modular Design**: Clear separation of concerns with pluggable components
+- **Factory Patterns**: Flexible component selection (storage, vector DB, etc.)
+- **Abstract Interfaces**: Clean abstractions for easy extension and testing
+- **Dual Storage Support**: Local files or Azure Blob Storage
+- **Multiple Vector Databases**: Weaviate cloud
+- **Comprehensive Evaluation**: Built-in testing framework with multiple evaluators
+- **Enterprise Security**: Azure AD integration with domain validation
+- **CLI and Web Interfaces**: Both command-line and web-based interactions
 
 ## Advanced Features
 
-- **Conversation analysis**: User interaction tracking
-- **Performance tracking**: Response time and accuracy metrics
-- **Feedback system**: User response evaluation
-- **Query history**: Previous search consultation
-- **RAG Evaluation**: (NOT IMPLEMENTED YET) Built-in evaluation system for assessing retrieval and generation quality
-- **Configurable Retrievers**: Factory pattern for different retrieval strategies
-- **Vector Store Abstraction**: Support for multiple vector storage backends (FAISS, etc.)
-- **Data Pipeline**: Automated document processing and embedding generation
+### Semantic Intelligence
+- **Intent Classification**: Automatically detects and routes queries based on intent (team_info, project_info, technical_info, feature_info)
+- **Query Expansion**: Semantic expansion using domain-specific mappings and synonym handling
+- **Context-Aware Retrieval**: Maintains document hierarchy awareness for complex queries
+- **Multilingual Processing**: Optimized for French and English content with cross-language understanding
 
-## Azure Production Deployment
+### Enterprise Operations
+- **Conversation Analytics**: Advanced user interaction tracking and analysis
+- **Performance Monitoring**: Real-time response time, accuracy metrics, and system health
+- **Feedback Loop**: Integrated user feedback collection with sentiment analysis
+- **Query History**: Persistent search history with conversation context
+- **Admin Dashboard**: System management with performance insights and user analytics
 
-For production deployment with Azure Blob Storage, set these environment variables:
+### Quality Assurance
+- **Comprehensive RAG Evaluation**: Multi-category testing framework for retrieval, generation, business value, and robustness
+- **LLM-based Evaluation**: Automated quality assessment using advanced language models
+- **CI/CD Integration**: Automated testing pipeline with configurable quality thresholds
+- **Performance Benchmarking**: Continuous performance monitoring and improvement tracking
+
+### Technical Capabilities
+- **Flexible Vector Storage**: Weaviate cloud
+- **Adaptive Chunking**: Content-type aware document processing with hierarchical chunking
+- **Semantic Re-ranking**: Advanced result re-ranking based on semantic similarity and intent matching
+- **Automated Data Pipeline**: Streamlined document processing and embedding generation with batch optimization
+
+## Production Deployment
+
+### Azure Cloud Deployment
+
+For production deployment with Azure integration:
 
 ```bash
-# Required for Azure Blob Storage
+# Azure Storage Configuration
 USE_AZURE_STORAGE=true
 AZURE_STORAGE_ACCOUNT=your_storage_account_name
-AZURE_BLOB_CONTAINER_NAME=blob_container_name
+AZURE_BLOB_CONTAINER_NAME=your_container_name
 
-# Existing Azure configuration
+# Azure Key Vault for Secret Management
 KEY_VAULT_URL=https://your-keyvault.vault.azure.net/
 ENVIRONMENT=production
+
+# Azure AD Authentication (for web app)
+AZURE_CLIENT_ID=your_azure_app_client_id
+AZURE_CLIENT_SECRET=your_azure_app_client_secret
+AZURE_TENANT_ID=your_azure_tenant_id
 ```
 
-**Local Development**: Leave `USE_AZURE_STORAGE` unset or `false` to use local file storage.
+### Docker Deployment
+
+Build and run with Docker:
+
+```bash
+# Build the container
+docker build -t isschat .
+
+# Run with environment variables
+docker run -d \
+  --name isschat \
+  -p 8501:8501 \
+  --env-file .env \
+  isschat
+
+# Run with volume mounting for local data
+docker run -d \
+  --name isschat \
+  -p 8501:8501 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  isschat
+```
+
+### Local Development
+
+For local development, leave Azure settings disabled:
+
+```bash
+USE_AZURE_STORAGE=false
+ENVIRONMENT=development
+```
+
+### Testing
+
+Run the test suite:
+
+```bash
+# Install test dependencies
+uv sync --extra test
+
+# Run tests
+uv run pytest tests/ -v
+
+# Run tests with coverage
+uv run pytest tests/ --cov=src --cov-report=html
+```
 
 ## License
 
