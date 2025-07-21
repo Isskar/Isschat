@@ -28,6 +28,28 @@ from src.webapp.auth.azure_auth import AzureADAuth
 
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
 
+# Add custom CSS for sidebar buttons
+st.markdown(
+    """
+    <style>
+    /* Sidebar button styling */
+    .stSidebar .stButton > button {
+        border-radius: 8px !important;
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+    .stSidebar .stButton > button > div {
+        text-align: center !important;
+        width: 100% !important;
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
+
 
 # Initialize embedder at startup
 @st.cache_resource
@@ -131,20 +153,16 @@ def main():
     with st.sidebar:
         st.image("logo.png", width=300)
 
-        # Always display user info
-        user_info = st.session_state.get("user", {})
-        if user_info:
-            st.success(f"Connected as : {user_info['email']}")
-
         # Main navigation
         st.subheader("Navigation")
         if st.button("Chat", key="nav_chat"):
             st.session_state["page"] = "chat"
             st.rerun()
 
-        if st.session_state.get("page") == "chat" and st.button("New Chat", key="new_chat_button_sidebar"):
+        if st.button("New Chat", key="new_chat_button_sidebar"):
             st.session_state["messages"] = []
             st.session_state["current_conversation_id"] = str(uuid.uuid4())
+            st.session_state["page"] = "chat"  # Switch to chat page
             st.rerun()
 
         if st.button("History", key="nav_history"):
@@ -174,6 +192,12 @@ def main():
             st.warning("Shutting down the Streamlit app...")
             time.sleep(1)
             os.kill(os.getpid(), signal.SIGKILL)
+
+        # User info at the bottom
+        user_info = st.session_state.get("user", {})
+        if user_info:
+            st.markdown("---")
+            st.success(f"Connected as : {user_info['email']}")
 
     # Determine which page to display - user is already authenticated at the beginning of main()
     if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):

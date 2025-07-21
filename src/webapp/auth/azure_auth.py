@@ -288,8 +288,42 @@ class AzureADAuth:
 
     def show_login_page(self):
         """Display login page with username/password form"""
-        st.title("Authentication Required")
-        st.write("Please log in with your Obea Microsoft account to access ISSCHAT.")
+        # Add custom CSS for auth box styling
+        st.markdown(
+            """
+            <style>
+            .auth-box {
+                background-color: white;
+                padding: 3rem 2rem;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                border: 1px solid #e0e0e0;
+                max-width: 400px;
+                margin: 4rem auto;
+                text-align: center;
+            }
+            .auth-logo {
+                width: 100px;
+                height: auto;
+                margin: 0 auto 2rem auto;
+                display: block;
+            }
+            .auth-title {
+                font-size: 2rem !important;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 2rem !important;
+            }
+            .auth-text {
+                font-size: 1.1rem !important;
+                color: #666;
+                line-height: 1.5;
+                margin-bottom: 2rem !important;
+            }
+            </style>
+        """,
+            unsafe_allow_html=True,
+        )
 
         query_params = st.query_params
 
@@ -317,13 +351,13 @@ class AzureADAuth:
             if st.button("Try Again"):
                 st.rerun()
         else:
-            _, col2, _ = st.columns([1, 2, 1])
-            with col2:
-                # OAuth flow option
-                auth_url = self.get_auth_url()
-                st.markdown(
-                    f"""
-                <div style="text-align: center; margin: 2rem 0;">
+            # Authentication box
+            auth_url = self.get_auth_url()
+            st.markdown(
+                f"""
+                <div class="auth-box">
+                    <h1 class="auth-title">Authentication required</h1>
+                    <p class="auth-text">Please log in with your Isskar account to access ISSCHAT.</p>
                     <a href="{auth_url}" target="_self" style="
                         background-color: #0078d4;
                         color: white;
@@ -335,16 +369,12 @@ class AzureADAuth:
                         font-size: 16px;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                     ">
-                        Sign in with Microsoft
+                        Sign in
                     </a>
                 </div>
                 """,
-                    unsafe_allow_html=True,
-                )
-                # Information about multi-tab limitation
-                st.warning(
-                    "📝 **Important note**: For security reasons, you must sign in again in each new browser tab."  # noqa : E501
-                )
+                unsafe_allow_html=True,
+            )
 
     def get_authenticated_url(self) -> Optional[str]:
         """Get base URL for authenticated users"""
