@@ -22,6 +22,12 @@ from src.storage.data_manager import get_data_manager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Suppress Azure SDK logs to reduce noise
+logging.getLogger("azure").setLevel(logging.WARNING)
+logging.getLogger("azure.core").setLevel(logging.WARNING)
+logging.getLogger("azure.storage").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 
 class FeedbackSentiment(Enum):
     """Binary feedback sentiment"""
@@ -77,9 +83,9 @@ class FeedbackClassifier:
             logger.error(f"Error loading topics configuration: {e}")
             # Fallback to default topics
             return [
-                Topic("technical_response_quality", "Qualité des réponses techniques"),
-                Topic("information_accuracy", "Précision des informations"),
-                Topic("overall_satisfaction", "Satisfaction utilisateur globale"),
+                Topic("technical_response_quality", "Technical Response Quality"),
+                Topic("information_accuracy", "Information Accuracy"),
+                Topic("overall_satisfaction", "Overall User Satisfaction"),
             ]
 
     def _init_camembert(self, model_name: str):
@@ -486,7 +492,7 @@ class FeedbackEvaluator(BaseEvaluator):
         lines = [
             "=== ANALYSE FEEDBACK ===",
             f"Total: {analysis.total_feedbacks} feedbacks",
-            f"Satisfaction globale: {analysis.overall_satisfaction:.0%}",
+            f"Overall Satisfaction: {analysis.overall_satisfaction:.0%}",
             "",
             "RÉPARTITION PAR THÈME:",
         ]
@@ -511,7 +517,7 @@ class FeedbackEvaluator(BaseEvaluator):
         lines.extend(
             [
                 "",
-                "POINTS D'AMÉLIORATION:",
+                "AREAS FOR IMPROVEMENT:",
             ]
         )
         for weakness in analysis.weaknesses:
@@ -557,7 +563,7 @@ class FeedbackEvaluator(BaseEvaluator):
         lines.extend(
             [
                 "",
-                "⚠️ POINTS D'AMÉLIORATION:",
+                "⚠️ AREAS FOR IMPROVEMENT:",
             ]
         )
         for weakness in analysis.weaknesses:
@@ -618,7 +624,7 @@ class FeedbackEvaluator(BaseEvaluator):
                         "topic_name": topic_analysis.topic_name,
                         "count": topic_analysis.total_count,
                         "satisfaction_rate": topic_analysis.satisfaction_rate,
-                        "reason": f"Faible taux de satisfaction ({topic_analysis.satisfaction_rate:.0%})",
+                        "reason": f"Low satisfaction rate ({topic_analysis.satisfaction_rate:.0%})",
                     }
                 )
 

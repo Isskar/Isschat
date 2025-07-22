@@ -419,17 +419,17 @@ class EvaluationDashboard:
             f"""
             <div class="evaluation-details">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <h3 style="color: #1f77b4; margin-bottom: 10px;">Analyse des feedbacks utilisateurs (in french)</h3>
+                    <h3 style="color: #000000; margin-bottom: 10px;">User Feedback Analysis</h3>
                     <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 20px;">
                         <div style="text-align: center;">
-                            <div style="font-size: 2em; font-weight: bold; color: #1f77b4;">{total_feedbacks}</div>
+                            <div style="font-size: 2em; font-weight: bold; color: #666;">{total_feedbacks}</div>
                             <div style="color: #666; font-size: 0.9em;">Total Feedbacks</div>
                         </div>
                         <div style="text-align: center;">
                             <div style="font-size: 2em; font-weight: bold; color: #28a745;">
                                 {overall_satisfaction:.0%}
                             </div>
-                            <div style="color: #666; font-size: 0.9em;">Satisfaction Globale</div>
+                            <div style="color: #666; font-size: 0.9em;">Overall Satisfaction</div>
                         </div>
                     </div>
                 </div>
@@ -443,7 +443,7 @@ class EvaluationDashboard:
         if topic_breakdown:
             st.markdown(
                 '<div class="evaluation-details" style="margin-top: 15px;">'
-                '<span class="section-label">Répartition par Thème (Classification CamemBERT):</span>',
+                '<span class="section-label">Topic Breakdown (CamemBERT Classification):</span>',
                 unsafe_allow_html=True,
             )
 
@@ -469,9 +469,7 @@ class EvaluationDashboard:
                     f"margin: 10px 0; padding: 15px; border-left: 4px solid {color}; "
                     f"background: #f8f9fa; border-radius: 5px;"
                 )
-                feedback_details = (
-                    f"{total_count} feedback(s) • {positive_count} positif(s) • {negative_count} négatif(s)"
-                )
+                feedback_details = f"{total_count} feedback(s) • {positive_count} positive • {negative_count} negative"
                 satisfaction_style = f"font-size: 1.2em; font-weight: bold; color: {color};"
 
                 st.markdown(
@@ -516,7 +514,7 @@ class EvaluationDashboard:
 
             with col1:
                 st.markdown(
-                    '<div class="evaluation-details"><span class="section-label">Points Forts:</span>',
+                    '<div class="evaluation-details"><span class="section-label">Strengths:</span>',
                     unsafe_allow_html=True,
                 )
 
@@ -545,7 +543,7 @@ class EvaluationDashboard:
                         )
                 else:
                     st.markdown(
-                        '<div style="font-style: italic; color: #666;">Aucun point fort identifié</div>',
+                        '<div style="font-style: italic; color: #666;">No strengths identified</div>',
                         unsafe_allow_html=True,
                     )
 
@@ -712,11 +710,17 @@ class EvaluationDashboard:
                                 title = self.category_descriptions.get(category, {}).get(
                                     "title", category.replace("_", " ").capitalize()
                                 )
+                                # For feedback category, use satisfaction rate (average_score) instead of pass_rate
+                                if category == "feedback":
+                                    rate = stats.get("average_score", 0)
+                                else:
+                                    rate = stats.get("pass_rate", 0)
+
                                 evolution_data.append(
                                     {
                                         "timestamp": dt,
                                         "evaluator": title,
-                                        "pass_rate": stats.get("pass_rate", 0),
+                                        "pass_rate": rate,
                                         "file_path": str(file_path),
                                     }
                                 )
@@ -754,8 +758,8 @@ class EvaluationDashboard:
                     x="timestamp",
                     y="pass_rate",
                     color="evaluator",
-                    title="Pass rate evolution across evaluations",
-                    labels={"pass_rate": "Pass rate", "timestamp": "Evaluation date", "evaluator": "Evaluator"},
+                    title="Performance rate evolution across evaluations",
+                    labels={"pass_rate": "Performance rate", "timestamp": "Evaluation date", "evaluator": "Evaluator"},
                 )
 
                 fig.update_traces(mode="markers+lines", marker=dict(size=8))
@@ -765,7 +769,7 @@ class EvaluationDashboard:
                     title_x=0,
                     yaxis=dict(tickformat=".0%", range=[0, 1]),
                     xaxis_title="Evaluation date",
-                    yaxis_title="Pass rate",
+                    yaxis_title="Performance rate",
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
@@ -778,9 +782,6 @@ class EvaluationDashboard:
 
     def render_category_details(self, results: Dict[str, Dict[str, Any]]):
         """Render detailed category analysis"""
-        st.header("Category analysis")
-
-        # Get all categories from all files
         all_categories = set()
         for data in results.values():
             overall_stats = data.get("overall_stats", {})
@@ -834,20 +835,27 @@ class EvaluationDashboard:
 
         # Metrics display without file names
         data = category_data[0]  # Single file mode
-        col1, col2, col3, col4 = st.columns(4)
 
-        with col1:
-            if "total_tests" in data:
-                st.metric("Total Tests", data["total_tests"])
-        with col2:
-            if "pass_rate" in data:
-                st.metric("Pass Rate", f"{data['pass_rate']:.1%}")
-        with col3:
-            if "average_score" in data:
-                st.metric("Avg Score", f"{data['average_score']:.3f}")
-        with col4:
-            if "average_response_time" in data:
-                st.metric("Avg Time (s)", f"{data['average_response_time']:.2f}")
+        # Special handling for feedback category to show appropriate metrics
+        if category == "feedback":
+            pass
+
+        else:
+            # For other categories, show the standard metrics
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                if "total_tests" in data:
+                    st.metric("Total Tests", data["total_tests"])
+            with col2:
+                if "pass_rate" in data:
+                    st.metric("Pass Rate", f"{data['pass_rate']:.1%}")
+            with col3:
+                if "average_score" in data:
+                    st.metric("Avg Score", f"{data['average_score']:.3f}")
+            with col4:
+                if "average_response_time" in data:
+                    st.metric("Avg Time (s)", f"{data['average_response_time']:.2f}")
 
         # Detailed results for category
         self.render_detailed_results(results, category)
@@ -1269,7 +1277,7 @@ class EvaluationDashboard:
         selected_results = {f: all_results[f] for f in selected_files}
 
         # Overall comparison with bar chart
-        st.subheader("Overall pass rate comparison")
+        st.subheader("Overall performance comparison")
 
         comparison_data = []
         for file_name, data in selected_results.items():
@@ -1293,8 +1301,8 @@ class EvaluationDashboard:
             df,
             x="Evaluation",
             y="Pass_Rate",
-            title="Overall pass rate comparison",
-            labels={"Pass_Rate": "Pass rate"},
+            title="Overall performance comparison",
+            labels={"Pass_Rate": "Performance rate"},
             color="Pass_Rate",
             color_continuous_scale="RdYlGn",
             range_color=[0, 1],
@@ -1328,17 +1336,19 @@ class EvaluationDashboard:
                         category_title = self.category_descriptions.get(category, {}).get(
                             "title", category.replace("_", " ").title()
                         )
-                        # For user feedback analysis, use pass rate as average score
+                        # For feedback category, use average_score as satisfaction rate for both pass_rate and avg_score
                         if category == "feedback":
-                            avg_score = cat_data.get("pass_rate", 0)
+                            avg_score = cat_data.get("average_score", 0)
+                            pass_rate = cat_data.get("average_score", 0)  # Use satisfaction rate instead of pass_rate
                         else:
                             avg_score = cat_data.get("average_score", 0)
+                            pass_rate = cat_data.get("pass_rate", 0)
 
                         category_comparison.append(
                             {
                                 "Evaluation": evaluation_name,
                                 "Category": category_title,
-                                "Pass_Rate": cat_data.get("pass_rate", 0),
+                                "Pass_Rate": pass_rate,
                                 "Avg_Score": avg_score,
                                 "Total_Tests": cat_data.get("total_tests", 0),
                             }
@@ -1354,8 +1364,8 @@ class EvaluationDashboard:
                     y="Pass_Rate",
                     color="Evaluation",
                     barmode="group",
-                    title="Pass rate by evaluator category",
-                    labels={"Pass_Rate": "Pass rate", "Category": "Evaluator category"},
+                    title="Performance rate by evaluator category",
+                    labels={"Pass_Rate": "Performance rate", "Category": "Evaluator category"},
                 )
                 fig.update_layout(
                     height=500,
