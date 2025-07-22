@@ -26,6 +26,14 @@ from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
 from src.webapp.auth.azure_auth import AzureADAuth
 
+# images paths
+IMAGES = {
+    "user": str(Path(__file__).parent.parent.parent / "Images" / "user.svg"),
+    "bot": str(Path(__file__).parent.parent.parent / "Images" / "logo.png"),
+    "panel": str(Path(__file__).parent.parent.parent / "Images" / "isschat.png"),
+}
+
+
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
 
 # Add custom CSS for sidebar buttons
@@ -45,6 +53,14 @@ st.markdown(
         text-align: center !important;
         width: 100% !important;
     }
+    div[data-testid="stChatMessage"] div img,
+  .stChatMessage img {
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      min-height: 40px !important;
+      border-radius: 50% !important;
+  }
     </style>
 """,
     unsafe_allow_html=True,
@@ -151,7 +167,7 @@ def main():
 
     # Sidebar for navigation and options
     with st.sidebar:
-        st.image("logo.png")
+        st.image(IMAGES["panel"])
 
         # Main navigation
         st.subheader("Navigation")
@@ -250,7 +266,7 @@ def chat_page():
             st.session_state["messages"] = []
 
     # Display main interface
-    st.subheader("Ask questions about our Confluence documentation")
+    st.subheader("Welcome to Isschat, ask questions about our Confluence documentation !")
 
     # Extract first name from email (part before @)
     user_email = st.session_state.get("user", {}).get("email", "")
@@ -289,9 +305,9 @@ def chat_page():
     # Display message history with feedback widgets
     for i, msg in enumerate(st.session_state.messages):
         if msg["role"] == "user":
-            st.chat_message("user").write(msg["content"])
+            st.chat_message("user", avatar=IMAGES["user"]).write(msg["content"])
         else:
-            with st.chat_message("assistant"):
+            with st.chat_message("assistant", avatar=IMAGES["bot"]):
                 st.write(msg["content"])
 
                 # Add feedback widget for assistant messages (except welcome)
@@ -344,7 +360,7 @@ def chat_page():
         st.session_state.messages.append(
             {"role": "user", "content": prompt, "conversation_id": st.session_state["current_conversation_id"]}
         )
-        st.chat_message("user").write(prompt)
+        st.chat_message("user", avatar=IMAGES["user"]).write(prompt)
 
         # Prepare chat history for context from the data manager
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
@@ -361,9 +377,9 @@ def chat_page():
                 response_content += "\n\n" + sources
 
             # Display the response
-            st.chat_message("assistant").markdown(result)
+            st.chat_message("assistant", avatar=IMAGES["bot"]).markdown(result)
             if sources:
-                st.chat_message("assistant").write(sources)
+                st.chat_message("assistant", avatar=IMAGES["bot"]).write(sources)
 
             # Add to message history with question data for feedback
             st.session_state.messages.append(
@@ -387,7 +403,7 @@ def chat_page():
         st.session_state.messages.append(
             {"role": "user", "content": prompt, "conversation_id": st.session_state["current_conversation_id"]}
         )
-        st.chat_message("user").write(prompt)
+        st.chat_message("user", avatar=IMAGES["user"]).write(prompt)
 
         # Prepare chat history for context from the data manager
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
@@ -404,9 +420,9 @@ def chat_page():
                 response_content += "\n\n" + sources
 
             # Display the response
-            st.chat_message("assistant").markdown(result)
+            st.chat_message("assistant", avatar=IMAGES["bot"]).markdown(result)
             if sources:
-                st.chat_message("assistant").write(sources)
+                st.chat_message("assistant", avatar=IMAGES["bot"]).write(sources)
 
             # Add to message history with question data for feedback
             st.session_state.messages.append(

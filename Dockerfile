@@ -11,7 +11,7 @@ RUN ["uv", "sync"]
 COPY src /app/src
 COPY .streamlit /app/.streamlit
 COPY README.md /app/
-COPY logo.png /app/
+COPY Images /app/Images
 
 EXPOSE 8501
 
