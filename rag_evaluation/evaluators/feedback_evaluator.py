@@ -1,6 +1,11 @@
 """
 Feedback evaluator using CamemBERT for multi-class classification
 Analyzes user feedback to identify strengths and weaknesses by topic
+
+Configuration:
+- Uses deployed app feedback data from Azure Blob Storage by default
+- Requires USE_AZURE_STORAGE=true in .env for production feedback analysis
+- Falls back to local storage for development/testing
 """
 
 import logging

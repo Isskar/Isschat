@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
+import plotly.express as px
 
 # Page configuration
 st.set_page_config(page_title="Evaluation Dashboard", layout="wide", initial_sidebar_state="expanded")
@@ -250,9 +251,18 @@ class EvaluationDashboard:
     def load_available_files(self):
         """Load available evaluation result files"""
         results_dir = Path(__file__).parent.parent / "evaluation_results"
+        print(f"Searching for files in: {results_dir}")
         if results_dir.exists():
-            self.available_files = list(results_dir.glob("*.json"))
-            self.available_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            print("Directory exists.")
+            try:
+                all_files = list(results_dir.glob("*.json"))
+                print(f"Found files: {[str(f) for f in all_files]}")
+                self.available_files = all_files
+                self.available_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            except Exception as e:
+                print(f"Error while globbing files: {e}")
+        else:
+            print("Directory does not exist.")
 
     def load_evaluation_file(self, file_path: Path) -> Dict[str, Any]:
         """Load evaluation results from JSON file"""
@@ -270,9 +280,10 @@ class EvaluationDashboard:
             timestamp = data.get("timestamp", "")
             if timestamp:
                 dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                return f"{dt.strftime('%Y-%m-%d %H:%M:%S')} - {file_path.name}"
+                return dt.strftime("%B %d, %Y %H:%M:%S")
             return file_path.name
-        except Exception:
+        except Exception as e:
+            print(f"ERROR processing file {file_path.name}: {e}")
             return file_path.name
 
     def _extract_page_id(self, url: str) -> str:
@@ -390,7 +401,7 @@ class EvaluationDashboard:
         comparison_html.append("</div>")
         return "".join(comparison_html)
 
-    def render_feedback_analysis(self, result: Dict[str, Any], eval_details: Dict[str, Any]):
+    def render_feedback_analysis(self, _result: Dict[str, Any], eval_details: Dict[str, Any]):
         """Render feedback analysis with custom dashboard layout"""
         feedback_metrics = eval_details.get("feedback_metrics", {})
 
@@ -444,7 +455,7 @@ class EvaluationDashboard:
             # Sort topics by count
             sorted_topics = sorted(topic_breakdown.items(), key=lambda x: x[1]["total_count"], reverse=True)
 
-            for topic_id, topic_data in sorted_topics:
+            for _, topic_data in sorted_topics:
                 topic_name = topic_data["topic_name"]
                 total_count = topic_data["total_count"]
                 satisfaction_rate = topic_data["satisfaction_rate"]
@@ -498,7 +509,7 @@ class EvaluationDashboard:
             strengths = []
             weaknesses = []
 
-            for topic_id, topic_data in topic_breakdown.items():
+            for _, topic_data in topic_breakdown.items():
                 satisfaction_rate = topic_data["satisfaction_rate"]
 
                 if satisfaction_rate >= 0.5:
@@ -639,54 +650,136 @@ class EvaluationDashboard:
 
         file_name = list(results.keys())[0]
         data = results[file_name]
-        self.render_single_file_metrics(data, file_name)
+        self.render_single_file_metrics(data)
 
-    def render_single_file_metrics(self, data: Dict[str, Any], file_name: str):
-        """Render metrics for a single file"""
+    def render_single_file_metrics(self, data: Dict[str, Any]):
+        """Render metrics for a single file with pie chart and interactive selector"""
         overall_stats = data.get("overall_stats", {})
 
-        # Main metrics
-        col1, col2, col3, col4 = st.columns(4)
+        # Create pie chart for pass/fail visualization
+        total_passed = overall_stats.get("total_passed", 0)
+        total_failed = overall_stats.get("total_failed", 0)
 
-        with col1:
-            st.metric("Total Tests", overall_stats.get("total_tests", 0))
+        if total_passed + total_failed > 0:
+            # Pie chart data
+            labels = ["Passed", "Failed"]
+            values = [total_passed, total_failed]
+            colors = ["#28a745", "#dc3545"]  # Green for passed, red for failed
 
-        with col2:
-            st.metric("Passed", overall_stats.get("total_passed", 0))
+            # Create pie chart
+            fig = px.pie(
+                values=values, names=labels, title="Current evaluation results", color_discrete_sequence=colors
+            )
+            fig.update_traces(textposition="inside", textinfo="percent+label", textfont_size=14)
+            fig.update_layout(showlegend=True, height=400, title_font_size=18, title_x=0)
 
-        with col3:
-            st.metric("Failed", overall_stats.get("total_failed", 0))
+            st.plotly_chart(fig, use_container_width=True)
 
-        with col4:
-            pass_rate = overall_stats.get("overall_pass_rate", 0)
-            st.metric("Pass Rate", f"{pass_rate:.1%}")
+        # Add evolution timeline chart
+        self.render_evaluation_evolution_chart()
 
-        # Category breakdown
-        st.subheader("Category breakdown")
-        category_results = overall_stats.get("category_results", {})
+    def render_evaluation_evolution_chart(self):
+        """Render evaluation evolution timeline chart"""
+        st.subheader("Evaluation evolution over time")
 
-        if category_results:
-            category_data = []
-            for category, stats in category_results.items():
-                if stats:
-                    category_data.append(
-                        {
-                            "Category": self.category_descriptions.get(category, {}).get(
-                                "title", category.replace("_", " ").title()
-                            ),
-                            "Total Tests": stats.get("total_tests", 0),
-                            "Passed": stats.get("passed", 0),
-                            "Failed": stats.get("failed", 0),
-                            "Measured": stats.get("measured", 0),
-                            "Pass Rate": f"{stats.get('pass_rate', 0):.1%}",
-                            "Avg Score": f"{stats.get('average_score', 0):.3f}",
-                            "Avg Time (s)": f"{stats.get('average_response_time', 0):.2f}",
-                        }
-                    )
+        # Load all available evaluation files to show evolution
+        evolution_data = []
 
-            if category_data:
-                df = pd.DataFrame(category_data)
-                st.dataframe(df, use_container_width=True, hide_index=True)
+        for file_path in self.available_files:
+            try:
+                data = self.load_evaluation_file(file_path)
+                if data:
+                    timestamp = data.get("timestamp", "")
+                    overall_stats = data.get("overall_stats", {})
+
+                    if timestamp and overall_stats:
+                        # Parse timestamp
+                        try:
+                            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        except:  # noqa
+                            continue
+
+                        # Add overall pass rate
+                        evolution_data.append(
+                            {
+                                "timestamp": dt,
+                                "evaluator": "Overall",
+                                "pass_rate": overall_stats.get("overall_pass_rate", 0),
+                                "file_path": str(file_path),
+                            }
+                        )
+
+                        # Add individual evaluator pass rates
+                        category_results = overall_stats.get("category_results", {})
+                        for category, stats in category_results.items():
+                            if stats:
+                                # Use sentence case for evaluator names
+                                title = self.category_descriptions.get(category, {}).get(
+                                    "title", category.replace("_", " ").capitalize()
+                                )
+                                evolution_data.append(
+                                    {
+                                        "timestamp": dt,
+                                        "evaluator": title,
+                                        "pass_rate": stats.get("pass_rate", 0),
+                                        "file_path": str(file_path),
+                                    }
+                                )
+            except Exception:
+                continue
+
+        if len(evolution_data) > 1:  # Only show chart if we have multiple data points
+            df = pd.DataFrame(evolution_data)
+
+            # Remove duplicates - keep one record per evaluator per timestamp
+            # This ensures each evaluator has only one line
+            df = df.drop_duplicates(subset=["timestamp", "evaluator"], keep="first")
+
+            # Sort by timestamp to ensure proper line connections
+            df = df.sort_values(["evaluator", "timestamp"])
+
+            # Get unique evaluators for multiselect
+            all_evaluators = sorted(df["evaluator"].unique())
+
+            # Add evaluator filter
+            selected_evaluators = st.multiselect(
+                "Select evaluators to display:",
+                options=all_evaluators,
+                default=all_evaluators,
+                help="Choose which evaluators to show in the evolution chart",
+            )
+
+            if selected_evaluators:
+                # Filter data based on selection
+                filtered_df = df[df["evaluator"].isin(selected_evaluators)]
+
+                # Create timeline chart
+                fig = px.line(
+                    filtered_df,
+                    x="timestamp",
+                    y="pass_rate",
+                    color="evaluator",
+                    title="Pass rate evolution across evaluations",
+                    labels={"pass_rate": "Pass rate", "timestamp": "Evaluation date", "evaluator": "Evaluator"},
+                )
+
+                fig.update_traces(mode="markers+lines", marker=dict(size=8))
+                fig.update_layout(
+                    height=500,
+                    title_font_size=16,
+                    title_x=0,
+                    yaxis=dict(tickformat=".0%", range=[0, 1]),
+                    xaxis_title="Evaluation date",
+                    yaxis_title="Pass rate",
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Please select at least one evaluator to display.")
+        else:
+            st.info(
+                "Evolution chart requires multiple evaluation results. Run more evaluations to see trends over time."
+            )
 
     def render_category_details(self, results: Dict[str, Dict[str, Any]]):
         """Render detailed category analysis"""
@@ -695,7 +788,8 @@ class EvaluationDashboard:
         # Get all categories from all files
         all_categories = set()
         for data in results.values():
-            category_results = data.get("category_results", {})
+            overall_stats = data.get("overall_stats", {})
+            category_results = overall_stats.get("category_results", {})
             all_categories.update(category_results.keys())
 
         if not all_categories:
@@ -731,8 +825,9 @@ class EvaluationDashboard:
             )
 
         category_data = []
-        for file_name, data in results.items():
-            category_results = data.get("category_results", {})
+        for _, data in results.items():
+            overall_stats = data.get("overall_stats", {})
+            category_results = overall_stats.get("category_results", {})
             cat_data = category_results.get(category, {})
 
             if cat_data:
@@ -805,7 +900,6 @@ class EvaluationDashboard:
 
         for item in filtered_results:
             result = item["result"]
-            file_name = item["file"]
             category = result.get("category", "")
 
             # Get evaluation details early for use in multiple sections
@@ -1147,8 +1241,8 @@ class EvaluationDashboard:
             st.dataframe(df, use_container_width=True, hide_index=True)
 
     def show_comparison_modal(self):
-        """Show comparison of two selected evaluation files"""
-        st.subheader("Evaluation Comparison")
+        """Show comparison of evaluation files with enhanced visualizations"""
+        st.subheader("Evaluation comparison")
 
         # Load all available files
         all_results = {}
@@ -1162,89 +1256,150 @@ class EvaluationDashboard:
             st.warning("At least 2 evaluation files are required to perform a comparison.")
             return
 
-        # Selection of two files to compare
-        col1, col2 = st.columns(2)
-
+        # Selection of files to compare (allow multiple selection)
         file_options = list(all_results.keys())
 
-        with col1:
-            file1 = st.selectbox("Select first evaluation:", options=file_options, index=0, key="comparison_file1")
+        selected_files = st.multiselect(
+            "Select evaluations to compare:",
+            options=file_options,
+            default=file_options[:2] if len(file_options) >= 2 else file_options,
+            help="Choose 2 or more evaluations to compare",
+        )
 
-        with col2:
-            # Filter out the first selected file from second selection
-            file2_options = [f for f in file_options if f != file1]
-            file2 = (
-                st.selectbox("Select second evaluation:", options=file2_options, index=0, key="comparison_file2")
-                if file2_options
-                else None
-            )
-
-        if not file2:
-            st.warning("Please select two different evaluation files.")
+        if len(selected_files) < 2:
+            st.warning("Please select at least two evaluation files for comparison.")
             return
 
-        # Create comparison dataframe for selected files only
-        selected_results = {file1: all_results[file1], file2: all_results[file2]}
+        # Create comparison data
+        selected_results = {f: all_results[f] for f in selected_files}
+
+        # Overall comparison with bar chart
+        st.subheader("Overall pass rate comparison")
 
         comparison_data = []
         for file_name, data in selected_results.items():
             overall_stats = data.get("overall_stats", {})
+            # Use the readable date directly
+            evaluation_name = file_name
             comparison_data.append(
                 {
-                    "File": file_name,
-                    "Total Tests": overall_stats.get("total_tests", 0),
+                    "Evaluation": evaluation_name,
+                    "Pass_Rate": overall_stats.get("overall_pass_rate", 0),
+                    "Total_Tests": overall_stats.get("total_tests", 0),
                     "Passed": overall_stats.get("total_passed", 0),
                     "Failed": overall_stats.get("total_failed", 0),
-                    "Measured": overall_stats.get("total_measured", 0),
-                    "Pass Rate": f"{overall_stats.get('overall_pass_rate', 0):.1%}",
-                    "Timestamp": data.get("timestamp", ""),
                 }
             )
 
         df = pd.DataFrame(comparison_data)
 
-        # Display comparison table
-        st.subheader("Overall Comparison")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        # Create bar chart for overall pass rates
+        fig = px.bar(
+            df,
+            x="Evaluation",
+            y="Pass_Rate",
+            title="Overall pass rate comparison",
+            labels={"Pass_Rate": "Pass rate"},
+            color="Pass_Rate",
+            color_continuous_scale="RdYlGn",
+            range_color=[0, 1],
+        )
+        fig.update_layout(height=400, title_font_size=16, title_x=0, yaxis=dict(tickformat=".0%", range=[0, 1]))
+        st.plotly_chart(fig, use_container_width=True)
 
-        # Category comparison for selected files
-        st.subheader("Category Comparison")
+        # Category-wise comparison
+        st.subheader("Category performance comparison")
 
         # Get all categories across selected files
         all_categories = set()
         for data in selected_results.values():
-            category_results = data.get("category_results", {})
+            overall_stats = data.get("overall_stats", {})
+            category_results = overall_stats.get("category_results", {})
             all_categories.update(category_results.keys())
 
         if all_categories:
-            selected_category = st.selectbox(
-                "Select a category for comparison:",
-                sorted(all_categories),
-                format_func=lambda x: self.category_descriptions.get(x, {}).get("title", x.replace("_", " ").title()),
-            )
+            # Create comparison data for all categories
+            category_comparison = []
 
-            if selected_category:
-                category_comparison_data = []
-                for file_name, data in selected_results.items():
-                    category_results = data.get("category_results", {})
-                    cat_data = category_results.get(selected_category, {})
+            for file_name, data in selected_results.items():
+                # Use the readable date directly
+                evaluation_name = file_name
+                overall_stats = data.get("overall_stats", {})
+                category_results = overall_stats.get("category_results", {})
 
+                for category in all_categories:
+                    cat_data = category_results.get(category, {})
                     if cat_data:
-                        category_comparison_data.append(
+                        category_title = self.category_descriptions.get(category, {}).get(
+                            "title", category.replace("_", " ").title()
+                        )
+                        # For user feedback analysis, use pass rate as average score
+                        if category == "feedback":
+                            avg_score = cat_data.get("pass_rate", 0)
+                        else:
+                            avg_score = cat_data.get("average_score", 0)
+
+                        category_comparison.append(
                             {
-                                "File": file_name,
-                                "Tests": cat_data.get("total_tests", 0),
-                                "Pass Rate": f"{cat_data.get('pass_rate', 0):.1%}",
-                                "Avg Score": f"{cat_data.get('average_score', 0):.3f}",
-                                "Avg Time (s)": f"{cat_data.get('average_response_time', 0):.2f}",
+                                "Evaluation": evaluation_name,
+                                "Category": category_title,
+                                "Pass_Rate": cat_data.get("pass_rate", 0),
+                                "Avg_Score": avg_score,
+                                "Total_Tests": cat_data.get("total_tests", 0),
                             }
                         )
 
-                if category_comparison_data:
-                    cat_df = pd.DataFrame(category_comparison_data)
-                    st.dataframe(cat_df, use_container_width=True, hide_index=True)
-                else:
-                    st.info(f"No data available for category '{selected_category}' in the selected files.")
+            if category_comparison:
+                cat_df = pd.DataFrame(category_comparison)
+
+                # Create grouped bar chart for category comparison
+                fig = px.bar(
+                    cat_df,
+                    x="Category",
+                    y="Pass_Rate",
+                    color="Evaluation",
+                    barmode="group",
+                    title="Pass rate by evaluator category",
+                    labels={"Pass_Rate": "Pass rate", "Category": "Evaluator category"},
+                )
+                fig.update_layout(
+                    height=500,
+                    title_font_size=16,
+                    title_x=0,
+                    yaxis=dict(tickformat=".0%", range=[0, 1]),
+                    xaxis_tickangle=-45,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Additional line chart showing average scores
+                fig2 = px.line(
+                    cat_df,
+                    x="Category",
+                    y="Avg_Score",
+                    color="Evaluation",
+                    markers=True,
+                    title="Average score by evaluator category",
+                    labels={"Avg_Score": "Average score", "Category": "Evaluator category"},
+                )
+                fig2.update_layout(
+                    height=400, title_font_size=16, title_x=0, yaxis=dict(range=[0, 1]), xaxis_tickangle=-45
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+
+                # Detailed comparison table
+                st.subheader("Detailed category comparison")
+
+                # Pivot the data for better table display
+                pivot_df = cat_df.pivot(index="Category", columns="Evaluation", values="Pass_Rate")
+                pivot_df = pivot_df.fillna(0)
+
+                # Format as percentages
+                for col in pivot_df.columns:
+                    pivot_df[col] = pivot_df[col].map(lambda x: f"{x:.1%}")
+
+                st.dataframe(pivot_df, use_container_width=True)
+            else:
+                st.info("No category data available for the selected evaluations.")
         else:
             st.info("No categories available for comparison in the selected files.")
 
@@ -1528,7 +1683,7 @@ class EvaluationDashboard:
             st.error("No valid evaluation data found")
             return
 
-        # Main content tabs (removed Retrieval Metrics tab)
+        # Main content tabs
         tab1, tab2 = st.tabs(["Overview", "Categories"])
 
         with tab1:
