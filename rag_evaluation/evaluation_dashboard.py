@@ -251,18 +251,13 @@ class EvaluationDashboard:
     def load_available_files(self):
         """Load available evaluation result files"""
         results_dir = Path(__file__).parent.parent / "evaluation_results"
-        print(f"Searching for files in: {results_dir}")
         if results_dir.exists():
-            print("Directory exists.")
             try:
                 all_files = list(results_dir.glob("*.json"))
-                print(f"Found files: {[str(f) for f in all_files]}")
                 self.available_files = all_files
                 self.available_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
             except Exception as e:
                 print(f"Error while globbing files: {e}")
-        else:
-            print("Directory does not exist.")
 
     def load_evaluation_file(self, file_path: Path) -> Dict[str, Any]:
         """Load evaluation results from JSON file"""
