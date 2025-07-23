@@ -25,6 +25,7 @@ from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
 from src.webapp.auth.azure_auth import AzureADAuth
+from src.webapp.example_prompts import EXAMPLE_PROMPTS
 
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
 
@@ -354,8 +355,30 @@ def chat_page():
             # Force rerun to display feedback widget in history
             st.rerun()
 
-    # Chat interface
-    if prompt := st.chat_input("Ask your question here..."):
+    # Display example prompts only on a new chat
+    if len(st.session_state.messages) <= 1:
+        with st.expander("Not sure where to start? Try these examples..."):
+            # Function to handle prompt click
+            def handle_prompt_click(prompt_text):
+                st.session_state.clicked_prompt = prompt_text
+
+            for example in EXAMPLE_PROMPTS:
+                if st.button(
+                    f"**{example['title']}** - {example['prompt']}",
+                    key=f"example_{example['title']}",
+                    on_click=handle_prompt_click,
+                    args=[example["prompt"]],
+                    use_container_width=True,
+                ):
+                    pass
+
+    # Handle chat input, prioritizing clicked examples
+    if "clicked_prompt" in st.session_state and st.session_state.clicked_prompt:
+        prompt = st.session_state.pop("clicked_prompt")
+    else:
+        prompt = st.chat_input("Ask your question here...")
+
+    if prompt:
         # Start timing from the moment user submits the question
         start_time = time.time()
 
