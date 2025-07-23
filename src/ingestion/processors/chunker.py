@@ -188,7 +188,7 @@ class ConfluenceChunker(DocumentChunker):
         return path
 
     def _split_into_hierarchical_sections(self, content: str, hierarchy: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Split content into sections with hierarchical metadata."""
+        """Split content into sections with hierarchical metadata using look-ahead fusion strategy."""
         if not hierarchy:
             return [
                 {
@@ -204,27 +204,94 @@ class ConfluenceChunker(DocumentChunker):
 
         lines = content.split("\n")
         sections = []
+        pending_titles = []  # Store titles of empty sections
 
         for i, header in enumerate(hierarchy):
             start_line = header["line_num"]
             end_line = hierarchy[i + 1]["line_num"] if i + 1 < len(hierarchy) else len(lines)
 
+            # Extract raw section content
             section_content = "\n".join(lines[start_line:end_line]).strip()
-            if section_content:
-                section_path = header["parent_path"] + [header["title"]]
+
+            # Extract actual text content (excluding the header line itself)
+            actual_content = self._extract_actual_content(section_content, header["title"])
+
+            # Check if section has substantial content (more than 20 characters)
+            if len(actual_content.strip()) > 20:
+                # This section has content, create chunk(s) with fused titles
+                fused_section_path = self._create_fused_section_path(header, pending_titles)
+                fused_breadcrumb = " > ".join(fused_section_path)
+
                 sections.append(
                     {
                         "content": section_content,
                         "level": header["level"],
                         "title": header["title"],
                         "parent_path": header["parent_path"],
-                        "section_path": section_path,
+                        "section_path": fused_section_path,
+                        "section_breadcrumb": fused_breadcrumb,
                         "start_line": start_line,
                         "end_line": end_line,
+                        "fused_titles": pending_titles.copy(),  # Keep track of fused titles
                     }
                 )
 
+                # Clear pending titles as they've been consumed
+                pending_titles.clear()
+            else:
+                # Section is empty or has insufficient content, add to pending titles
+                pending_titles.append(header["title"])
+
         return sections
+
+    def _extract_actual_content(self, section_content: str, title: str) -> str:
+        """Extract actual text content excluding the header line itself."""
+        lines = section_content.split("\n")
+
+        # Remove the header line (first line that contains the title)
+        filtered_lines = []
+        header_line_skipped = False
+
+        for line in lines:
+            line_stripped = line.strip()
+
+            # Skip the header line containing the title (only the first occurrence)
+            if not header_line_skipped and title in line_stripped:
+                # Check if this line is actually a header (starts with # or h1-h6.)
+                if (line_stripped.startswith("#") and title in line_stripped) or (
+                    re.match(r"^h[1-6]\.\s+", line_stripped) and title in line_stripped
+                ):
+                    header_line_skipped = True
+                    continue
+
+            # Include all content after header
+            if header_line_skipped:
+                filtered_lines.append(line)
+
+        actual_content = "\n".join(filtered_lines).strip()
+
+        # Additional filtering: remove common "empty" patterns
+        # Remove parenthetical notes like "(Cette section est vide...)"
+        actual_content = re.sub(r"\([^)]*section[^)]*vide[^)]*\)", "", actual_content, flags=re.IGNORECASE)
+        actual_content = re.sub(r"\([^)]*empty[^)]*section[^)]*\)", "", actual_content, flags=re.IGNORECASE)
+
+        return actual_content.strip()
+
+    def _create_fused_section_path(self, current_header: Dict[str, Any], pending_titles: List[str]) -> List[str]:
+        """Create a fused section path combining pending titles with current path."""
+        # Start with the parent path
+        fused_path = current_header["parent_path"].copy()
+
+        # Add pending titles (empty sections that came before)
+        for title in pending_titles:
+            if title not in fused_path:  # Avoid duplicates
+                fused_path.append(title)
+
+        # Add current section title
+        if current_header["title"] not in fused_path:  # Avoid duplicates
+            fused_path.append(current_header["title"])
+
+        return fused_path
 
     def _chunk_section_with_hierarchy(
         self, document: Document, section: Dict[str, Any], start_chunk_index: int
@@ -313,8 +380,9 @@ class ConfluenceChunker(DocumentChunker):
                 "section_level": section["level"],
                 "section_path": section["section_path"],
                 "parent_path": section["parent_path"],
-                "section_breadcrumb": " > ".join(section["section_path"]),
+                "section_breadcrumb": section.get("section_breadcrumb", " > ".join(section["section_path"])),
                 "hierarchy_depth": len(section["section_path"]),
+                "fused_titles": section.get("fused_titles", []),
                 # Position metadata
                 "section_start_line": section["start_line"],
                 "section_end_line": section["end_line"],
