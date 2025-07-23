@@ -344,7 +344,14 @@ def main():
         results = manager.run_full_evaluation(args.categories)  # noqa
 
         # Save results
-        output_path = Path(args.output) if args.output else None
+        if args.output:
+            # If output path is specified, ensure it's in the evaluation_results directory
+            if not Path(args.output).is_absolute():
+                output_path = config.output_dir / args.output
+            else:
+                output_path = Path(args.output)
+        else:
+            output_path = None
         saved_results_path = manager.save_results(output_path)
 
         # Print summary

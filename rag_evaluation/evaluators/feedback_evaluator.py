@@ -1,6 +1,11 @@
 """
 Feedback evaluator using CamemBERT for multi-class classification
 Analyzes user feedback to identify strengths and weaknesses by topic
+
+Configuration:
+- Uses deployed app feedback data from Azure Blob Storage by default
+- Requires USE_AZURE_STORAGE=true in .env for production feedback analysis
+- Falls back to local storage for development/testing
 """
 
 import logging
@@ -16,6 +21,12 @@ from src.storage.data_manager import get_data_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Suppress Azure SDK logs to reduce noise
+logging.getLogger("azure").setLevel(logging.WARNING)
+logging.getLogger("azure.core").setLevel(logging.WARNING)
+logging.getLogger("azure.storage").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 class FeedbackSentiment(Enum):
@@ -72,9 +83,9 @@ class FeedbackClassifier:
             logger.error(f"Error loading topics configuration: {e}")
             # Fallback to default topics
             return [
-                Topic("technical_response_quality", "Qualité des réponses techniques"),
-                Topic("information_accuracy", "Précision des informations"),
-                Topic("overall_satisfaction", "Satisfaction utilisateur globale"),
+                Topic("technical_response_quality", "Technical Response Quality"),
+                Topic("information_accuracy", "Information Accuracy"),
+                Topic("overall_satisfaction", "Overall User Satisfaction"),
             ]
 
     def _init_camembert(self, model_name: str):
@@ -127,51 +138,93 @@ class FeedbackClassifier:
 class FeedbackDataLoader:
     def __init__(self, limit: Optional[int] = None):
         """Initialize data loader"""
-        self.feedback_data_store = get_data_manager().get_feedback_data
+        data_manager = get_data_manager()
+        logger.info(f"DataManager instance: {data_manager}")
+        logger.info(f"DataManager storage type: {type(data_manager.storage).__name__}")
+        logger.info(f"DataManager storage: {data_manager.storage}")
+
+        self.feedback_data_store = data_manager.get_feedback_data
         self.limit = limit
         logger.info(f"FeedbackDataLoader initialized with limit: {limit}")
 
     def load_feedbacks(self) -> Optional[List[FeedbackEntry]]:
         logger.info("=== FEEDBACK LOADING START ===")
+        logger.info(f"FeedbackDataLoader limit: {self.limit}")
+        logger.info(f"feedback_data_store function: {self.feedback_data_store}")
 
         try:
             # Load raw feedback data from data manager
             logger.info("Loading feedback data from data manager...")
-            raw_feedbacks = self.feedback_data_store(limit=self.limit)
+            # Handle None limit - DataManager expects an integer
+            effective_limit = self.limit if self.limit is not None else 100
+            logger.info(f"Calling feedback_data_store with limit={effective_limit} (original: {self.limit})")
+            raw_feedbacks = self.feedback_data_store(limit=effective_limit)
+            logger.info(f"Raw feedbacks result type: {type(raw_feedbacks)}")
 
             if not raw_feedbacks:
-                logger.warning("No feedback data loaded from data manager")
+                logger.warning("No feedback data loaded from data manager - empty result")
+                logger.info(f"Raw feedbacks value: {raw_feedbacks}")
                 return None
 
             logger.info(f"Loaded {len(raw_feedbacks)} raw feedback entries")
+            logger.info(f"Sample raw feedback (first entry): {raw_feedbacks[0] if raw_feedbacks else 'None'}")
 
             # Convert to evaluator format
             converted_feedbacks = []
-            for raw_feedback in raw_feedbacks:
-                # Extract question and answer from metadata
-                metadata = raw_feedback.get("metadata", {})
-                question = metadata.get("question", "")
-                answer = metadata.get("answer", "")
+            logger.info(f"Starting conversion of {len(raw_feedbacks)} raw feedback entries")
 
-                # Map data manager format to evaluator format
-                sentiment = (
-                    FeedbackSentiment.POSITIVE if raw_feedback.get("rating", 0) >= 3 else FeedbackSentiment.NEGATIVE
-                )
+            for i, raw_feedback in enumerate(raw_feedbacks):
+                try:
+                    logger.debug(f"Processing raw feedback {i + 1}: {raw_feedback}")
 
-                converted_feedback = FeedbackEntry(
-                    question=question,
-                    answer=answer,
-                    sentiment=sentiment,
-                    comment=raw_feedback.get("comment", ""),
-                    timestamp=datetime.fromisoformat(raw_feedback.get("timestamp", datetime.now().isoformat())),
-                )
-                converted_feedbacks.append(converted_feedback)
+                    # Extract question and answer from metadata
+                    metadata = raw_feedback.get("metadata", {})
+                    question = metadata.get("question", "")
+                    answer = metadata.get("answer", "")
 
-            logger.info(f"Converted {len(converted_feedbacks)} feedback entries")
+                    # Map data manager format to evaluator format
+                    rating = raw_feedback.get("rating", 0)
+                    sentiment = FeedbackSentiment.POSITIVE if rating >= 3 else FeedbackSentiment.NEGATIVE
+                    logger.debug(f"Feedback {i + 1}: rating={rating}, sentiment={sentiment}")
+
+                    # Handle timestamp conversion safely
+                    timestamp_str = raw_feedback.get("timestamp", datetime.now().isoformat())
+                    try:
+                        timestamp = datetime.fromisoformat(timestamp_str)
+                    except Exception as ts_e:
+                        logger.warning(
+                            f"Invalid timestamp '{timestamp_str}' in feedback {i + 1}, using current time: {ts_e}"
+                        )
+                        timestamp = datetime.now()
+
+                    converted_feedback = FeedbackEntry(
+                        question=question,
+                        answer=answer,
+                        sentiment=sentiment,
+                        comment=raw_feedback.get("comment", ""),
+                        timestamp=timestamp,
+                    )
+                    converted_feedbacks.append(converted_feedback)
+                    logger.debug(f"Successfully converted feedback {i + 1}")
+
+                except Exception as conv_e:
+                    logger.error(f"Error converting feedback entry {i + 1}: {conv_e}")
+                    logger.error(f"Raw feedback data: {raw_feedback}")
+                    continue  # Skip this entry but continue with others
+
+            logger.info(f"Converted {len(converted_feedbacks)} out of {len(raw_feedbacks)} feedback entries")
+
+            if len(converted_feedbacks) == 0:
+                logger.warning("No feedback entries were successfully converted")
+                return None
+
             return converted_feedbacks
 
         except Exception as e:
             logger.error(f"Error loading feedback data: {e}")
+            import traceback
+
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             return None
 
 
@@ -205,10 +258,21 @@ class FeedbackEvaluator(BaseEvaluator):
         super().__init__(config)
         self.limit = kwargs.get("limit", None)
 
+        logger.info("=== FEEDBACK EVALUATOR INITIALIZATION ===")
+        logger.info(f"Config: {config}")
+        logger.info(f"Kwargs: {kwargs}")
+        logger.info(f"Limit parameter: {self.limit}")
+
         # Initialize our specific components
+        logger.info("Initializing FeedbackDataLoader...")
         self.data_loader = FeedbackDataLoader(limit=self.limit)
+        logger.info(f"FeedbackDataLoader created: {self.data_loader}")
+
         classifier_params = kwargs.get("classifier_params", {})
+        logger.info(f"Classifier params: {classifier_params}")
+        logger.info("Initializing FeedbackClassifier...")
         self.classifier = FeedbackClassifier(**classifier_params)
+        logger.info("FeedbackEvaluator initialization completed")
 
     def get_category(self) -> str:
         return "feedback"
@@ -276,11 +340,22 @@ class FeedbackEvaluator(BaseEvaluator):
 
     def analyze_feedback(self) -> FeedbackAnalysis:
         """Main analysis method"""
+        logger.info("=== ANALYZE_FEEDBACK START ===")
+        logger.info(f"DataLoader instance: {self.data_loader}")
+        logger.info(f"DataLoader limit: {self.data_loader.limit}")
+
         # Load feedback data
+        logger.info("About to call data_loader.load_feedbacks()...")
         feedbacks = self.data_loader.load_feedbacks()
+        logger.info(
+            f"load_feedbacks() returned: {type(feedbacks)} with length: {len(feedbacks) if feedbacks else 'None'}"
+        )
+
         if feedbacks is None or len(feedbacks) == 0:
-            logger.warning("No feedback data available for analysis")
-            return self._empty_analysis()
+            logger.warning("No feedback data available for analysis - returning empty analysis")
+            empty_result = self._empty_analysis()
+            logger.info(f"Empty analysis: total_feedbacks={empty_result.total_feedbacks}")
+            return empty_result
 
         # Classify feedbacks by topic
         topic_feedbacks = {}
@@ -417,7 +492,7 @@ class FeedbackEvaluator(BaseEvaluator):
         lines = [
             "=== ANALYSE FEEDBACK ===",
             f"Total: {analysis.total_feedbacks} feedbacks",
-            f"Satisfaction globale: {analysis.overall_satisfaction:.0%}",
+            f"Overall Satisfaction: {analysis.overall_satisfaction:.0%}",
             "",
             "RÉPARTITION PAR THÈME:",
         ]
@@ -442,7 +517,7 @@ class FeedbackEvaluator(BaseEvaluator):
         lines.extend(
             [
                 "",
-                "POINTS D'AMÉLIORATION:",
+                "AREAS FOR IMPROVEMENT:",
             ]
         )
         for weakness in analysis.weaknesses:
@@ -488,7 +563,7 @@ class FeedbackEvaluator(BaseEvaluator):
         lines.extend(
             [
                 "",
-                "⚠️ POINTS D'AMÉLIORATION:",
+                "⚠️ AREAS FOR IMPROVEMENT:",
             ]
         )
         for weakness in analysis.weaknesses:
@@ -549,7 +624,7 @@ class FeedbackEvaluator(BaseEvaluator):
                         "topic_name": topic_analysis.topic_name,
                         "count": topic_analysis.total_count,
                         "satisfaction_rate": topic_analysis.satisfaction_rate,
-                        "reason": f"Faible taux de satisfaction ({topic_analysis.satisfaction_rate:.0%})",
+                        "reason": f"Low satisfaction rate ({topic_analysis.satisfaction_rate:.0%})",
                     }
                 )
 
