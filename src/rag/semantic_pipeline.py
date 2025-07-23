@@ -1,6 +1,6 @@
 """
 Enhanced RAG pipeline with semantic understanding capabilities.
-Integrates semantic query processing and retrieval for better accuracy.
+Integrates semantic query processing, context-aware retrieval, and conversation tracking for better accuracy.
 """
 
 import logging
@@ -12,26 +12,34 @@ from ..storage.data_manager import get_data_manager
 from .tools.semantic_retrieval_tool import SemanticRetrievalTool
 from .tools.generation_tool import GenerationTool
 from .query_processor import QueryProcessor
+from .conversation_context import ConversationContextTracker
 
 
 class SemanticRAGPipeline:
     """
-    Enhanced RAG pipeline with semantic understanding capabilities.
-    Handles misleading keywords through semantic query processing.
+    Enhanced RAG pipeline with semantic understanding and context-aware capabilities.
+    Handles misleading keywords through semantic query processing and maintains conversation context.
     """
 
-    def __init__(self, use_semantic_features: bool = True):
+    def __init__(self, use_semantic_features: bool = True, use_context_awareness: bool = True):
         self.config = get_config()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.data_manager = get_data_manager()
         self.use_semantic_features = use_semantic_features
+        self.use_context_awareness = use_context_awareness
 
         # Initialize tools
         self.semantic_retrieval_tool = SemanticRetrievalTool()
         self.generation_tool = GenerationTool()
         self.query_processor = QueryProcessor()
 
-        self.logger.info("✅ Semantic RAG pipeline initialized")
+        # Initialize context tracker
+        if self.use_context_awareness:
+            self.context_tracker = ConversationContextTracker()
+        else:
+            self.context_tracker = None
+
+        self.logger.info(f"✅ Semantic RAG pipeline initialized (context-aware: {use_context_awareness})")
 
     def process_query(
         self,
@@ -42,9 +50,10 @@ class SemanticRAGPipeline:
         verbose: bool = False,
         use_semantic_expansion: bool = True,
         use_semantic_reranking: bool = True,
+        use_context_enrichment: bool = True,
     ) -> Tuple[str, str]:
         """
-        Process a complete query with semantic understanding.
+        Process a complete query with semantic understanding and context awareness.
 
         Args:
             query: User question
@@ -54,15 +63,35 @@ class SemanticRAGPipeline:
             verbose: Detailed display
             use_semantic_expansion: Enable semantic query expansion
             use_semantic_reranking: Enable semantic re-ranking
+            use_context_enrichment: Enable conversational context enrichment
 
         Returns:
             Tuple (answer, sources)
         """
         start_time = time.time()
+        original_query = query
+        context_metadata = {"context_applied": False}
 
         try:
             if verbose:
                 self.logger.info(f"🔍 Processing query with semantic understanding: '{query[:100]}...'")
+
+            # Step 0: Context enrichment (if enabled and conversation_id provided)
+            if self.use_context_awareness and use_context_enrichment and conversation_id and self.context_tracker:
+                if verbose:
+                    self.logger.info("🧩 Step 0: Context-aware query enrichment")
+
+                enriched_query, context_metadata = self.context_tracker.enrich_query_with_context(
+                    conversation_id, query
+                )
+
+                if context_metadata.get("context_applied", False):
+                    query = enriched_query
+                    if verbose:
+                        self.logger.info(f"📝 Query enriched with context: '{original_query}' -> '{query[:150]}...'")
+                        self.logger.info(
+                            f"🏷️ Context entities: {[e['entity'] for e in context_metadata.get('context_entities', [])]}"
+                        )
 
             # Step 1: Process query for semantic understanding
             query_result = None
@@ -79,12 +108,12 @@ class SemanticRAGPipeline:
                         f"Confidence: {query_result.confidence:.2f}"
                     )
 
-            # Step 2: Semantic retrieval
+            # Step 2: Context-aware semantic retrieval
             if verbose:
-                self.logger.info("📥 Step 2: Semantic document retrieval")
+                self.logger.info("📥 Step 2: Context-aware semantic document retrieval")
 
             search_results = self.semantic_retrieval_tool.retrieve(
-                query=query,
+                query=query,  # Use potentially enriched query
                 use_semantic_expansion=use_semantic_expansion and self.use_semantic_features,
                 use_semantic_reranking=use_semantic_reranking and self.use_semantic_features,
             )
@@ -96,11 +125,16 @@ class SemanticRAGPipeline:
                     avg_score = sum(doc.score for doc in search_results) / len(search_results)
                     self.logger.info(f"📊 Top score: {top_score:.3f}, Average score: {avg_score:.3f}")
 
-            # Step 3: Generate response
+            # Step 3: Generate response with context awareness
             if verbose:
                 self.logger.info("🤖 Step 3: Generating response")
 
-            generation_result = self.generation_tool.generate(query=query, documents=search_results, history=history)
+            # Provide original query to generation tool for natural response
+            generation_result = self.generation_tool.generate(
+                query=original_query,  # Use original query for natural response generation
+                documents=search_results,
+                history=history,
+            )
 
             answer = generation_result["answer"]
             sources = generation_result["sources"]
@@ -109,6 +143,16 @@ class SemanticRAGPipeline:
 
             if verbose:
                 self.logger.info(f"✅ Response generated in {response_time:.0f}ms")
+
+            # Step 4: Track conversation turn for context (if enabled)
+            if self.use_context_awareness and conversation_id and self.context_tracker:
+                intent = query_result.intent if query_result else "general"
+                self.context_tracker.track_conversation_turn(
+                    conversation_id=conversation_id, query=original_query, response=answer, intent=intent
+                )
+
+                if verbose:
+                    self.logger.info("🧩 Conversation turn tracked for future context")
 
             # Save conversation with enhanced metadata
             try:
@@ -120,7 +164,24 @@ class SemanticRAGPipeline:
                     "semantic_features_enabled": self.use_semantic_features,
                     "semantic_expansion_used": use_semantic_expansion,
                     "semantic_reranking_used": use_semantic_reranking,
+                    "context_awareness_enabled": self.use_context_awareness,
+                    "context_enrichment_used": use_context_enrichment,
+                    "original_query": original_query,
                 }
+
+                # Add context metadata if available
+                if context_metadata.get("context_applied", False):
+                    metadata.update(
+                        {
+                            "context_applied": True,
+                            "enriched_query": context_metadata.get("enriched_query"),
+                            "context_entities": context_metadata.get("context_entities", []),
+                            "context_turns_used": context_metadata.get("context_turns_used", 0),
+                            "active_topics": context_metadata.get("active_topics", []),
+                        }
+                    )
+                else:
+                    metadata["context_applied"] = False
 
                 # Add query processing metadata if available
                 if query_result:
@@ -325,10 +386,11 @@ class SemanticRAGPipeline:
             retrieval_stats = self.semantic_retrieval_tool.get_stats()
             generation_stats = self.generation_tool.get_stats()
 
-            return {
+            status = {
                 "pipeline_type": "semantic_rag_pipeline",
                 "ready": self.is_ready(),
                 "semantic_features_enabled": self.use_semantic_features,
+                "context_awareness_enabled": self.use_context_awareness,
                 "config": {
                     "embeddings_model": self.config.embeddings_model,
                     "llm_model": self.config.llm_model,
@@ -346,8 +408,23 @@ class SemanticRAGPipeline:
                     "multilingual_support": True,
                     "synonym_handling": True,
                     "misleading_keyword_resolution": True,
+                    "conversation_context_tracking": self.use_context_awareness,
+                    "context_aware_retrieval": self.use_context_awareness,
+                    "entity_extraction": self.use_context_awareness,
                 },
             }
+
+            # Add context tracker status if available
+            if self.context_tracker:
+                active_conversations = len(self.context_tracker.contexts)
+                total_turns = sum(len(ctx.turns) for ctx in self.context_tracker.contexts.values())
+                status["context_tracker"] = {
+                    "active_conversations": active_conversations,
+                    "total_tracked_turns": total_turns,
+                    "conversations": list(self.context_tracker.contexts.keys()),
+                }
+
+            return status
         except Exception as e:
             return {"pipeline_type": "semantic_rag_pipeline", "ready": False, "error": str(e)}
 
@@ -369,14 +446,119 @@ class SemanticRAGPipeline:
         except Exception as e:
             return {"success": False, "error": str(e), "test_query": test_query}
 
+    def test_context_aware_conversation(self) -> Dict[str, Any]:
+        """Test context-aware conversation with implicit references"""
+        if not self.use_context_awareness or not self.context_tracker:
+            return {"success": False, "error": "Context awareness not enabled"}
+
+        try:
+            test_conversation_id = f"test_context_{int(time.time())}"
+
+            # Simulate a multi-turn conversation
+            test_turns = [
+                {
+                    "query": "Qui travaille sur le projet Teora ?",
+                    "expected_entities": ["teora"],
+                    "expected_types": ["project"],
+                },
+                {
+                    "query": "Quelles sont leurs responsabilités ?",  # Implicit reference to Teora team
+                    "expected_context": True,
+                    "expected_enrichment": ["teora"],
+                },
+                {
+                    "query": "Comment puis-je les contacter ?",  # Further implicit reference
+                    "expected_context": True,
+                    "expected_enrichment": ["teora"],
+                },
+            ]
+
+            test_results = []
+
+            for i, turn in enumerate(test_turns):
+                self.logger.info(f"Testing turn {i + 1}: {turn['query']}")
+
+                # Process query with context
+                answer, sources = self.process_query(
+                    query=turn["query"], conversation_id=test_conversation_id, verbose=True, use_context_enrichment=True
+                )
+
+                # Get context summary
+                context_summary = self.context_tracker.get_conversation_summary(test_conversation_id)
+
+                turn_result = {
+                    "turn": i + 1,
+                    "query": turn["query"],
+                    "answer": answer[:200] + "..." if len(answer) > 200 else answer,
+                    "sources_found": bool(sources and sources != "System error"),
+                    "context_summary": context_summary,
+                    "success": True,
+                }
+
+                # Check expectations
+                if "expected_entities" in turn:
+                    found_entities = [
+                        e
+                        for e in context_summary.get("entities_by_type", {}).get("project", [])
+                        if any(exp in e.lower() for exp in turn["expected_entities"])
+                    ]
+                    turn_result["entities_extracted"] = found_entities
+                    turn_result["entity_extraction_success"] = len(found_entities) > 0
+
+                if turn.get("expected_context", False):
+                    # Check if context was applied (this would be in metadata, simulated here)
+                    turn_result["context_expected"] = True
+                    turn_result["context_likely_applied"] = context_summary.get("active_entities", 0) > 0
+
+                test_results.append(turn_result)
+
+            # Overall assessment
+            entity_extraction_success = any(r.get("entity_extraction_success", False) for r in test_results)
+            context_progression = len(test_results) > 1 and test_results[-1]["context_summary"]["turn_count"] == len(
+                test_turns
+            )
+
+            return {
+                "success": True,
+                "test_type": "context_aware_conversation",
+                "conversation_id": test_conversation_id,
+                "turns_tested": len(test_turns),
+                "results": test_results,
+                "overall_assessment": {
+                    "entity_extraction_working": entity_extraction_success,
+                    "context_tracking_working": context_progression,
+                    "conversation_continuity": context_progression,
+                },
+                "final_context_state": self.context_tracker.get_conversation_summary(test_conversation_id),
+            }
+
+        except Exception as e:
+            return {"success": False, "error": str(e), "test_type": "context_aware_conversation"}
+
+    def get_context_summary(self, conversation_id: str) -> Dict[str, Any]:
+        """Get context summary for a conversation"""
+        if not self.context_tracker:
+            return {"error": "Context tracking not enabled"}
+
+        return self.context_tracker.get_conversation_summary(conversation_id)
+
+    def clear_conversation_context(self, conversation_id: str):
+        """Clear context for a specific conversation"""
+        if self.context_tracker:
+            self.context_tracker.clear_conversation_context(conversation_id)
+
 
 class SemanticRAGPipelineFactory:
     """Factory for creating semantic RAG pipelines"""
 
     @staticmethod
-    def create_semantic_pipeline(use_semantic_features: bool = True) -> SemanticRAGPipeline:
-        """Create a semantic RAG pipeline"""
-        pipeline = SemanticRAGPipeline(use_semantic_features=use_semantic_features)
+    def create_semantic_pipeline(
+        use_semantic_features: bool = True, use_context_awareness: bool = True
+    ) -> SemanticRAGPipeline:
+        """Create a semantic RAG pipeline with optional context awareness"""
+        pipeline = SemanticRAGPipeline(
+            use_semantic_features=use_semantic_features, use_context_awareness=use_context_awareness
+        )
 
         if not pipeline.is_ready():
             logging.warning("⚠️ Semantic RAG pipeline created but not ready - check that the vector database is built")
@@ -384,9 +566,26 @@ class SemanticRAGPipelineFactory:
         return pipeline
 
     @staticmethod
-    def create_comparison_pipeline() -> Tuple[SemanticRAGPipeline, SemanticRAGPipeline]:
-        """Create both semantic and basic pipelines for comparison"""
-        semantic_pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(use_semantic_features=True)
-        basic_pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(use_semantic_features=False)
+    def create_context_aware_pipeline() -> SemanticRAGPipeline:
+        """Create a fully featured context-aware semantic RAG pipeline"""
+        return SemanticRAGPipelineFactory.create_semantic_pipeline(
+            use_semantic_features=True, use_context_awareness=True
+        )
 
-        return semantic_pipeline, basic_pipeline
+    @staticmethod
+    def create_basic_pipeline() -> SemanticRAGPipeline:
+        """Create a basic pipeline without semantic features or context awareness"""
+        return SemanticRAGPipelineFactory.create_semantic_pipeline(
+            use_semantic_features=False, use_context_awareness=False
+        )
+
+    @staticmethod
+    def create_comparison_pipeline() -> Tuple[SemanticRAGPipeline, SemanticRAGPipeline, SemanticRAGPipeline]:
+        """Create context-aware, semantic, and basic pipelines for comparison"""
+        context_aware_pipeline = SemanticRAGPipelineFactory.create_context_aware_pipeline()
+        semantic_pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(
+            use_semantic_features=True, use_context_awareness=False
+        )
+        basic_pipeline = SemanticRAGPipelineFactory.create_basic_pipeline()
+
+        return context_aware_pipeline, semantic_pipeline, basic_pipeline
