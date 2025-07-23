@@ -27,7 +27,45 @@ from src.webapp.components.history_manager import get_history_manager
 from src.webapp.auth.azure_auth import AzureADAuth
 from src.webapp.example_prompts import EXAMPLE_PROMPTS
 
+# images paths
+IMAGES = {
+    "user": str(Path(__file__).parent.parent.parent / "Images" / "user.svg"),
+    "bot": str(Path(__file__).parent.parent.parent / "Images" / "logo.png"),
+    "panel": str(Path(__file__).parent.parent.parent / "Images" / "isschat.png"),
+}
+
+
 st.set_page_config(page_title="Isschat", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
+
+# Add custom CSS for sidebar buttons
+st.markdown(
+    """
+    <style>
+    /* Sidebar button styling */
+    .stSidebar .stButton > button {
+        border-radius: 8px !important;
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+    .stSidebar .stButton > button > div {
+        text-align: center !important;
+        width: 100% !important;
+    }
+    div[data-testid="stChatMessage"] div img,
+  .stChatMessage img {
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      min-height: 40px !important;
+      border-radius: 50% !important;
+  }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
 
 
 # Initialize embedder at startup
@@ -130,12 +168,7 @@ def main():
 
     # Sidebar for navigation and options
     with st.sidebar:
-        st.image("logo.png", width=300)
-
-        # Always display user info
-        user_info = st.session_state.get("user", {})
-        if user_info:
-            st.success(f"Connected as : {user_info['email']}")
+        st.image(IMAGES["panel"])
 
         # Main navigation
         st.subheader("Navigation")
@@ -143,9 +176,10 @@ def main():
             st.session_state["page"] = "chat"
             st.rerun()
 
-        if st.session_state.get("page") == "chat" and st.button("New Chat", key="new_chat_button_sidebar"):
+        if st.button("New Chat", key="new_chat_button_sidebar"):
             st.session_state["messages"] = []
             st.session_state["current_conversation_id"] = str(uuid.uuid4())
+            st.session_state["page"] = "chat"  # Switch to chat page
             st.rerun()
 
         if st.button("History", key="nav_history"):
@@ -175,6 +209,12 @@ def main():
             st.warning("Shutting down the Streamlit app...")
             time.sleep(1)
             os.kill(os.getpid(), signal.SIGKILL)
+
+        # User info at the bottom
+        user_info = st.session_state.get("user", {})
+        if user_info:
+            st.markdown("---")
+            st.success(f"Connected as : {user_info['email']}")
 
     # Determine which page to display - user is already authenticated at the beginning of main()
     if st.session_state.get("page") == "admin" and st.session_state["user"].get("is_admin"):
@@ -227,7 +267,7 @@ def chat_page():
             st.session_state["messages"] = []
 
     # Display main interface
-    st.subheader("Ask questions about our Confluence documentation")
+    st.subheader("Welcome to Isschat, ask questions about our Confluence documentation !")
 
     # Extract first name from email (part before @)
     user_email = st.session_state.get("user", {}).get("email", "")
@@ -266,9 +306,9 @@ def chat_page():
     # Display message history with feedback widgets
     for i, msg in enumerate(st.session_state.messages):
         if msg["role"] == "user":
-            st.chat_message("user").write(msg["content"])
+            st.chat_message("user", avatar=IMAGES["user"]).write(msg["content"])
         else:
-            with st.chat_message("assistant"):
+            with st.chat_message("assistant", avatar=IMAGES["bot"]):
                 st.write(msg["content"])
 
                 # Add feedback widget for assistant messages (except welcome)
@@ -321,7 +361,7 @@ def chat_page():
         st.session_state.messages.append(
             {"role": "user", "content": prompt, "conversation_id": st.session_state["current_conversation_id"]}
         )
-        st.chat_message("user").write(prompt)
+        st.chat_message("user", avatar=IMAGES["user"]).write(prompt)
 
         # Prepare chat history for context from the data manager
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
@@ -338,9 +378,9 @@ def chat_page():
                 response_content += "\n\n" + sources
 
             # Display the response
-            st.chat_message("assistant").markdown(result)
+            st.chat_message("assistant", avatar=IMAGES["bot"]).markdown(result)
             if sources:
-                st.chat_message("assistant").write(sources)
+                st.chat_message("assistant", avatar=IMAGES["bot"]).write(sources)
 
             # Add to message history with question data for feedback
             st.session_state.messages.append(
@@ -386,7 +426,7 @@ def chat_page():
         st.session_state.messages.append(
             {"role": "user", "content": prompt, "conversation_id": st.session_state["current_conversation_id"]}
         )
-        st.chat_message("user").write(prompt)
+        st.chat_message("user", avatar=IMAGES["user"]).write(prompt)
 
         # Prepare chat history for context from the data manager
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
@@ -403,9 +443,9 @@ def chat_page():
                 response_content += "\n\n" + sources
 
             # Display the response
-            st.chat_message("assistant").markdown(result)
+            st.chat_message("assistant", avatar=IMAGES["bot"]).markdown(result)
             if sources:
-                st.chat_message("assistant").write(sources)
+                st.chat_message("assistant", avatar=IMAGES["bot"]).write(sources)
 
             # Add to message history with question data for feedback
             st.session_state.messages.append(

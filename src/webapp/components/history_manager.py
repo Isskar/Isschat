@@ -21,7 +21,7 @@ class ConversationHistoryManager:
         self.colors = {
             "primary": "#2E86AB",
             "secondary": "#A23B72",
-            "success": "#F18F01",
+            "success": "#2149F3",
             "warning": "#C73E1D",
             "info": "#6A994E",
         }
@@ -42,8 +42,8 @@ class ConversationHistoryManager:
         }
 
         .search-highlight {
-            background-color: #F18F01;
-            color: #000000;
+            background-color: #2149F3;
+            color: #ffffff;
             padding: 2px 4px;
             border-radius: 3px;
         }
@@ -141,17 +141,17 @@ class ConversationHistoryManager:
             total_response_time = sum(e.get("response_time_ms", 0) for e in conv_entries)
 
             with st.expander(
-                f"💬 Conversation with {num_messages} messages "
+                f"Conversation with {num_messages} messages "
                 f"({self._format_timestamp(first_entry['timestamp'])}) - "
-                f"👤 {first_entry.get('user_id', 'Anonymous')} - "
-                f"⏱️ {total_response_time:.0f}ms",
+                f"{first_entry.get('user_id', 'Anonymous')} - "
+                f"{total_response_time:.0f}ms",
                 expanded=False,
             ):
                 for entry in conv_entries:
-                    st.markdown(f"**❓ Question ({self._format_timestamp(entry['timestamp'])}):**")
+                    st.markdown(f"**Question ({self._format_timestamp(entry['timestamp'])}):**")
                     st.write(entry["question"])
 
-                    st.markdown("**💡 Answer:**")
+                    st.markdown("**Answer:**")
                     if show_details:
                         st.write(entry["answer"])
                     else:
@@ -264,10 +264,10 @@ class ConversationHistoryManager:
 
             for i, conv in enumerate(filtered_conversations[:10]):
                 with st.expander(
-                    f"🕐 {self._format_timestamp(conv['timestamp'])} - 👤 {conv.get('user_id', 'Anonymous')}",
+                    f"{self._format_timestamp(conv['timestamp'])} - {conv.get('user_id', 'Anonymous')}",
                     expanded=False,
                 ):
-                    st.markdown("**❓ Question:**")
+                    st.markdown("**Question:**")
                     question = conv["question"]
                     highlighted_question = question.replace(
                         search_term, f'<span class="search-highlight">{search_term}</span>'
