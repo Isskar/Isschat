@@ -205,6 +205,8 @@ class ConfluenceChunker(DocumentChunker):
         lines = content.split("\n")
         sections = []
         pending_titles = []  # Store titles of empty sections
+        accumulated_content = []  # Store short sections to merge
+        accumulated_metadata = None  # Store metadata for merged sections
 
         for i, header in enumerate(hierarchy):
             start_line = header["line_num"]
@@ -216,8 +218,18 @@ class ConfluenceChunker(DocumentChunker):
             # Extract actual text content (excluding the header line itself)
             actual_content = self._extract_actual_content(section_content, header["title"])
 
-            # Check if section has substantial content (more than 20 characters)
-            if len(actual_content.strip()) > 20:
+            # Check if section has substantial content (more than 200 characters)
+            if len(actual_content.strip()) > 200:
+                # Process any accumulated short sections first
+                if accumulated_content:
+                    merged_section = self._create_merged_section(
+                        accumulated_content, accumulated_metadata, pending_titles
+                    )
+                    if merged_section:
+                        sections.append(merged_section)
+                    accumulated_content.clear()
+                    accumulated_metadata = None
+
                 # This section has content, create chunk(s) with fused titles
                 fused_section_path = self._create_fused_section_path(header, pending_titles)
                 fused_breadcrumb = " > ".join(fused_section_path)
@@ -239,8 +251,29 @@ class ConfluenceChunker(DocumentChunker):
                 # Clear pending titles as they've been consumed
                 pending_titles.clear()
             else:
-                # Section is empty or has insufficient content, add to pending titles
-                pending_titles.append(header["title"])
+                # Section is short - decide whether to accumulate or mark as pending
+                if len(actual_content.strip()) > 20:  # Has some content, just short
+                    # Accumulate short sections for potential merging
+                    accumulated_content.append(
+                        {
+                            "content": section_content,
+                            "header": header,
+                            "start_line": start_line,
+                            "end_line": end_line,
+                            "actual_content": actual_content,
+                        }
+                    )
+                    if not accumulated_metadata:
+                        accumulated_metadata = header
+                else:
+                    # Section is empty, add to pending titles
+                    pending_titles.append(header["title"])
+
+        # Process any remaining accumulated short sections
+        if accumulated_content:
+            merged_section = self._create_merged_section(accumulated_content, accumulated_metadata, pending_titles)
+            if merged_section:
+                sections.append(merged_section)
 
         return sections
 
@@ -292,6 +325,56 @@ class ConfluenceChunker(DocumentChunker):
             fused_path.append(current_header["title"])
 
         return fused_path
+
+    def _create_merged_section(
+        self, accumulated_content: List[Dict[str, Any]], base_metadata: Dict[str, Any], pending_titles: List[str]
+    ) -> Optional[Dict[str, Any]]:
+        """Create a merged section from multiple short sections."""
+        if not accumulated_content:
+            return None
+
+        # Combine all content
+        merged_content_parts = []
+        all_titles = []
+
+        for section_data in accumulated_content:
+            merged_content_parts.append(section_data["content"])
+            all_titles.append(section_data["header"]["title"])
+
+        merged_content = "\n\n".join(merged_content_parts)
+
+        # Check if merged content meets minimum threshold
+        if len(merged_content.strip()) < 200:
+            # Still too short, add all titles to pending
+            pending_titles.extend(all_titles)
+            return None
+
+        # Create merged section metadata
+        first_section = accumulated_content[0]
+        last_section = accumulated_content[-1]
+
+        # Create a combined title representing all merged sections
+        if len(all_titles) > 3:
+            combined_title = f"{all_titles[0]} ... {all_titles[-1]} ({len(all_titles)} sections)"
+        else:
+            combined_title = " + ".join(all_titles)
+
+        fused_section_path = self._create_fused_section_path(base_metadata, pending_titles)
+        fused_section_path.append(combined_title)
+        fused_breadcrumb = " > ".join(fused_section_path)
+
+        return {
+            "content": merged_content,
+            "level": base_metadata["level"],
+            "title": combined_title,
+            "parent_path": base_metadata["parent_path"],
+            "section_path": fused_section_path,
+            "section_breadcrumb": fused_breadcrumb,
+            "start_line": first_section["start_line"],
+            "end_line": last_section["end_line"],
+            "fused_titles": pending_titles.copy(),
+            "merged_sections": all_titles,  # Track original section names
+        }
 
     def _chunk_section_with_hierarchy(
         self, document: Document, section: Dict[str, Any], start_chunk_index: int
@@ -383,6 +466,7 @@ class ConfluenceChunker(DocumentChunker):
                 "section_breadcrumb": section.get("section_breadcrumb", " > ".join(section["section_path"])),
                 "hierarchy_depth": len(section["section_path"]),
                 "fused_titles": section.get("fused_titles", []),
+                "merged_sections": section.get("merged_sections", []),
                 # Position metadata
                 "section_start_line": section["start_line"],
                 "section_end_line": section["end_line"],
@@ -589,79 +673,67 @@ class ConfluenceChunker(DocumentChunker):
         return Document(content=enriched_content, metadata=metadata)
 
     def _build_structured_chunk_header(self, metadata: Dict[str, Any]) -> str:
-        """Build a compact, single-line compatible chunk header."""
+        """Build an LLM-friendly chunk header with contextual information."""
         header_parts = []
 
-        # Build metadata section
-        metadata_parts = []
-        title = metadata.get("title")
-        if title:
-            metadata_parts.append(f"Titre: {title}")
-
+        # Document context line
+        title = metadata.get("title", "Document")
         author = metadata.get("author_name")
-        if author:
-            metadata_parts.append(f"Auteur: {author}")
+        space_key = metadata.get("space_key")
 
+        context_info = []
+        if author:
+            context_info.append(f"par {author}")
+        if space_key:
+            context_info.append(f"({space_key})")
+
+        if context_info:
+            header_parts.append(f'Document: "{title}" {" ".join(context_info)}')
+        else:
+            header_parts.append(f'Document: "{title}"')
+
+        # Document path with emoji indicator
+        hierarchy_breadcrumb = metadata.get("hierarchy_breadcrumb")
+        if hierarchy_breadcrumb:
+            header_parts.append(f"📍 {hierarchy_breadcrumb}")
+
+        # Optional metadata for context (kept minimal)
+        additional_context = []
+
+        # Add creation date if available
         created = metadata.get("created_date")
         if created:
-            metadata_parts.append(f"Créé: {created[:10]}")
+            additional_context.append(f"Créé: {created[:10]}")
 
-        space_key = metadata.get("space_key")
-        if space_key:
-            metadata_parts.append(f"Espace: {space_key}")
-
+        # Add URL for reference
         url = metadata.get("url")
         if url:
-            metadata_parts.append(f"URL: {url}")
+            additional_context.append(f"URL: {url}")
 
-        # Build hierarchy section
-        hierarchy_parts = []
-        full_path = self._build_full_hierarchy_path(metadata)
-        if full_path:
-            hierarchy_parts.append(f"Chemin: {full_path}")
-
+        # Add sibling documents context if available
         siblings = self._get_sibling_documents(metadata)
         if siblings:
-            current_doc = None
-            other_siblings = []
-
-            for sibling in siblings:
-                if sibling["is_current"]:
-                    current_doc = sibling["title"]
-                else:
-                    other_siblings.append(sibling["title"])
-
-            if current_doc:
-                hierarchy_parts.append(f"Document actuel: {current_doc}")
-
+            other_siblings = [s["title"] for s in siblings if not s["is_current"]]
             if other_siblings:
-                # Limit to 5 siblings for readability
-                siblings_list = ", ".join(other_siblings[:5])
-                if len(other_siblings) > 5:
-                    siblings_list += f" (et {len(other_siblings) - 5} autres)"
-                hierarchy_parts.append(f"Documents voisins: {siblings_list}")
+                # Limit to 3 siblings for conciseness
+                siblings_list = ", ".join(other_siblings[:3])
+                if len(other_siblings) > 3:
+                    siblings_list += f" (+{len(other_siblings) - 3} autres)"
+                additional_context.append(f"Documents voisins: {siblings_list}")
 
-        # Build content structure section
-        content_parts = []
-        section_breadcrumb = metadata.get("section_breadcrumb")
-        if section_breadcrumb:
-            content_parts.append(f"Section: {section_breadcrumb}")
-
+        # Add numerical content indicator
         if metadata.get("has_numbers"):
             number_count = metadata.get("number_count", 0)
-            content_parts.append(f"Numérique: {number_count} valeurs")
+            additional_context.append(f"Contient {number_count} valeurs numériques")
 
-        # Combine all sections with clear separators
-        if metadata_parts:
-            header_parts.append(f"### METADATA ### {' | '.join(metadata_parts)}")
-        if hierarchy_parts:
-            header_parts.append(f"### HIÉRARCHIE ### {' | '.join(hierarchy_parts)}")
-        if content_parts:
-            header_parts.append(f"### STRUCTURE ### {' | '.join(content_parts)}")
+        # Include additional context as a single line if present
+        if additional_context:
+            header_parts.append(f"ℹ️ {' | '.join(additional_context)}")
 
-        header_parts.append("### CONTENU ###")
+        # Add separator before content
+        header_parts.append("---")
 
-        return " ".join(header_parts) + " "
+        return "\n".join(header_parts) + "\n\n"
 
     def _build_full_hierarchy_path(self, metadata: Dict[str, Any]) -> str:
         """Build full path from root to current document."""
