@@ -41,7 +41,14 @@ class IsschatConfig:
     # Source filtering configuration
     source_filtering_enabled: bool = True
     min_source_score_threshold: float = 0.4
-    min_source_relevance_threshold: float = 0.3
+    min_source_relevance_threshold: float = 0.1
+
+    # Isskar Smart Filtering configuration
+    isskar_smart_filtering_enabled: bool = True
+    contextual_score_threshold: float = 0.32  # Permissif pour requêtes contextuelles
+    strict_score_threshold: float = 0.70  # Strict pour requêtes génériques
+    semantic_matching_enabled: bool = True
+    context_boost_max: float = 0.15  # Boost maximum pour contexte
 
     confluence_api_key: str = ""
     confluence_space_key: str = ""

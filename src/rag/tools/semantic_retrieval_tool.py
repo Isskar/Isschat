@@ -73,9 +73,13 @@ class SemanticRetrievalTool:
             # Process query for semantic understanding
             if use_semantic_expansion:
                 query_result = self._query_processor.process_query(query)
-                self.logger.debug(
-                    f"Query processed: intent={query_result.intent}, variations={len(query_result.expanded_queries)}"
-                )
+                self.logger.info("🧠 SEMANTIC EXPANSION:")
+                self.logger.info(f"   - Intent: {query_result.intent}")
+                self.logger.info(f"   - Confidence: {query_result.confidence:.2f}")
+                self.logger.info(f"   - Keywords: {query_result.keywords}")
+                self.logger.info(f"   - Expanded queries ({len(query_result.expanded_queries)}):")
+                for i, expanded in enumerate(query_result.expanded_queries):
+                    self.logger.info(f"     {i + 1}. '{expanded}'")
             else:
                 query_result = QueryProcessingResult(
                     original_query=query,
@@ -91,13 +95,24 @@ class SemanticRetrievalTool:
 
             # Apply semantic re-ranking if enabled
             if use_semantic_reranking and len(all_results) > 1:
+                self.logger.info(f"🔄 SEMANTIC RE-RANKING: Re-ranking {len(all_results)} results")
                 all_results = self._semantic_rerank(query_result, all_results)
 
             # Determine number of results to return
             return_k = k if k is not None else self.config.search_k
             final_results = all_results[:return_k]
 
-            self.logger.debug(f"Semantic retrieval: {len(final_results)} results for '{query[:50]}...'")
+            # Log retrieved chunks with scores
+            self.logger.info(f"📄 RETRIEVED CHUNKS ({len(final_results)} results):")
+            for i, doc in enumerate(final_results):
+                content_preview = (
+                    doc.content[:100].replace("\n", " ") + "..." if len(doc.content) > 100 else doc.content
+                )
+                self.logger.info(f"   {i + 1}. Score: {doc.score:.3f} | Content: '{content_preview}'")
+                if hasattr(doc, "metadata") and doc.metadata:
+                    source_info = doc.metadata.get("source", "Unknown source")
+                    self.logger.info(f"       Source: {source_info}")
+
             return final_results
 
         except Exception as e:
@@ -124,8 +139,12 @@ class SemanticRetrievalTool:
             query_weights[expanded_query] = max(0.3, 1.0 - (i * 0.1))
 
         # Retrieve for each query variation
-        for query_text in query_result.expanded_queries:
+        for i, query_text in enumerate(query_result.expanded_queries):
             try:
+                self.logger.info(
+                    f"🔎 SEARCHING WEAVIATE ({i + 1}/{len(query_result.expanded_queries)}): '{query_text}'"
+                )
+
                 # Generate embedding for this query variation
                 query_embedding = self._embedding_service.encode_query(query_text)
 
@@ -133,6 +152,8 @@ class SemanticRetrievalTool:
                 search_results = self._vector_db.search(
                     query_embedding=query_embedding, k=self.config.search_fetch_k, filter_conditions=filter_conditions
                 )
+
+                self.logger.info(f"   → Found {len(search_results)} results for this query")
 
                 # Convert to retrieval documents with weighted scores
                 query_weight = query_weights.get(query_text, 0.5)

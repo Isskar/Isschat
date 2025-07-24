@@ -6,6 +6,7 @@ import re
 from ...config import get_config
 from src.rag.tools.prompt_templates import PromptTemplates
 from ...core.documents import RetrievalDocument
+from .isskar_smart_filter import IsskarSmartFilter
 
 
 class GenerationTool:
@@ -13,11 +14,19 @@ class GenerationTool:
         self.config = get_config()
         self.logger = logging.getLogger(self.__class__.__name__)
 
+        # Nouveau système de filtrage intelligent Isskar
+        self.smart_filter = IsskarSmartFilter(self.config)
+
         if not self.config.openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY required for generation")
 
     def generate(
-        self, query: str, documents: List[RetrievalDocument], history: str = "", numerical_context: Any = None
+        self,
+        query: str,
+        documents: List[RetrievalDocument],
+        history: str = "",
+        numerical_context: Any = None,
+        enriched_query: str = None,
     ) -> Dict[str, Any]:
         """
         Generate response from query and retrieved documents
@@ -27,21 +36,62 @@ class GenerationTool:
             documents: Retrieved documents with scores
             history: Conversation history
             numerical_context: Optional numerical query processing result
+            enriched_query: Query enrichie avec contexte (pour filtrage intelligent)
 
         Returns:
             Dict with answer, sources, etc.
         """
         try:
-            # Filter documents based on relevance
-            relevant_documents = self._filter_relevant_documents(query, documents)
+            # Utilise le nouveau système de filtrage intelligent
+            if enriched_query:
+                filtering_result = self.smart_filter.filter_documents(query, enriched_query, documents)
+                relevant_documents = filtering_result.documents
+
+                # Log détaillé du filtrage intelligent
+                self.logger.info("🧠 FILTRAGE INTELLIGENT ISSKAR:")
+                self.logger.info(f"   - Type de requête: {filtering_result.query_type.value}")
+                self.logger.info(f"   - Documents entrée: {len(documents)}")
+                self.logger.info(f"   - Documents retenus: {len(relevant_documents)}")
+                self.logger.info(f"   - Projets contextuels: {list(filtering_result.context.projects)}")
+                self.logger.info(f"   - Équipe contextuelle: {list(filtering_result.context.team_members)}")
+
+                for reason in filtering_result.reasoning:
+                    self.logger.info(f"   💡 {reason}")
+            else:
+                # Fallback vers l'ancien système si pas d'enrichissement
+                relevant_documents = self._filter_relevant_documents(query, documents)
+
+            # Log document filtering results
+            self.logger.info("📋 DOCUMENT FILTERING:")
+            self.logger.info(f"   - Total documents retrieved: {len(documents)}")
+            self.logger.info(f"   - Relevant documents after filtering: {len(relevant_documents)}")
+            if len(relevant_documents) < len(documents):
+                filtered_out = len(documents) - len(relevant_documents)
+                self.logger.info(f"   - Documents filtered out: {filtered_out}")
 
             # Prepare context from relevant documents
             context = self._prepare_context(relevant_documents)
 
+            # Log context length
+            self.logger.info("📝 CONTEXT PREPARED:")
+            self.logger.info(f"   - Context length: {len(context)} characters")
+            self.logger.info(f"   - Number of context sections: {len(relevant_documents)}")
+
             avg_score = sum(doc.score for doc in documents) / len(documents) if documents else 0.0
             prompt = self._build_prompt(query, context, history, avg_score, numerical_context)
 
+            # Log the complete prompt being sent to LLM
+            self.logger.info("🤖 COMPLETE PROMPT SENT TO LLM:")
+            self.logger.info("=" * 80)
+            self.logger.info(prompt)
+            self.logger.info("=" * 80)
+
             llm_response = self._call_openrouter(prompt)
+
+            # Log the LLM response
+            self.logger.info(f"🤖 LLM RESPONSE: '{llm_response.get('answer', '')[:200]}...'")
+            if len(llm_response.get("answer", "")) > 200:
+                self.logger.info(f"    (Total response length: {len(llm_response.get('answer', ''))} characters)")
 
             # Only show sources if documents are relevant
             sources = self._format_sources(relevant_documents) if relevant_documents else ""

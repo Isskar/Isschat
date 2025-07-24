@@ -92,6 +92,17 @@ class SemanticRAGPipeline:
                         self.logger.info(
                             f"🏷️ Context entities: {[e['entity'] for e in context_metadata.get('context_entities', [])]}"
                         )
+                else:
+                    if verbose:
+                        self.logger.info("🧩 No context enrichment applied (no relevant entities found)")
+            else:
+                if verbose and self.use_context_awareness:
+                    self.logger.info("🧩 Context enrichment skipped (no conversation_id or disabled)")
+
+            # Debug: Always log the query that will be sent to retrieval
+            self.logger.info(f"🔍 QUERY SENT TO WEAVIATE: '{query}'")
+            if query != original_query:
+                self.logger.info(f"📝 ORIGINAL USER QUERY: '{original_query}'")
 
             # Step 1: Process query for semantic understanding
             query_result = None
@@ -129,11 +140,13 @@ class SemanticRAGPipeline:
             if verbose:
                 self.logger.info("🤖 Step 3: Generating response")
 
-            # Provide original query to generation tool for natural response
+            # Provide original query et enriched query to generation tool for intelligent filtering
+            enriched_query = context_metadata.get("enriched_query") if context_metadata.get("context_applied") else None
             generation_result = self.generation_tool.generate(
                 query=original_query,  # Use original query for natural response generation
                 documents=search_results,
                 history=history,
+                enriched_query=enriched_query,  # Pass enriched query for smart filtering
             )
 
             answer = generation_result["answer"]
