@@ -384,3 +384,8 @@ class SemanticRetrievalTool:
 
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def get_vector_db(self):
+        """Retourne la base vectorielle pour le système d'apprentissage dynamique"""
+        self._initialize()
+        return self._vector_db

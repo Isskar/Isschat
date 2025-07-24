@@ -10,12 +10,13 @@ from .isskar_smart_filter import IsskarSmartFilter
 
 
 class GenerationTool:
-    def __init__(self):
+    def __init__(self, vector_db=None):
         self.config = get_config()
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.vector_db = vector_db
 
-        # Nouveau système de filtrage intelligent Isskar
-        self.smart_filter = IsskarSmartFilter(self.config)
+        # Nouveau système de filtrage intelligent Isskar avec apprentissage dynamique
+        self.smart_filter = IsskarSmartFilter(self.config, vector_db=vector_db)
 
         if not self.config.openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY required for generation")
@@ -215,7 +216,7 @@ class GenerationTool:
 
     def get_stats(self) -> Dict[str, Any]:
         """Generation tool statistics"""
-        return {
+        stats = {
             "type": "generation_tool",
             "ready": self.is_ready(),
             "config": {
@@ -225,6 +226,12 @@ class GenerationTool:
                 "api_key_configured": bool(self.config.openrouter_api_key),
             },
         }
+
+        # Ajoute les statistiques d'apprentissage du système intelligent
+        if self.smart_filter:
+            stats["smart_filter_learning"] = self.smart_filter.get_learning_stats()
+
+        return stats
 
     def _filter_relevant_documents(self, query: str, documents: List[RetrievalDocument]) -> List[RetrievalDocument]:
         """

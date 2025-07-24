@@ -30,7 +30,13 @@ class SemanticRAGPipeline:
 
         # Initialize tools
         self.semantic_retrieval_tool = SemanticRetrievalTool()
-        self.generation_tool = GenerationTool()
+        # Passe la base vectorielle au GenerationTool pour le système d'apprentissage dynamique
+        vector_db = (
+            self.semantic_retrieval_tool.get_vector_db()
+            if hasattr(self.semantic_retrieval_tool, "get_vector_db")
+            else None
+        )
+        self.generation_tool = GenerationTool(vector_db=vector_db)
         self.query_processor = QueryProcessor()
 
         # Initialize context tracker

@@ -9,8 +9,8 @@ import re
 from typing import List, Dict
 from dataclasses import dataclass
 
-from .isskar_context_analyzer import IsskarContextAnalyzer, QueryType, IsskarContext
-from .isskar_semantic_matcher import IsskarSemanticMatcher
+from .dynamic_context_analyzer import DynamicContextAnalyzer, QueryType, IsskarContext
+from .dynamic_semantic_matcher import DynamicSemanticMatcher
 from ...core.documents import RetrievalDocument
 
 
@@ -36,13 +36,14 @@ class IsskarSmartFilter:
     - Logging détaillé pour debugging
     """
 
-    def __init__(self, config):
+    def __init__(self, config, vector_db=None):
         self.config = config
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.vector_db = vector_db
 
-        # Composants experts
-        self.context_analyzer = IsskarContextAnalyzer()
-        self.semantic_matcher = IsskarSemanticMatcher()
+        # Composants experts dynamiques (apprennent depuis les documents)
+        self.context_analyzer = DynamicContextAnalyzer(vector_db=vector_db)
+        self.semantic_matcher = DynamicSemanticMatcher(vector_db=vector_db)
 
         # Stats pour monitoring
         self.filtering_stats = {"total_queries": 0, "by_query_type": {}, "documents_filtered": 0, "documents_passed": 0}
@@ -445,3 +446,14 @@ class IsskarSmartFilter:
     def reset_stats(self):
         """Remet à zéro les statistiques"""
         self.filtering_stats = {"total_queries": 0, "by_query_type": {}, "documents_filtered": 0, "documents_passed": 0}
+
+    def get_learning_stats(self) -> Dict:
+        """Retourne les statistiques d'apprentissage des composants dynamiques"""
+
+        stats = {
+            "context_analyzer": self.context_analyzer.get_learned_stats(),
+            "semantic_matcher": self.semantic_matcher.get_learning_stats(),
+            "filtering": self.get_filtering_stats(),
+        }
+
+        return stats
