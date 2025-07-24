@@ -86,7 +86,7 @@ class AzureADAuth:
             return False
 
         # Check allowed domains
-        allowed_domains = os.getenv("AZURE_ALLOWED_DOMAINS", "isskar.fr").split(",")
+        allowed_domains = os.getenv("AZURE_ALLOWED_DOMAINS", "isskar.fr,obea.fr,kanbios.fr").split(",")
         domain = email.split("@")[1].lower()
 
         return domain in [d.strip().lower() for d in allowed_domains]
