@@ -668,8 +668,72 @@ class EvaluationDashboard:
 
             st.plotly_chart(fig, use_container_width=True)
 
+        # Add category pass rate chart
+        self.render_category_pass_rate_chart(data)
+
         # Add evolution timeline chart
         self.render_evaluation_evolution_chart()
+
+    def render_category_pass_rate_chart(self, data: Dict[str, Any]):
+        """Render category pass rate bar chart"""
+        overall_stats = data.get("overall_stats", {})
+        category_results = overall_stats.get("category_results", {})
+
+        if not category_results:
+            return
+
+        # Prepare data for chart
+        categories = []
+        pass_rates = []
+        colors = []
+
+        for category, stats in category_results.items():
+            # Get category title from descriptions
+            category_title = self.category_descriptions.get(category, {}).get(
+                "title", category.replace("_", " ").title()
+            )
+            categories.append(category_title)
+
+            # For feedback category, use average_score (satisfaction rate) instead of pass_rate
+            if category == "feedback":
+                pass_rate = stats.get("average_score", 0)
+            else:
+                pass_rate = stats.get("pass_rate", 0)
+            pass_rates.append(pass_rate)
+
+            # Color based on performance
+            if pass_rate >= 0.7:
+                colors.append("#28a745")  # Green for good performance
+            elif pass_rate >= 0.5:
+                colors.append("#ffc107")  # Yellow for medium performance
+            else:
+                colors.append("#dc3545")  # Red for poor performance
+
+        # Create bar chart
+        fig = px.bar(
+            x=categories,
+            y=pass_rates,
+            title="Pass rate by category",
+            labels={"x": "Category", "y": "Pass rate"},
+            color=pass_rates,
+            color_continuous_scale=[[0, "#dc3545"], [0.5, "#ffc107"], [1, "#28a745"]],
+        )
+
+        fig.update_layout(
+            height=400,
+            title_font_size=16,
+            title_x=0,
+            yaxis=dict(tickformat=".0%", range=[0, 1]),
+            xaxis_title="Category",
+            yaxis_title="Pass rate",
+            showlegend=False,
+            xaxis_tickangle=-45,
+        )
+
+        # Add value labels on bars
+        fig.update_traces(texttemplate="%{y:.0%}", textposition="outside")
+
+        st.plotly_chart(fig, use_container_width=True)
 
     def render_evaluation_evolution_chart(self):
         """Render evaluation evolution timeline chart"""
@@ -1375,21 +1439,6 @@ class EvaluationDashboard:
                     xaxis_tickangle=-45,
                 )
                 st.plotly_chart(fig, use_container_width=True)
-
-                # Additional line chart showing average scores
-                fig2 = px.line(
-                    cat_df,
-                    x="Category",
-                    y="Avg_Score",
-                    color="Evaluation",
-                    markers=True,
-                    title="Average score by evaluator category",
-                    labels={"Avg_Score": "Average score", "Category": "Evaluator category"},
-                )
-                fig2.update_layout(
-                    height=400, title_font_size=16, title_x=0, yaxis=dict(range=[0, 1]), xaxis_tickangle=-45
-                )
-                st.plotly_chart(fig2, use_container_width=True)
 
                 # Detailed comparison table
                 st.subheader("Detailed category comparison")
