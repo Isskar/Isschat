@@ -1557,6 +1557,7 @@ class EvaluationDashboard:
 
         output_lines = []
         process = None
+        expected_output_path = None
 
         try:
             # Build command
@@ -1572,9 +1573,13 @@ class EvaluationDashboard:
 
             # Add output file
             if params["output_name"]:
-                # Use absolute path to ensure it goes to the correct directory
-                output_path = Path(__file__).parent.parent / "evaluation_results" / params["output_name"]
-                cmd.extend(["--output", str(output_path)])
+                # Ensure .json extension
+                filename = params["output_name"]
+                if not filename.endswith(".json"):
+                    filename += ".json"
+                # Pass only the filename (relative path) to let the main module handle the directory
+                expected_output_path = Path(__file__).parent.parent / "evaluation_results" / filename
+                cmd.extend(["--output", filename])
 
             status_text.text("Starting evaluation process...")
             progress_bar.progress(10)
@@ -1621,29 +1626,37 @@ class EvaluationDashboard:
                 status_text.text("Evaluation completed successfully!")
                 progress_bar.progress(100)
 
-                # Find the most recent results file
-                results_dir = Path(__file__).parent.parent / "evaluation_results"
-                if results_dir.exists():
-                    result_files = list(results_dir.glob("*.json"))
-                    if result_files:
-                        latest_file = max(result_files, key=lambda x: x.stat().st_mtime)
-                        st.session_state.evaluation_result = {
-                            "success": True,
-                            "output_file": latest_file,
-                            "output": "\n".join(output_lines),
-                        }
+                # Check if we have the expected output path (custom name)
+                if expected_output_path and expected_output_path.exists():
+                    st.session_state.evaluation_result = {
+                        "success": True,
+                        "output_file": expected_output_path,
+                        "output": "\n".join(output_lines),
+                    }
+                else:
+                    # Fallback: Find the most recent results file
+                    results_dir = Path(__file__).parent.parent / "evaluation_results"
+                    if results_dir.exists():
+                        result_files = list(results_dir.glob("*.json"))
+                        if result_files:
+                            latest_file = max(result_files, key=lambda x: x.stat().st_mtime)
+                            st.session_state.evaluation_result = {
+                                "success": True,
+                                "output_file": latest_file,
+                                "output": "\n".join(output_lines),
+                            }
+                        else:
+                            st.session_state.evaluation_result = {
+                                "success": False,
+                                "error": "No result files found",
+                                "output": "\n".join(output_lines),
+                            }
                     else:
                         st.session_state.evaluation_result = {
                             "success": False,
-                            "error": "No result files found",
+                            "error": "Results directory not found",
                             "output": "\n".join(output_lines),
                         }
-                else:
-                    st.session_state.evaluation_result = {
-                        "success": False,
-                        "error": "Results directory not found",
-                        "output": "\n".join(output_lines),
-                    }
             else:
                 status_text.text("Evaluation failed!")
                 st.session_state.evaluation_result = {
