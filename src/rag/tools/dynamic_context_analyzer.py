@@ -35,6 +35,12 @@ class DynamicContextAnalyzer:
     def __init__(self, vector_db=None):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.vector_db = vector_db
+        
+        self.logger.info("🚀 Initialisation DynamicContextAnalyzer")
+        if vector_db:
+            self.logger.info("📊 Vector DB disponible pour l'apprentissage")
+        else:
+            self.logger.warning("⚠️ Pas de Vector DB - fonctionnement limité")
 
         # Cache des entités apprises (expiration 1 heure)
         self._entity_cache = {}
@@ -43,6 +49,7 @@ class DynamicContextAnalyzer:
 
         # Patterns génériques pour la détection d'entités
         self._init_generic_patterns()
+        self.logger.info("✅ DynamicContextAnalyzer initialisé")
 
     def _init_generic_patterns(self):
         """Initialise les patterns génériques de détection"""
@@ -97,14 +104,21 @@ class DynamicContextAnalyzer:
 
         try:
             # Récupère un échantillon de documents récents
+            self.logger.info("📄 Récupération de documents récents pour apprentissage...")
             documents = self._get_recent_documents(limit=200)
+            self.logger.info(f"📄 {len(documents)} documents récupérés")
 
-            for doc in documents:
+            total_persons = set()
+            total_projects = set()
+            total_technologies = set()
+            
+            for i, doc in enumerate(documents):
                 content = doc.get("content", "")
                 metadata = doc.get("metadata", {})
 
                 # Extraction des personnes
                 persons = self._extract_persons(content, metadata)
+                total_persons.update(persons)
                 for person in persons:
                     key = f"person:{person.lower()}"
                     entities[key]["frequency"] += 1
@@ -114,6 +128,7 @@ class DynamicContextAnalyzer:
 
                 # Extraction des projets
                 projects = self._extract_projects(content, metadata)
+                total_projects.update(projects)
                 for project in projects:
                     key = f"project:{project.lower()}"
                     entities[key]["frequency"] += 1
@@ -123,12 +138,24 @@ class DynamicContextAnalyzer:
 
                 # Extraction des technologies
                 technologies = self._extract_technologies(content)
+                total_technologies.update(technologies)
                 for tech in technologies:
                     key = f"technology:{tech.lower()}"
                     entities[key]["frequency"] += 1
                     entities[key]["contexts"].add("technical")
                     entities[key]["type"] = "technology"
                     entities[key]["name"] = tech
+                    
+                if (i + 1) % 50 == 0:
+                    self.logger.info(f"📄 Traité {i + 1}/{len(documents)} documents...")
+                    
+            self.logger.info(f"🏷️ Entités extraites - Personnes: {len(total_persons)}, Projets: {len(total_projects)}, Technologies: {len(total_technologies)}")
+            if total_persons:
+                self.logger.info(f"👥 Personnes trouvées: {list(total_persons)[:5]}{'...' if len(total_persons) > 5 else ''}")
+            if total_projects:
+                self.logger.info(f"📋 Projets trouvés: {list(total_projects)[:5]}{'...' if len(total_projects) > 5 else ''}")
+            if total_technologies:
+                self.logger.info(f"⚙️ Technologies trouvées: {list(total_technologies)[:5]}{'...' if len(total_technologies) > 5 else ''}")
 
             # Conversion en EntityInfo avec calcul de confiance
             learned_entities = {}
@@ -144,7 +171,21 @@ class DynamicContextAnalyzer:
                         confidence=confidence,
                     )
 
-            self.logger.info(f"✅ {len(learned_entities)} entités apprises depuis Confluence")
+            high_confidence = sum(1 for e in learned_entities.values() if e.confidence > 0.7)
+            self.logger.info(f"✅ {len(learned_entities)} entités apprises depuis Confluence ({high_confidence} haute confiance)")
+            
+            # Log des entités les plus fréquentes par type
+            by_type = {"person": [], "project": [], "technology": []}
+            for entity in learned_entities.values():
+                if entity.type in by_type:
+                    by_type[entity.type].append((entity.name, entity.frequency, entity.confidence))
+            
+            for entity_type, entities_list in by_type.items():
+                if entities_list:
+                    sorted_entities = sorted(entities_list, key=lambda x: x[1], reverse=True)[:3]
+                    entities_str = ", ".join([f"{name}({freq}, {conf:.2f})" for name, freq, conf in sorted_entities])
+                    self.logger.info(f"🔝 Top {entity_type}s: {entities_str}")
+            
             return learned_entities
 
         except Exception as e:
@@ -250,12 +291,16 @@ class DynamicContextAnalyzer:
         """Retourne les entités apprises (avec cache)"""
 
         if self._is_cache_valid():
-            return self._entity_cache.get("entities", {})
+            cached_entities = self._entity_cache.get("entities", {})
+            self.logger.info(f"💾 Utilisation du cache ({len(cached_entities)} entités, âge: {datetime.now() - self._cache_timestamp})")
+            return cached_entities
 
         # Renouvelle le cache
+        self.logger.info("🔄 Cache expiré, renouvellement des entités...")
         entities = self._learn_from_documents()
         self._entity_cache = {"entities": entities}
         self._cache_timestamp = datetime.now()
+        self.logger.info(f"✅ Cache renouvelé avec {len(entities)} entités")
 
         return entities
 
@@ -263,6 +308,7 @@ class DynamicContextAnalyzer:
         """
         Classification intelligente basée sur les entités apprises dynamiquement
         """
+        self.logger.info(f"🤖 Classification query: '{original_query}' (enriched: {len(enriched_query) > len(original_query)})")
         query_lower = original_query.lower().strip()
 
         # Détection salutations (patterns statiques OK)
@@ -273,6 +319,7 @@ class DynamicContextAnalyzer:
         ]
 
         if any(re.match(pattern, query_lower) for pattern in greeting_patterns):
+            self.logger.info("👋 Détecté comme GREETING")
             return QueryType.GREETING
 
         # Récupère les entités apprises
@@ -284,41 +331,50 @@ class DynamicContextAnalyzer:
         context_enriched = len(enriched_query) > len(original_query) * 1.3
 
         if has_pronouns or has_references or context_enriched:
+            self.logger.info(f"🧩 Détecté comme CONTEXTUAL (pronouns:{has_pronouns}, refs:{has_references}, enriched:{context_enriched})")
             return QueryType.CONTEXTUAL
 
         # Détection mentions explicites de projets appris
         for key, entity in entities.items():
             if entity.type == "project" and entity.name.lower() in query_lower:
+                self.logger.info(f"📋 Détecté comme PROJECT_SPECIFIC (projet: {entity.name})")
                 return QueryType.PROJECT_SPECIFIC
 
         # Détection mentions explicites de personnes apprises
         for key, entity in entities.items():
             if entity.type == "person" and any(part.lower() in query_lower for part in entity.name.split()):
+                self.logger.info(f"👥 Détecté comme TEAM_INQUIRY (personne: {entity.name})")
                 return QueryType.TEAM_INQUIRY
 
         # Détection technique
         for key, entity in entities.items():
             if entity.type == "technology" and entity.name.lower() in query_lower:
+                self.logger.info(f"⚙️ Détecté comme TECHNICAL (tech: {entity.name})")
                 return QueryType.TECHNICAL
 
         # Détection mots business
         business_keywords = ["budget", "coût", "prix", "commercial", "client", "deal"]
         if any(keyword in query_lower for keyword in business_keywords):
+            found_keyword = next(keyword for keyword in business_keywords if keyword in query_lower)
+            self.logger.info(f"💼 Détecté comme BUSINESS (mot-clé: {found_keyword})")
             return QueryType.BUSINESS
 
         # Détection termes génériques problématiques
         generic_terms = {"test", "help", "aide", "info", "ok"}
         words = query_lower.split()
         if len(words) == 1 and words[0] in generic_terms:
+            self.logger.info(f"⚠️ Détecté comme GENERIC (terme: {words[0]})")
             return QueryType.GENERIC
 
         # Par défaut: projet spécifique (contexte Isskar)
+        self.logger.info("📋 Détecté comme PROJECT_SPECIFIC (défaut)")
         return QueryType.PROJECT_SPECIFIC
 
     def extract_isskar_entities(self, query: str, enriched_query: str) -> IsskarContext:
         """
         Extraction d'entités basée on l'apprentissage dynamique
         """
+        self.logger.info(f"🏷️ Extraction entités depuis: '{enriched_query[:100]}{'...' if len(enriched_query) > 100 else ''}''")
         entities = self.get_learned_entities()
 
         projects = set()
@@ -341,6 +397,8 @@ class DynamicContextAnalyzer:
             elif entity.type == "technology" and entity_name_lower in text_to_analyze:
                 technical_domains.add(entity_name_lower)
 
+        self.logger.info(f"🏷️ Entités extraites - Projets: {projects}, Personnes: {team_members}, Technologies: {technical_domains}")
+        
         return IsskarContext(
             projects=projects,
             team_members=team_members,

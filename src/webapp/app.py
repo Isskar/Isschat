@@ -4,6 +4,7 @@ import signal
 import os
 import sys
 import asyncio
+import logging
 from pathlib import Path
 import traceback
 import pandas as pd
@@ -12,6 +13,17 @@ import uuid
 from typing import Optional
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
+
+# Configure logging pour voir les logs du DynamicContextAnalyzer
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+# Disable verbose Azure HTTP logging
+logging.getLogger('azure.core.pipeline.policies.http_logging_policy').setLevel(logging.WARNING)
+logging.getLogger('azure').setLevel(logging.WARNING)
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -100,7 +112,7 @@ def get_model(rebuild_db=False):
                 debug_info: {debug_info}""")
         try:
             # Use semantic pipeline for enhanced understanding
-            pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(use_semantic_features=True)
+            pipeline = SemanticRAGPipelineFactory.create_context_aware_pipeline()
             return pipeline
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")
@@ -478,9 +490,18 @@ def process_question_with_model(
         # Process with model directly
         if hasattr(model, "process_query"):
             if chat_history is not None:
-                result, sources = model.process_query(prompt, history=chat_history)
+                result, sources = model.process_query(
+                    prompt, 
+                    history=chat_history, 
+                    conversation_id=conversation_id,
+                    use_context_enrichment=True
+                )
             else:
-                result, sources = model.process_query(prompt)
+                result, sources = model.process_query(
+                    prompt, 
+                    conversation_id=conversation_id,
+                    use_context_enrichment=True
+                )
         elif hasattr(model, "query"):
             result = model.query(prompt)
             sources = ""
