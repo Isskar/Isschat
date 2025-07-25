@@ -59,6 +59,25 @@ st.markdown(
         text-align: left !important;
         width: 100% !important;
     }
+    /* Example prompt button styling to match panel buttons */
+    div[data-testid="stExpander"] .stButton > button {
+        border-radius: 8px !important;
+        width: 100% !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        display: flex !important;
+        align-items: center !important;
+        background-color: transparent !important;
+        border: 1px solid #e0e0e0 !important;
+        margin-bottom: 4px !important;
+    }
+    div[data-testid="stExpander"] .stButton > button:hover {
+        background-color: #d2d2d2 !important;
+    }
+    div[data-testid="stExpander"] .stButton > button > div {
+        text-align: left !important;
+        width: 100% !important;
+    }
     div[data-testid="stChatMessage"] div img,
   .stChatMessage img {
       width: 40px !important;
@@ -422,18 +441,19 @@ def chat_page():
 
     # Display example prompts only on a new chat
     if len(st.session_state.messages) <= 1:
-        with st.expander("Not sure where to start? Try these examples..."):
+        with st.expander("Not sure where to start? Try these examples :", expanded=False):
             # Function to handle prompt click
             def handle_prompt_click(prompt_text):
                 st.session_state.clicked_prompt = prompt_text
 
             for example in EXAMPLE_PROMPTS:
                 if st.button(
-                    f"**{example['title']}** - {example['prompt']}",
+                    example["title"],
                     key=f"example_{example['title']}",
                     on_click=handle_prompt_click,
                     args=[example["prompt"]],
                     use_container_width=True,
+                    help=example["prompt"],
                 ):
                     pass
 
