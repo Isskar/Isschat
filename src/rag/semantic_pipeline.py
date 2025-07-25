@@ -1,6 +1,6 @@
 """
 Enhanced RAG pipeline with semantic understanding capabilities.
-Integrates semantic query processing and retrieval for better accuracy.
+Now powered by LlamaIndex for optimized query processing and memory management.
 """
 
 import logging
@@ -9,15 +9,13 @@ from typing import Tuple, Dict, Any, Optional
 
 from ..config import get_config
 from ..storage.data_manager import get_data_manager
-from .tools.semantic_retrieval_tool import SemanticRetrievalTool
-from .tools.generation_tool import GenerationTool
-from .query_processor import QueryProcessor
+from .llama_index_pipeline import LlamaIndexRAGPipelineFactory
 
 
 class SemanticRAGPipeline:
     """
-    Enhanced RAG pipeline with semantic understanding capabilities.
-    Handles misleading keywords through semantic query processing.
+    Enhanced RAG pipeline powered by LlamaIndex.
+    Provides advanced query transformation and unified memory management.
     """
 
     def __init__(self, use_semantic_features: bool = True):
@@ -26,12 +24,19 @@ class SemanticRAGPipeline:
         self.data_manager = get_data_manager()
         self.use_semantic_features = use_semantic_features
 
-        # Initialize tools
-        self.semantic_retrieval_tool = SemanticRetrievalTool()
-        self.generation_tool = GenerationTool()
-        self.query_processor = QueryProcessor()
+        # Initialize LlamaIndex pipeline based on configuration
+        pipeline_type = getattr(self.config, "llamaindex_pipeline_type", "hyde")
 
-        self.logger.info("✅ Semantic RAG pipeline initialized")
+        if pipeline_type == "decompose":
+            self.llama_pipeline = LlamaIndexRAGPipelineFactory.create_decompose_pipeline()
+        elif pipeline_type == "hybrid":
+            self.llama_pipeline = LlamaIndexRAGPipelineFactory.create_hybrid_pipeline()
+        elif pipeline_type == "simple":
+            self.llama_pipeline = LlamaIndexRAGPipelineFactory.create_simple_pipeline()
+        else:  # default to hyde
+            self.llama_pipeline = LlamaIndexRAGPipelineFactory.create_hyde_pipeline()
+
+        self.logger.info(f"✅ LlamaIndex-powered RAG pipeline initialized (type: {pipeline_type})")
 
     def process_query(
         self,
@@ -44,129 +49,78 @@ class SemanticRAGPipeline:
         use_semantic_reranking: bool = True,
     ) -> Tuple[str, str]:
         """
-        Process a complete query with semantic understanding.
+        Process a complete query using LlamaIndex pipeline.
 
         Args:
             query: User question
-            history: Conversation history
+            history: Conversation history (now managed by ChatMemoryBuffer)
             user_id: User ID for logs
             conversation_id: Conversation ID for logs
             verbose: Detailed display
-            use_semantic_expansion: Enable semantic query expansion
-            use_semantic_reranking: Enable semantic re-ranking
+            use_semantic_expansion: Deprecated - managed by LlamaIndex
+            use_semantic_reranking: Deprecated - managed by LlamaIndex
 
         Returns:
             Tuple (answer, sources)
         """
-        start_time = time.time()
-
         try:
             if verbose:
-                self.logger.info(f"🔍 Processing query with semantic understanding: '{query[:100]}...'")
+                self.logger.info(f"🔍 Processing query with LlamaIndex: '{query[:100]}...'")
 
-            # Step 1: Process query for semantic understanding
-            query_result = None
-            if self.use_semantic_features and use_semantic_expansion:
-                if verbose:
-                    self.logger.info("🧠 Step 1: Semantic query processing")
-
-                query_result = self.query_processor.process_query(query)
-
-                if verbose:
-                    self.logger.info(
-                        f"📝 Intent: {query_result.intent}, "
-                        f"Variations: {len(query_result.expanded_queries)}, "
-                        f"Confidence: {query_result.confidence:.2f}"
-                    )
-
-            # Step 2: Semantic retrieval
-            if verbose:
-                self.logger.info("📥 Step 2: Semantic document retrieval")
-
-            search_results = self.semantic_retrieval_tool.retrieve(
+            # Delegate to LlamaIndex pipeline which handles:
+            # - Query transformation (HyDE/Decompose)
+            # - Memory management (ChatMemoryBuffer)
+            # - Optimized retrieval
+            # - Response generation
+            answer, sources = self.llama_pipeline.process_query(
                 query=query,
-                use_semantic_expansion=use_semantic_expansion and self.use_semantic_features,
-                use_semantic_reranking=use_semantic_reranking and self.use_semantic_features,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                verbose=verbose,
             )
 
             if verbose:
-                self.logger.info(f"📄 {len(search_results)} documents retrieved")
-                if search_results:
-                    top_score = search_results[0].score
-                    avg_score = sum(doc.score for doc in search_results) / len(search_results)
-                    self.logger.info(f"📊 Top score: {top_score:.3f}, Average score: {avg_score:.3f}")
-
-            # Step 3: Generate response
-            if verbose:
-                self.logger.info("🤖 Step 3: Generating response")
-
-            generation_result = self.generation_tool.generate(query=query, documents=search_results, history=history)
-
-            answer = generation_result["answer"]
-            sources = generation_result["sources"]
-
-            response_time = (time.time() - start_time) * 1000  # in ms
-
-            if verbose:
-                self.logger.info(f"✅ Response generated in {response_time:.0f}ms")
-
-            # Save conversation with enhanced metadata
-            try:
-                conv_id = conversation_id or f"conv_{int(time.time())}"
-                metadata = {
-                    "pipeline_type": "semantic_rag",
-                    "num_retrieved_docs": len(search_results),
-                    "generation_success": generation_result["success"],
-                    "semantic_features_enabled": self.use_semantic_features,
-                    "semantic_expansion_used": use_semantic_expansion,
-                    "semantic_reranking_used": use_semantic_reranking,
-                }
-
-                # Add query processing metadata if available
-                if query_result:
-                    metadata.update(
-                        {
-                            "query_intent": query_result.intent,
-                            "query_confidence": query_result.confidence,
-                            "num_query_variations": len(query_result.expanded_queries),
-                            "semantic_keywords": query_result.keywords,
-                        }
-                    )
-
-                self.data_manager.save_conversation(
-                    user_id=user_id,
-                    conversation_id=conv_id,
-                    question=query,
-                    answer=answer,
-                    response_time_ms=response_time,
-                    sources=self._format_sources_for_storage(search_results),
-                    metadata=metadata,
-                )
-            except Exception as e:
-                self.logger.warning(f"Failed to save conversation: {e}")
+                self.logger.info("✅ Query processed successfully with LlamaIndex")
 
             return answer, sources
 
         except Exception as e:
-            error_msg = f"Semantic RAG pipeline error: {str(e)}"
-            self.logger.error(error_msg)
+            self.logger.error(f"LlamaIndex pipeline failed: {e}")
+            error_answer = f"Sorry, an error occurred while processing your question: {str(e)}"
+            return error_answer, ""
 
-            # Save error conversation
-            try:
-                response_time = (time.time() - start_time) * 1000
-                conv_id = conversation_id or f"conv_{int(time.time())}"
-                self.data_manager.save_conversation(
-                    user_id=user_id,
-                    conversation_id=conv_id,
-                    question=query,
-                    answer=f"Error: {error_msg}",
-                    response_time_ms=response_time,
-                    metadata={"pipeline_type": "semantic_rag", "error": str(e)},
-                )
-            except Exception:
-                pass
+    def clear_memory(self):
+        """Clear conversation memory"""
+        if hasattr(self, "llama_pipeline"):
+            self.llama_pipeline.clear_memory()
+            self.logger.debug("LlamaIndex memory cleared")
 
-            return f"Sorry, an error occurred: {str(e)}", "System error"
+    def get_memory_summary(self) -> str:
+        """Get current memory content summary"""
+        if hasattr(self, "llama_pipeline"):
+            return self.llama_pipeline.get_memory_summary()
+        return "Memory not available"
+
+    def is_ready(self) -> bool:
+        """Check if pipeline is ready"""
+        try:
+            return hasattr(self, "llama_pipeline") and self.llama_pipeline.is_ready()
+        except Exception:
+            return False
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get pipeline statistics"""
+        if hasattr(self, "llama_pipeline"):
+            stats = self.llama_pipeline.get_stats()
+            stats.update(
+                {
+                    "wrapper_type": "semantic_rag_pipeline",
+                    "llama_index_enabled": True,
+                }
+            )
+            return stats
+
+        return {"wrapper_type": "semantic_rag_pipeline", "llama_index_enabled": False, "ready": False}
 
     def compare_with_basic_retrieval(self, query: str, k: int = 5) -> Dict[str, Any]:
         """
@@ -308,16 +262,6 @@ class SemanticRAGPipeline:
 
         return sources
 
-    def is_ready(self) -> bool:
-        """Check if the pipeline is ready"""
-        try:
-            retrieval_ready = self.semantic_retrieval_tool.is_ready()
-            generation_ready = self.generation_tool.is_ready()
-
-            return retrieval_ready and generation_ready
-        except Exception as e:
-            self.logger.error(f"Readiness check failed: {e}")
-            return False
 
     def get_status(self) -> Dict[str, Any]:
         """Get comprehensive pipeline status"""
@@ -375,18 +319,43 @@ class SemanticRAGPipelineFactory:
 
     @staticmethod
     def create_semantic_pipeline(use_semantic_features: bool = True) -> SemanticRAGPipeline:
-        """Create a semantic RAG pipeline"""
+        """Create a LlamaIndex-powered semantic RAG pipeline"""
         pipeline = SemanticRAGPipeline(use_semantic_features=use_semantic_features)
 
         if not pipeline.is_ready():
-            logging.warning("⚠️ Semantic RAG pipeline created but not ready - check that the vector database is built")
+            logging.warning("⚠️ LlamaIndex RAG pipeline created but not ready - check that the vector database is built")
 
         return pipeline
 
     @staticmethod
-    def create_comparison_pipeline() -> Tuple[SemanticRAGPipeline, SemanticRAGPipeline]:
-        """Create both semantic and basic pipelines for comparison"""
-        semantic_pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(use_semantic_features=True)
-        basic_pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(use_semantic_features=False)
+    def create_hyde_pipeline() -> SemanticRAGPipeline:
+        """Create pipeline optimized with HyDE query transformation"""
+        pipeline = SemanticRAGPipeline()
+        # Override with HyDE-specific configuration
+        pipeline.llama_pipeline = LlamaIndexRAGPipelineFactory.create_hyde_pipeline()
+        return pipeline
 
-        return semantic_pipeline, basic_pipeline
+    @staticmethod
+    def create_decompose_pipeline() -> SemanticRAGPipeline:
+        """Create pipeline optimized with query decomposition"""
+        pipeline = SemanticRAGPipeline()
+        # Override with decompose-specific configuration
+        pipeline.llama_pipeline = LlamaIndexRAGPipelineFactory.create_decompose_pipeline()
+        return pipeline
+
+    @staticmethod
+    def create_hybrid_pipeline() -> SemanticRAGPipeline:
+        """Create pipeline with both HyDE and decomposition"""
+        pipeline = SemanticRAGPipeline()
+        # Override with hybrid configuration
+        pipeline.llama_pipeline = LlamaIndexRAGPipelineFactory.create_hybrid_pipeline()
+        return pipeline
+
+    @staticmethod
+    def create_comparison_pipeline() -> Tuple[SemanticRAGPipeline, SemanticRAGPipeline]:
+        """Create both LlamaIndex and simple pipelines for comparison"""
+        llamaindex_pipeline = SemanticRAGPipelineFactory.create_hyde_pipeline()
+        simple_pipeline = SemanticRAGPipeline()
+        simple_pipeline.llama_pipeline = LlamaIndexRAGPipelineFactory.create_simple_pipeline()
+
+        return llamaindex_pipeline, simple_pipeline

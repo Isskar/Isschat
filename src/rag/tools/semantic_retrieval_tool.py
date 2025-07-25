@@ -173,36 +173,27 @@ class SemanticRetrievalTool:
         self, query_result: QueryProcessingResult, candidates: List[RetrievalDocument]
     ) -> List[RetrievalDocument]:
         """
-        Re-rank candidates using semantic similarity and intent matching.
+        Re-rank candidates using intent and keyword matching only.
+        Removed redundant semantic similarity re-computation.
         """
         if not candidates:
             return candidates
 
         try:
-            # Generate embedding for original query
-            original_query_embedding = self._embedding_service.encode_single(query_result.original_query)
-
-            # Calculate semantic scores for each candidate
+            # Calculate intent and keyword bonuses without re-embedding
             for candidate in candidates:
-                # Semantic similarity with original query
-                content_embedding = self._embedding_service.encode_single(candidate.content)
-                semantic_score = self._embedding_service.similarity(original_query_embedding, content_embedding)
-
                 # Intent matching bonus
                 intent_bonus = self._calculate_intent_bonus(query_result.intent, candidate)
 
                 # Keyword matching bonus
                 keyword_bonus = self._calculate_keyword_bonus(query_result.keywords, candidate)
 
-                # Combine scores
-                # 60% original score, 25% semantic similarity, 10% intent, 5% keywords
-                combined_score = (
-                    0.6 * candidate.score + 0.25 * semantic_score + 0.1 * intent_bonus + 0.05 * keyword_bonus
-                )
+                # Combine scores: keep original vector score + small bonuses
+                # 90% original vector score, 7% intent, 3% keywords
+                combined_score = 0.90 * candidate.score + 0.07 * intent_bonus + 0.03 * keyword_bonus
 
                 # Update candidate score and add debugging info
                 candidate.score = combined_score
-                candidate.metadata["semantic_score"] = semantic_score
                 candidate.metadata["intent_bonus"] = intent_bonus
                 candidate.metadata["keyword_bonus"] = keyword_bonus
                 candidate.metadata["combined_score"] = combined_score
@@ -210,11 +201,11 @@ class SemanticRetrievalTool:
             # Sort by combined score
             candidates.sort(key=lambda x: x.score, reverse=True)
 
-            self.logger.debug(f"Semantic re-ranking applied to {len(candidates)} candidates")
+            self.logger.debug(f"Lightweight re-ranking applied to {len(candidates)} candidates")
             return candidates
 
         except Exception as e:
-            self.logger.error(f"Semantic re-ranking failed: {e}")
+            self.logger.error(f"Re-ranking failed: {e}")
             return candidates
 
     def _calculate_intent_bonus(self, intent: str, candidate: RetrievalDocument) -> float:
