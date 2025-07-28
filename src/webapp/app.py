@@ -113,7 +113,7 @@ def initialize_embedder():
 def get_model(rebuild_db=False):
     # Display a spinner during loading
     with st.spinner("Loading RAG model..."):
-        # Check if the index.faiss file exists
+        # Initialize RAG model
         from src.config.settings import get_debug_info
 
         # Get debug info

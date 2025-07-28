@@ -1,70 +1,128 @@
 graph TD
     %% Users and Interface
-    User([User]) -->|Connects| Login[Login Page]
-    Login -->|Verifies credentials| AuthDB[(SQLite Database<br>Users)]
-    Login -->|Authentication successful| Chat[Chat Interface]
-    Login -->|Admin access| Admin[User Management]
+    User([User]) -->|Accesses| WebApp[Streamlit Web App]
+    User -->|CLI Commands| CLI[CLI Interface]
     
-    %% Question Flow
-    User -->|Asks a question| Chat
-    Chat -->|Sends query| Retriever[FAISS Retriever]
+    %% Authentication Flow
+    WebApp -->|Authentication| AzureAuth[Azure AD Authentication]
+    AzureAuth -->|Valid credentials| ChatInterface[Chat Interface]
+    AzureAuth -->|Admin access| AdminInterface[Admin Interface]
     
-    %% Document Search
-    Retriever -->|Vector similarity search| VectorDB[(FAISS Vector<br>Database)]
-    VectorDB -->|Relevant documents| Retriever
+    %% Main Chat Flow
+    User -->|Asks question| ChatInterface
+    ChatInterface -->|Query| SemanticPipeline[Semantic RAG Pipeline]
     
-    %% Response Generation
-    Retriever -->|Document context| Chain[LangChain Chain]
-    Chain -->|Builds prompt| LLM[LLM Model<br>GPT 4o]
-    LLM -->|Generates response in French| Chain
-    Chain -->|Formatted response| Chat
-    Chat -->|Displays response + sources| User
+    %% Semantic Processing Pipeline
+    SemanticPipeline -->|Analyze query| QueryProcessor[Query Processor]
+    QueryProcessor -->|Intent & expansion| SemanticRetrieval[Semantic Retrieval Tool]
+    SemanticRetrieval -->|Vector search| WeaviateDB[(Weaviate Vector DB<br>Collection: isschat_docs)]
+    WeaviateDB -->|Relevant documents| SemanticRetrieval
+    SemanticRetrieval -->|Ranked results| GenerationTool[Generation Tool]
+    GenerationTool -->|Context + prompt| LLM[Gemini 2.5 Flash Lite]
+    LLM -->|Generated response| GenerationTool
+    GenerationTool -->|Final answer + sources| ChatInterface
     
-    %% Database Initialization and Update
-    ConfluenceAPI[Confluence API] -->|Retrieves pages| DataLoader[DataLoader]
-    DataLoader -->|Processes documents| TextSplitter[Text Splitter]
-    TextSplitter -->|Splits into chunks| Embedder[Embeddings<br>HuggingFace]
-    Embedder -->|Vectors + Metadata| VectorDB
+    %% Data Storage & Management
+    GenerationTool -->|Save conversation| DataManager[Data Manager]
+    DataManager -->|Store data| StorageSystem{Storage System}
+    StorageSystem -->|Local| LocalStorage[(Local File Storage)]
+    StorageSystem -->|Cloud| AzureStorage[(Azure Blob Storage)]
     
-    %% User Management
-    Admin -->|Add/Remove| AuthDB
+    %% Features & History
+    ChatInterface -->|User feedback| FeaturesManager[Features Manager]
+    ChatInterface -->|Conversation history| HistoryManager[History Manager]
+    FeaturesManager -->|Feedback data| DataManager
+    HistoryManager -->|Load/save history| DataManager
     
-    %% Advanced Options
-    RebuildDB[Option: Rebuild DB] -.->|Triggers| DataLoader
+    %% CLI Operations
+    CLI -->|Ingest command| IngestionPipeline[Confluence Ingestion Pipeline]
+    CLI -->|Status command| StatusCheck[System Status Check]
+    CLI -->|Query command| SemanticPipeline
+    CLI -->|Chat command| InteractiveCLI[Interactive CLI Chat]
+    
+    %% Data Ingestion Flow
+    IngestionPipeline -->|Extract| ConfluenceConnector[Confluence Connector]
+    ConfluenceConnector -->|Fetch pages| ConfluenceAPI[Confluence API]
+    ConfluenceConnector -->|Raw documents| DocumentProcessor[Document Processor]
+    DocumentProcessor -->|Clean & structure| DocumentChunker[Document Chunker]
+    DocumentChunker -->|Text chunks| EmbeddingService[Embedding Service<br>multilingual-e5-small]
+    EmbeddingService -->|Vector embeddings| WeaviateDB
+    
+    %% Configuration & Secrets
+    SemanticPipeline -.->|Config| ConfigManager[Configuration Manager]
+    ConfigManager -.->|Secrets| KeyVault[Azure Key Vault]
+    ConfigManager -.->|Settings| EnvFile[Environment Variables]
+    
+    %% Performance & Monitoring
+    AdminInterface -->|View metrics| PerformanceDashboard[Performance Dashboard]
+    PerformanceDashboard -->|Query stats| DataManager
     
     %% Subgraphs for organization
-    subgraph "User Interface"
+    subgraph "User Interface Layer"
         User
-        Login
-        Chat
-        Admin
-        RebuildDB
+        WebApp
+        CLI
+        ChatInterface
+        AdminInterface
+        InteractiveCLI
     end
     
-    subgraph "RAG Processing"
-        Retriever
-        Chain
+    subgraph "Authentication & Authorization"
+        AzureAuth
+        KeyVault
+    end
+    
+    subgraph "RAG Processing Engine"
+        SemanticPipeline
+        QueryProcessor
+        SemanticRetrieval
+        GenerationTool
         LLM
     end
     
-    subgraph "Data Storage"
-        VectorDB
-        AuthDB
+    subgraph "Data Storage Layer"
+        WeaviateDB
+        DataManager
+        StorageSystem
+        LocalStorage
+        AzureStorage
     end
     
-    subgraph "Data ingestion"
+    subgraph "Application Components"
+        FeaturesManager
+        HistoryManager
+        PerformanceDashboard
+        ConfigManager
+    end
+    
+    subgraph "Data Ingestion Pipeline"
+        IngestionPipeline
+        ConfluenceConnector
         ConfluenceAPI
-        DataLoader
-        TextSplitter
-        Embedder
+        DocumentProcessor
+        DocumentChunker
+        EmbeddingService
     end
     
-    classDef interface fill:#f9f,stroke:#333,stroke-width:1px
-    classDef processing fill:#bbf,stroke:#333,stroke-width:1px
-    classDef storage fill:#bfb,stroke:#333,stroke-width:1px
-    classDef ingestion fill:#fbb,stroke:#333,stroke-width:1px
+    subgraph "Configuration & Environment"
+        ConfigManager
+        KeyVault
+        EnvFile
+    end
     
-    class User,Login,Chat,Admin,RebuildDB interface
-    class Retriever,Chain,LLM processing
-    class VectorDB,AuthDB storage
-    class ConfluenceAPI,DataLoader,TextSplitter,Embedder ingestion
+    %% Styling
+    classDef interface fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef auth fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef processing fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef storage fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef components fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef ingestion fill:#f1f8e9,stroke:#558b2f,stroke-width:2px
+    classDef config fill:#f5f5f5,stroke:#616161,stroke-width:2px
+    
+    class User,WebApp,CLI,ChatInterface,AdminInterface,InteractiveCLI interface
+    class AzureAuth,KeyVault auth
+    class SemanticPipeline,QueryProcessor,SemanticRetrieval,GenerationTool,LLM processing
+    class WeaviateDB,DataManager,StorageSystem,LocalStorage,AzureStorage storage
+    class FeaturesManager,HistoryManager,PerformanceDashboard components
+    class IngestionPipeline,ConfluenceConnector,ConfluenceAPI,DocumentProcessor,DocumentChunker,EmbeddingService ingestion
+    class ConfigManager,EnvFile config

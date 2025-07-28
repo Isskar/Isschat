@@ -67,7 +67,6 @@ rag_evaluation/config/test_datasets/
 
 # Project specific files
 *.pkl
-*.faiss
 *.pdf
 *.docx
 *.xlsx
