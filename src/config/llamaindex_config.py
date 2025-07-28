@@ -18,9 +18,13 @@ class LlamaIndexConfig:
     use_decompose: bool = False
     include_original_query: bool = True
 
-    # Memory settings
+    # Memory settings - adaptive token management
     memory_token_limit: Optional[int] = None  # Auto-calculated from LLM max tokens
     memory_enabled: bool = True
+    adaptive_memory: bool = True  # Enable adaptive token limit adjustment
+    memory_reserve_ratio: float = 0.3  # Reserve 30% of max tokens for memory by default
+    min_memory_tokens: int = 1000  # Minimum tokens reserved for memory
+    max_memory_tokens: int = 8000  # Maximum tokens reserved for memory
 
     # HyDE specific settings
     hyde_prompt_template: Optional[str] = None  # Use LlamaIndex default
@@ -82,6 +86,12 @@ def get_llamaindex_config() -> LlamaIndexConfig:
 
     if os.getenv("LLAMAINDEX_SIMILARITY_THRESHOLD"):
         config.retrieval_similarity_threshold = float(os.getenv("LLAMAINDEX_SIMILARITY_THRESHOLD"))
+
+    if os.getenv("LLAMAINDEX_ADAPTIVE_MEMORY"):
+        config.adaptive_memory = os.getenv("LLAMAINDEX_ADAPTIVE_MEMORY").lower() == "true"
+
+    if os.getenv("LLAMAINDEX_MEMORY_RESERVE_RATIO"):
+        config.memory_reserve_ratio = float(os.getenv("LLAMAINDEX_MEMORY_RESERVE_RATIO"))
 
     # Re-run validation after environment overrides
     config.__post_init__()

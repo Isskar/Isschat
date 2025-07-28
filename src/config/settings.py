@@ -24,7 +24,7 @@ class IsschatConfig:
     vectordb_host: str = "localhost"
     vectordb_port: int = 8080
 
-    llm_model: str = "google/gemini-2.5-flash-lite-preview-06-17"
+    llm_model: str = "google/gemini-2.5-flash"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 512
     search_k: int = 3
@@ -32,7 +32,7 @@ class IsschatConfig:
 
     # Semantic understanding configuration
     use_semantic_features: bool = True
-    semantic_expansion_enabled: bool = True
+    semantic_expansion_enabled: bool = False  # Disabled for performance - using HyDE instead
     semantic_reranking_enabled: bool = True
     semantic_similarity_threshold: float = 0.7
     query_expansion_max_variations: int = 5

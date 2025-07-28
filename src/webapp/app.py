@@ -21,7 +21,6 @@ try:
 except RuntimeError:
     pass
 
-from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
 from src.webapp.auth.azure_auth import AzureADAuth
@@ -92,16 +91,20 @@ st.markdown(
 )
 
 
-# Initialize embedder at startup
+# Initialize embedder at startup with warm-up
 @st.cache_resource
 def initialize_embedder():
-    """Initialize the embedding service at startup"""
+    """Initialize the embedding service at startup with warm-up to eliminate cold start"""
     from src.embeddings.service import get_embedding_service
 
     try:
         embedder = get_embedding_service()
         # Force model loading by accessing the model property
         _ = embedder.model
+
+        # LIGHT WARM-UP: Only basic model loading at startup
+        # Full warm-up will happen on first query to reduce startup time
+
         return embedder
     except Exception as e:
         st.error(f"Failed to initialize embedding service: {str(e)}")
@@ -123,8 +126,11 @@ def get_model(rebuild_db=False):
                 **Configuration**:
                 debug_info: {debug_info}""")
         try:
-            # Use semantic pipeline for enhanced understanding
-            pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline(use_semantic_features=True)
+            # Use FAST pipeline optimized for Streamlit performance
+            from src.rag.fast_pipeline import FastRAGPipelineFactory
+
+            # Direct components pipeline for maximum speed (<2s target)
+            pipeline = FastRAGPipelineFactory.create_fast_pipeline()
             return pipeline
         except Exception as e:
             st.error(f"Error loading model: {str(e)}")
@@ -520,12 +526,12 @@ def process_question_with_model(
         if start_time is None:
             start_time = time.time()
 
-        # Process with model directly
+        # Process with model directly using LlamaIndex conversation management
         if hasattr(model, "process_query"):
-            if chat_history is not None:
-                result, sources = model.process_query(prompt, history=chat_history)
-            else:
-                result, sources = model.process_query(prompt)
+            # Use LlamaIndex conversation_id for proper context continuity
+            result, sources = model.process_query(
+                query=prompt, conversation_id=conversation_id, user_id="streamlit_user", verbose=False
+            )
         elif hasattr(model, "query"):
             result = model.query(prompt)
             sources = ""

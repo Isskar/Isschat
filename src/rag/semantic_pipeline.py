@@ -68,9 +68,9 @@ class SemanticRAGPipeline:
                 self.logger.info(f"🔍 Processing query with LlamaIndex: '{query[:100]}...'")
 
             # Delegate to LlamaIndex pipeline which handles:
-            # - Query transformation (HyDE/Decompose)
+            # - HyDE query transformation (replaces costly semantic expansion)
             # - Memory management (ChatMemoryBuffer)
-            # - Optimized retrieval
+            # - Optimized retrieval (single enhanced query vs 5 basic queries)
             # - Response generation
             answer, sources = self.llama_pipeline.process_query(
                 query=query,
@@ -88,6 +88,24 @@ class SemanticRAGPipeline:
             self.logger.error(f"LlamaIndex pipeline failed: {e}")
             error_answer = f"Sorry, an error occurred while processing your question: {str(e)}"
             return error_answer, ""
+
+    def start_new_conversation(self, conversation_id: str) -> bool:
+        """Start a new conversation"""
+        if hasattr(self, "llama_pipeline"):
+            return self.llama_pipeline.start_new_conversation(conversation_id)
+        return False
+
+    def continue_conversation(self, conversation_id: str, user_id: str = "anonymous") -> bool:
+        """Continue an existing conversation by loading its history"""
+        if hasattr(self, "llama_pipeline"):
+            return self.llama_pipeline.continue_conversation(conversation_id, user_id)
+        return False
+
+    def load_conversation_history(self, conversation_id: str, user_id: str = "anonymous") -> bool:
+        """Load conversation history into memory"""
+        if hasattr(self, "llama_pipeline"):
+            return self.llama_pipeline.load_conversation_history(conversation_id, user_id)
+        return False
 
     def clear_memory(self):
         """Clear conversation memory"""
@@ -261,7 +279,6 @@ class SemanticRAGPipeline:
             sources.append(source_info)
 
         return sources
-
 
     def get_status(self) -> Dict[str, Any]:
         """Get comprehensive pipeline status"""

@@ -5,12 +5,9 @@ Replaces the custom semantic pipeline with proven LlamaIndex components.
 
 import logging
 import time
-from typing import Tuple, Dict, Any, Optional, List
+from typing import Tuple, Dict, Any, Optional
 
 from llama_index.core import Settings
-from llama_index.core.query_engine import RetrieverQueryEngine
-from llama_index.core.retrievers import VectorIndexRetriever
-from llama_index.core.query_pipeline import QueryPipeline
 
 # Query Transforms
 from llama_index.core.indices.query.query_transform import HyDEQueryTransform, DecomposeQueryTransform
@@ -22,6 +19,7 @@ from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.llms.openrouter import OpenRouter
 
 from ..config import get_config
+from ..config.llamaindex_config import get_llamaindex_config
 from ..storage.data_manager import get_data_manager
 from ..vectordb import VectorDBFactory
 
@@ -34,12 +32,21 @@ class LlamaIndexRAGPipeline:
 
     def __init__(self, use_hyde: bool = True, use_decompose: bool = False):
         self.config = get_config()
+        self.llama_config = get_llamaindex_config()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.data_manager = get_data_manager()
 
         # Configuration
         self.use_hyde = use_hyde
         self.use_decompose = use_decompose
+
+        # Adaptive memory tracking
+        self.conversation_lengths = []  # Track recent conversation lengths
+        self.current_context_size = 0
+
+        # Conversation history management
+        self.current_conversation_id = None
+        self.conversation_history_loaded = False
 
         # Initialize LlamaIndex Settings
         self._setup_llama_index()
@@ -67,78 +74,85 @@ class LlamaIndexRAGPipeline:
 
         self.embedding_service = get_embedding_service()
 
-        # Custom wrapper to make embedding service compatible with LlamaIndex
-        class IsschatEmbedding:
-            def __init__(self, embedding_service):
-                self._embedding_service = embedding_service
-
-            def get_text_embedding(self, text: str) -> List[float]:
-                return self._embedding_service.encode_query(text)
-
-            def get_text_embeddings(self, texts: List[str]) -> List[List[float]]:
-                embeddings = self._embedding_service.encode_texts(texts)
-                return embeddings.tolist()
-
-        Settings.embed_model = IsschatEmbedding(self.embedding_service)
+        # For now, skip LlamaIndex embedding integration to maintain compatibility
+        # We'll use existing Isschat embedding service directly in retrieval
+        # Settings.embed_model = self.embedding_service  # Skip this for compatibility
 
         self.logger.debug("LlamaIndex settings configured")
 
     def _setup_vector_store(self):
-        """Initialize vector store and index"""
+        """Initialize vector store - using existing Isschat infrastructure"""
         try:
-            # Use existing Weaviate vector store
+            # Use existing Weaviate vector store (keeping current architecture)
             self.vector_db = VectorDBFactory.create_from_config()
 
-            # Create LlamaIndex wrapper for existing vector store
-            # Note: This is a simplified approach - in production you might want
-            # to use LlamaIndex's native Weaviate integration
+            # Note: We'll integrate LlamaIndex components gradually
+            # For now, we keep the existing vector store and add LlamaIndex
+            # memory management and query transforms on top
 
-            class IsschatVectorStoreWrapper:
-                """Wrapper to make Isschat vector store compatible with LlamaIndex"""
-
-                def __init__(self, vector_db, embedding_service):
-                    self.vector_db = vector_db
-                    self.embedding_service = embedding_service
-
-                def query(self, query_str: str, similarity_top_k: int = None) -> List[Dict]:
-                    """Query the vector store and return results in LlamaIndex format"""
-                    k = similarity_top_k or self.config.search_k
-                    query_embedding = self.embedding_service.encode_query(query_str)
-
-                    search_results = self.vector_db.search(query_embedding=query_embedding, k=k)
-
-                    # Convert to LlamaIndex format
-                    nodes = []
-                    for result in search_results:
-                        node = {
-                            "text": result.document.content,
-                            "metadata": result.document.metadata or {},
-                            "score": result.score,
-                            "id_": result.document.id,
-                        }
-                        nodes.append(node)
-
-                    return nodes
-
-            # For now, we'll use a simplified approach and create the retriever directly
-            self.retriever = VectorIndexRetriever(
-                index=None,  # We'll handle this manually
-                similarity_top_k=self.config.search_k,
-            )
-
-            self.logger.debug("Vector store wrapper created")
+            self.logger.debug("Vector store initialized (existing Isschat infrastructure)")
 
         except Exception as e:
             raise RuntimeError(f"Failed to setup vector store: {e}")
 
     def _setup_memory(self):
-        """Initialize unified memory management"""
+        """Initialize unified memory management with adaptive token limits"""
+        # Calculate initial memory token limit
+        initial_limit = self._calculate_adaptive_memory_limit()
+
         self.memory = ChatMemoryBuffer.from_defaults(
-            token_limit=self.config.llm_max_tokens // 2,  # Reserve half tokens for context
-            tokenizer_fn=lambda text: len(text.split()),  # Simple tokenizer
+            token_limit=initial_limit,
+            tokenizer_fn=self._estimate_tokens,  # More accurate tokenizer
         )
 
-        self.logger.debug("ChatMemoryBuffer initialized")
+        self.logger.debug(f"ChatMemoryBuffer initialized with adaptive limit: {initial_limit} tokens")
+
+    def _calculate_adaptive_memory_limit(self) -> int:
+        """Calculate optimal memory token limit based on context and configuration"""
+        max_tokens = self.config.llm_max_tokens
+
+        if not self.llama_config.adaptive_memory:
+            # Static allocation if adaptive is disabled
+            if self.llama_config.memory_token_limit:
+                return self.llama_config.memory_token_limit
+            return max_tokens // 2
+
+        # Adaptive logic based on conversation history
+        base_limit = int(max_tokens * self.llama_config.memory_reserve_ratio)
+
+        # Adjust based on recent conversation patterns
+        if len(self.conversation_lengths) >= 3:
+            avg_length = sum(self.conversation_lengths[-5:]) / min(5, len(self.conversation_lengths))
+
+            if avg_length > 500:  # Long conversations need more memory
+                adjustment_factor = 1.3
+            elif avg_length < 100:  # Short conversations need less memory
+                adjustment_factor = 0.7
+            else:
+                adjustment_factor = 1.0
+
+            base_limit = int(base_limit * adjustment_factor)
+
+        # Apply bounds
+        return max(self.llama_config.min_memory_tokens, min(base_limit, self.llama_config.max_memory_tokens))
+
+    def _estimate_tokens(self, text: str) -> int:
+        """More accurate token estimation"""
+        # Simple heuristic: ~4 characters per token for most languages
+        return max(1, len(text) // 4)
+
+    def _update_memory_limit_if_needed(self):
+        """Dynamically adjust memory limit if adaptive mode is enabled"""
+        if not self.llama_config.adaptive_memory:
+            return
+
+        new_limit = self._calculate_adaptive_memory_limit()
+        current_limit = self.memory.token_limit
+
+        # Only update if the change is significant (>20% difference)
+        if abs(new_limit - current_limit) / current_limit > 0.2:
+            self.memory.token_limit = new_limit
+            self.logger.debug(f"Memory limit adapted: {current_limit} -> {new_limit} tokens")
 
     def _setup_query_transforms(self):
         """Initialize query transformation components"""
@@ -163,40 +177,17 @@ class LlamaIndexRAGPipeline:
         self.logger.debug(f"Query transforms configured: {[name for name, _ in self.query_transforms]}")
 
     def _setup_pipeline(self):
-        """Setup the query processing pipeline"""
+        """Setup simplified pipeline - hybrid approach"""
         try:
-            # Create query engine with memory
-            self.query_engine = RetrieverQueryEngine.from_args(
-                retriever=self.retriever,
-                memory=self.memory,
-                verbose=False,
-            )
+            # For now, we create a simpler integration that combines:
+            # 1. LlamaIndex memory management (ChatMemoryBuffer) ✅
+            # 2. LlamaIndex query transforms (HyDE) ✅
+            # 3. Existing Isschat retrieval + generation ✅
 
-            # Create query pipeline if transforms are enabled
-            if self.query_transforms:
-                self.pipeline = QueryPipeline(verbose=False)
+            # This is a pragmatic approach that doesn't break existing architecture
+            # while adding the LlamaIndex benefits we want
 
-                # Add components to pipeline
-                for name, transform in self.query_transforms:
-                    self.pipeline.add_modules({name: transform})
-
-                # Add query engine
-                self.pipeline.add_modules({"query_engine": self.query_engine})
-
-                # Connect components
-                if len(self.query_transforms) == 1:
-                    # Single transform
-                    transform_name = self.query_transforms[0][0]
-                    self.pipeline.add_link(transform_name, "query_engine")
-                else:
-                    # Multiple transforms - chain them
-                    prev_name = self.query_transforms[0][0]
-                    for name, _ in self.query_transforms[1:]:
-                        self.pipeline.add_link(prev_name, name)
-                        prev_name = name
-                    self.pipeline.add_link(prev_name, "query_engine")
-
-            self.logger.debug("Query pipeline configured")
+            self.logger.debug("Hybrid pipeline configured (LlamaIndex + Isschat)")
 
         except Exception as e:
             raise RuntimeError(f"Failed to setup pipeline: {e}")
@@ -226,26 +217,105 @@ class LlamaIndexRAGPipeline:
             if verbose:
                 self.logger.info(f"🔍 Processing query with LlamaIndex: '{query[:100]}...'")
 
+            # Handle conversation context setup
+            if conversation_id:
+                if self.current_conversation_id != conversation_id:
+                    # Switch to different conversation - load its history
+                    if not self.continue_conversation(conversation_id, user_id):
+                        self.logger.warning(f"Failed to load history for conversation: {conversation_id}")
+                elif not self.conversation_history_loaded:
+                    # Same conversation but history not loaded yet
+                    self.continue_conversation(conversation_id, user_id)
+            else:
+                # No conversation_id provided - generate one for tracking
+                conversation_id = f"conv_{int(time.time())}_{user_id}"
+                self.start_new_conversation(conversation_id)
+
+            # Track conversation length for adaptive memory
+            query_length = self._estimate_tokens(query)
+            self.conversation_lengths.append(query_length)
+            if len(self.conversation_lengths) > 10:  # Keep only recent 10 conversations
+                self.conversation_lengths.pop(0)
+
+            # Update memory limit adaptively before processing
+            self._update_memory_limit_if_needed()
+
             # Add current query to memory context
             self.memory.put(f"Human: {query}")
 
-            # Process query through pipeline or directly
-            if hasattr(self, "pipeline") and self.pipeline:
+            # Apply query transforms (HyDE/Decompose) if enabled
+            processed_query = query
+            if self.query_transforms:
                 if verbose:
-                    self.logger.info("🔄 Using query transformation pipeline")
-                response = self.pipeline.run(query=query)
-            else:
-                if verbose:
-                    self.logger.info("🎯 Using direct query engine")
-                response = self.query_engine.query(query)
+                    self.logger.info("🔄 Applying LlamaIndex query transforms")
 
-            answer = str(response.response) if hasattr(response, "response") else str(response)
+                for name, transform in self.query_transforms:
+                    try:
+                        if name == "hyde":
+                            # Apply HyDE transformation
+                            hyde_result = transform(processed_query)
+                            processed_query = str(hyde_result) if hyde_result else processed_query
+                            if verbose:
+                                self.logger.info(f"HyDE query: {processed_query[:100]}...")
+                        elif name == "decompose":
+                            # Apply decomposition (for complex queries)
+                            decompose_result = transform(processed_query)
+                            processed_query = str(decompose_result) if decompose_result else processed_query
+                    except Exception as e:
+                        self.logger.warning(f"Query transform {name} failed: {e}")
+                        continue
+
+            # Use existing Isschat retrieval + generation pipeline
+            if verbose:
+                self.logger.info("🎯 Using Isschat retrieval + generation")
+
+            # Import existing tools here to avoid circular imports
+            from .tools.semantic_retrieval_tool import SemanticRetrievalTool
+            from .tools.generation_tool import GenerationTool
+
+            # Create tools if not already available
+            if not hasattr(self, "_retrieval_tool"):
+                self._retrieval_tool = SemanticRetrievalTool()
+            if not hasattr(self, "_generation_tool"):
+                self._generation_tool = GenerationTool()
+
+            # Retrieve relevant documents (using HyDE-enhanced query, no need for semantic expansion)
+            retrieved_docs = self._retrieval_tool.retrieve(
+                query=processed_query,
+                k=self.config.search_k,
+                use_semantic_expansion=False,  # Disabled: HyDE replaces semantic expansion
+                use_semantic_reranking=True,  # Keep reranking for score adjustment
+            )
+
+            # Get memory context for generation
+            memory_context = ""
+            try:
+                memory_messages = self.memory.get_all()
+                if memory_messages:
+                    # Take recent messages for context
+                    recent_messages = memory_messages[-6:]  # Last 3 exchanges
+                    memory_context = "\n".join([str(msg) for msg in recent_messages])
+            except Exception as e:
+                self.logger.warning(f"Failed to get memory context: {e}")
+
+            # Generate answer using existing generation tool
+            generation_result = self._generation_tool.generate(
+                query=query,  # Use original query for generation
+                documents=retrieved_docs,
+                history=memory_context,
+            )
+
+            answer = generation_result.get("answer", "No answer generated")
+
+            # Track response length for adaptive memory
+            response_length = self._estimate_tokens(answer)
+            self.conversation_lengths[-1] += response_length  # Add to last query's length
 
             # Add response to memory
             self.memory.put(f"Assistant: {answer}")
 
-            # Extract sources
-            sources = self._format_sources(response)
+            # Extract sources from retrieved documents
+            sources = self._format_sources_from_docs(retrieved_docs)
 
             response_time = (time.time() - start_time) * 1000  # in ms
 
@@ -259,6 +329,8 @@ class LlamaIndexRAGPipeline:
                     "pipeline_type": "llama_index_rag",
                     "query_transforms_used": [name for name, _ in self.query_transforms],
                     "memory_enabled": True,
+                    "adaptive_memory": self.llama_config.adaptive_memory,
+                    "current_memory_limit": self.memory.token_limit,
                     "response_time_ms": response_time,
                 }
 
@@ -299,57 +371,162 @@ class LlamaIndexRAGPipeline:
 
             return error_answer, ""
 
-    def _format_sources(self, response) -> str:
-        """Format sources from LlamaIndex response"""
+    def _format_sources_from_docs(self, retrieved_docs) -> str:
+        """Format sources from Isschat retrieved documents"""
         try:
-            if hasattr(response, "source_nodes") and response.source_nodes:
-                sources = []
-                seen_sources = set()
+            if not retrieved_docs:
+                return ""
 
-                for node in response.source_nodes:
-                    # Extract metadata
-                    metadata = getattr(node.node, "metadata", {}) if hasattr(node, "node") else {}
-                    title = metadata.get("title", "Document")
-                    url = metadata.get("url", "")
+            sources = []
+            seen_sources = set()
 
-                    # Create source link
-                    if url:
-                        source_link = f"[{title}]({url})"
-                    else:
-                        source_link = title
+            for doc in retrieved_docs:
+                # Extract metadata from Isschat document format
+                metadata = doc.metadata or {}
+                title = metadata.get("title", "Document")
+                url = metadata.get("url", "")
 
-                    # Deduplicate
-                    if source_link not in seen_sources:
-                        seen_sources.add(source_link)
-                        sources.append(source_link)
+                # Create source link
+                if url:
+                    source_link = f"[{title}]({url})"
+                else:
+                    source_link = title
 
-                return " • ".join(sources)
+                # Deduplicate
+                if source_link not in seen_sources:
+                    seen_sources.add(source_link)
+                    sources.append(source_link)
 
-            return ""
+            return " • ".join(sources)
 
         except Exception as e:
             self.logger.warning(f"Failed to format sources: {e}")
             return ""
 
+    def load_conversation_history(self, conversation_id: str, user_id: str = "anonymous") -> bool:
+        """
+        Load conversation history from persistent storage into ChatMemoryBuffer
+
+        Args:
+            conversation_id: ID of conversation to load
+            user_id: User ID for filtering (optional)
+
+        Returns:
+            True if history was loaded successfully
+        """
+        try:
+            # Don't reload if already loaded for this conversation
+            if self.current_conversation_id == conversation_id and self.conversation_history_loaded:
+                self.logger.debug(f"History already loaded for conversation: {conversation_id}")
+                return True
+
+            # Clear existing memory
+            self.memory.reset()
+
+            # Load conversation history from DataManager
+            history_entries = self.data_manager.get_conversation_history(
+                user_id=user_id,
+                conversation_id=conversation_id,
+                limit=20,  # Load last 20 exchanges to respect memory limits
+            )
+
+            if not history_entries:
+                self.logger.debug(f"No history found for conversation: {conversation_id}")
+                self.current_conversation_id = conversation_id
+                self.conversation_history_loaded = True
+                return True
+
+            # Sort by timestamp to maintain chronological order
+            history_entries.sort(key=lambda x: x.get("timestamp", ""))
+
+            # Load history into memory buffer
+            loaded_count = 0
+            for entry in history_entries:
+                try:
+                    question = entry.get("question", "")
+                    answer = entry.get("answer", "")
+
+                    if question and answer:
+                        self.memory.put(f"Human: {question}")
+                        self.memory.put(f"Assistant: {answer}")
+                        loaded_count += 1
+
+                except Exception as e:
+                    self.logger.warning(f"Failed to load history entry: {e}")
+                    continue
+
+            self.current_conversation_id = conversation_id
+            self.conversation_history_loaded = True
+
+            self.logger.info(f"✅ Loaded {loaded_count} conversation exchanges for: {conversation_id}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to load conversation history: {e}")
+            return False
+
+    def start_new_conversation(self, conversation_id: str) -> bool:
+        """
+        Start a new conversation, clearing memory and setting up tracking
+
+        Args:
+            conversation_id: New conversation ID
+
+        Returns:
+            True if successfully initialized
+        """
+        try:
+            # Clear memory for fresh start
+            self.memory.reset()
+
+            # Reset tracking variables
+            self.current_conversation_id = conversation_id
+            self.conversation_history_loaded = True
+            self.conversation_lengths = []
+
+            self.logger.info(f"🆕 Started new conversation: {conversation_id}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to start new conversation: {e}")
+            return False
+
+    def continue_conversation(self, conversation_id: str, user_id: str = "anonymous") -> bool:
+        """
+        Continue an existing conversation by loading its history
+
+        Args:
+            conversation_id: Conversation to continue
+            user_id: User ID for filtering
+
+        Returns:
+            True if conversation was set up successfully
+        """
+        return self.load_conversation_history(conversation_id, user_id)
+
     def clear_memory(self):
-        """Clear conversation memory"""
+        """Clear conversation memory and reset tracking"""
         self.memory.reset()
-        self.logger.debug("Memory cleared")
+        self.current_conversation_id = None
+        self.conversation_history_loaded = False
+        self.conversation_lengths = []
+        self.logger.debug("Memory cleared and tracking reset")
 
     def get_memory_summary(self) -> str:
         """Get current memory content summary"""
         try:
             messages = self.memory.get_all()
-            return f"Memory contains {len(messages)} messages"
+            return f"Memory contains {len(messages)} messages (Conversation: {self.current_conversation_id or 'None'})"
         except Exception:
-            return "Memory summary unavailable"
+            return f"Memory summary unavailable (Conversation: {self.current_conversation_id or 'None'})"
 
     def is_ready(self) -> bool:
         """Check if pipeline is ready"""
         try:
+            # Simple check: vector DB exists and has documents, memory is initialized
             return (
-                hasattr(self, "query_engine")
-                and self.query_engine is not None
+                hasattr(self, "vector_db")
+                and hasattr(self, "memory")
                 and self.vector_db.exists()
                 and self.vector_db.count() > 0
             )
@@ -358,12 +535,30 @@ class LlamaIndexRAGPipeline:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get pipeline statistics"""
+        avg_conversation_length = (
+            sum(self.conversation_lengths) / len(self.conversation_lengths) if self.conversation_lengths else 0
+        )
+
         return {
             "type": "llama_index_pipeline",
             "ready": self.is_ready(),
             "query_transforms": [name for name, _ in self.query_transforms],
             "memory_enabled": True,
             "memory_summary": self.get_memory_summary(),
+            "adaptive_memory": {
+                "enabled": self.llama_config.adaptive_memory,
+                "current_limit": self.memory.token_limit,
+                "reserve_ratio": self.llama_config.memory_reserve_ratio,
+                "min_tokens": self.llama_config.min_memory_tokens,
+                "max_tokens": self.llama_config.max_memory_tokens,
+                "avg_conversation_length": round(avg_conversation_length, 1),
+                "recent_conversations": len(self.conversation_lengths),
+            },
+            "conversation_management": {
+                "current_conversation_id": self.current_conversation_id,
+                "history_loaded": self.conversation_history_loaded,
+                "memory_messages": len(self.memory.get_all()) if hasattr(self.memory, "get_all") else 0,
+            },
             "vector_store_count": self.vector_db.count() if hasattr(self, "vector_db") else 0,
         }
 
