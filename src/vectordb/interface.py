@@ -1,6 +1,6 @@
 """
 Vector database interface for clean abstractions.
-Supports both Qdrant and FAISS implementations.
+Supports Weaviate vector database implementation.
 """
 
 from abc import ABC, abstractmethod

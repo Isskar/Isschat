@@ -239,51 +239,6 @@ class SemanticRAGPipeline:
         except Exception as e:
             return {"error": str(e), "query": query}
 
-    def test_problematic_query(self, query: str = "qui sont les collaborateurs sur Isschat") -> Dict[str, Any]:
-        """
-        Test the pipeline with the specific problematic query about collaborators.
-
-        Args:
-            query: The problematic query to test
-
-        Returns:
-            Detailed test results
-        """
-        try:
-            # Test with full semantic pipeline
-            start_time = time.time()
-            answer, sources = self.process_query(query, verbose=True)
-            response_time = (time.time() - start_time) * 1000
-
-            # Get comparison data
-            comparison = self.compare_with_basic_retrieval(query)
-
-            # Analyze if the answer contains team information
-            team_keywords = ["vincent", "nicolas", "emin", "fraillon", "lambropoulos", "calyaka", "équipe", "team"]
-            answer_lower = answer.lower()
-            team_mentions = [keyword for keyword in team_keywords if keyword in answer_lower]
-
-            return {
-                "test_query": query,
-                "semantic_pipeline_result": {
-                    "answer": answer,
-                    "sources": sources,
-                    "response_time_ms": response_time,
-                    "team_keywords_found": team_mentions,
-                    "contains_team_info": len(team_mentions) > 2,
-                },
-                "comparison": comparison,
-                "success_criteria": {
-                    "finds_team_info": len(team_mentions) > 2,
-                    "mentions_specific_names": any(name in answer_lower for name in ["vincent", "nicolas", "emin"]),
-                    "better_than_basic": comparison.get("improvement_metrics", {}).get("semantic_advantage", False),
-                },
-                "pipeline_status": self.get_status(),
-            }
-
-        except Exception as e:
-            return {"error": str(e), "test_query": query}
-
     def _format_sources_for_storage(self, formatted_docs) -> list[dict]:
         """Format sources for storage with enhanced metadata"""
         sources = []
@@ -350,24 +305,6 @@ class SemanticRAGPipeline:
             }
         except Exception as e:
             return {"pipeline_type": "semantic_rag_pipeline", "ready": False, "error": str(e)}
-
-    def check_pipeline(self, test_query: str = "qui sont les collaborateurs sur Isschat") -> Dict[str, Any]:
-        """Check pipeline with default problematic query"""
-        try:
-            if not self.is_ready():
-                return {"success": False, "error": "Pipeline not ready", "details": self.get_status()}
-
-            # Run the problematic query test
-            test_result = self.test_problematic_query(test_query)
-
-            return {
-                "success": test_result.get("success_criteria", {}).get("finds_team_info", False),
-                "test_result": test_result,
-                "pipeline_status": self.get_status(),
-            }
-
-        except Exception as e:
-            return {"success": False, "error": str(e), "test_query": test_query}
 
 
 class SemanticRAGPipelineFactory:
