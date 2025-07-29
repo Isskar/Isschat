@@ -9,11 +9,40 @@ import traceback
 from datetime import datetime
 import uuid
 from typing import Optional
+import random
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+
+def get_random_loading_message():
+    """Get a random loading message to show variety"""
+    messages = [
+        "Analyse en cours...",
+        "Recherche dans la documentation...",
+        "Traitement de votre requête...",
+        "Analyse de votre question...",
+        "Recherche d'informations pertinentes...",
+        "Consultation de la base de connaissances...",
+        "Formulation d'une réponse...",
+        "Recherche sur votre sujet...",
+        "Examen de la documentation...",
+        "Recherche de la meilleure réponse...",
+        "Exploration des ressources disponibles...",
+        "Analyse de votre demande...",
+        "Collecte d'informations...",
+        "Compilation des données...",
+        "Traitement de votre demande...",
+        "Préparation de la réponse...",
+        "Consultation des sources...",
+        "Réflexion en cours...",
+        "Génération de la réponse...",
+        "Finalisation de l'analyse...",
+    ]
+    return random.choice(messages)
+
 
 try:
     asyncio.get_running_loop()
@@ -415,8 +444,11 @@ def chat_page():
         # Note: History is now used for query reformulation within the pipeline, not for generation
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
 
+        # Show loading message immediately with variety
+        loading_message = get_random_loading_message()
+
         # Process the question with all features
-        with st.spinner("Analysis in progress..."):
+        with st.spinner(loading_message):
             result, sources = process_question_with_model(
                 model, features, prompt, chat_history, st.session_state["current_conversation_id"], start_time
             )
@@ -478,12 +510,15 @@ def chat_page():
         )
         st.chat_message("user", avatar=IMAGES["user"]).write(prompt)
 
+        # Show loading message immediately with variety
+        loading_message = get_random_loading_message()
+
         # Prepare chat history for context from the data manager
         # Note: History is now used for query reformulation within the pipeline, not for generation
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
 
         # Process the question with all features
-        with st.spinner("Analysis in progress..."):
+        with st.spinner(loading_message):
             result, sources = process_question_with_model(
                 model, features, prompt, chat_history, st.session_state["current_conversation_id"], start_time
             )

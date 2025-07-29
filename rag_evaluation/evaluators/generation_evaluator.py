@@ -86,7 +86,7 @@ class GenerationEvaluator(BaseEvaluator):
         self.conversation_history[conversation_id].append({"question": test_case.question, "response": response})
 
     def _build_context_string(self, test_case: TestCase) -> Optional[str]:
-        """Build context string from conversation context for IsschatClient"""
+        """Build context string from conversation context for IsschatClient (reformulation-compatible format)"""
         if not test_case.conversation_context:
             return None
 
@@ -114,8 +114,9 @@ class GenerationEvaluator(BaseEvaluator):
                     pass
 
             if question and response:
-                context_parts.append(f"Q: {question}")
-                context_parts.append(f"R: {response}")
+                # Use User:/Assistant: format compatible with reformulation service
+                context_parts.append(f"User: {question}")
+                context_parts.append(f"Assistant: {response}")
 
         return "\n".join(context_parts) if context_parts else None
 

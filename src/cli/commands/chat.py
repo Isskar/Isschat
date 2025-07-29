@@ -162,14 +162,14 @@ class ChatSession:
             click.echo()
 
     def _build_history_context(self) -> str:
-        """Build history context for the query"""
+        """Build history context for the query (reformulation-compatible format)"""
         if len(self.history) <= 1:
             return ""
 
         context_parts = []
-        for item in self.history[-2:]:
-            context_parts.append(f"Q: {item['question']}")
-            context_parts.append(f"R: {item['answer']}")
+        for item in self.history[-3:]:  # Use last 3 exchanges for better context
+            context_parts.append(f"User: {item['question']}")
+            context_parts.append(f"Assistant: {item['answer']}")
 
         return "\n".join(context_parts)
 
