@@ -5,33 +5,48 @@
 
 A chatbot that provides semantic search and conversational AI capabilities for Confluence knowledge bases using advanced RAG (Retrieval-Augmented Generation) technology with semantic understanding.
 
-## Key Features
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Launch](#launch)
+  - [Web Interface](#web-interface)
+  - [Command Line Interface](#command-line-interface-cli)
+  - [Evaluation System](#evaluation-system)
+- [Architecture](#architecture)
+- [Production Deployment](#production-deployment)
+  - [Azure Cloud Deployment](#azure-cloud-deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Local Development](#local-development)
+  - [Testing](#testing)
+- [License](#license)
+
+## Features
 
 ### Core RAG Capabilities
-- **Semantic RAG Pipeline**: Advanced semantic understanding with query reformulation
-- **Dual Pipeline Architecture**: Both standard and semantic-enhanced RAG processing
+- **Semantic RAG Pipeline**: Advanced semantic understanding with query reformulation and coreference resolution
+- **Dual Pipeline Architecture**: Both standard and semantic-enhanced RAG processing with intelligent fallback
+- **Intent Classification**: Automatically detects and routes queries based on intent (team_info, project_info, technical_info, feature_info)
+- **Query Reformulation**: LLM-based coreference resolution using conversation context for ambiguous queries
 - **Intelligent Query Processing**: Handles misleading keywords and provides contextually accurate responses
-- **Vector Retrieval**: Direct vector search with optional semantic re-ranking
-- **Semantic Re-ranking**: Re-ranks results based on semantic similarity and intent matching
-
-### Advanced Semantic Features  
-- **Intent Classification**: Automatically detects query intent (team_info, project_info, technical_info, feature_info)
-- **Query Reformulation**: LLM-based coreference resolution and context clarification
-- **Multilingual Support**: Optimized for French and English content with synonym handling
+- **Vector Retrieval**: Direct vector search with semantic re-ranking based on similarity and intent matching
+- **Multilingual Support**: Optimized for French and English content with cross-language understanding and synonym handling
 - **Contextual Understanding**: Maintains document hierarchy awareness for numerical and structured queries
 
-### Enterprise Features
+### Enterprise Operations
 - **Azure AD Authentication**: Secure OAuth 2.0 integration with domain validation
-- **Performance Monitoring**: Real-time metrics tracking and analytics dashboard
-- **Conversation History**: Persistent chat history with search capabilities
-- **User Feedback System**: Integrated feedback collection and analysis
-- **Admin Dashboard**: System management and configuration interface
+- **Performance Monitoring**: Real-time response time, accuracy metrics, and system health tracking
+- **Conversation History**: Persistent chat history with search capabilities and conversation context
+- **User Feedback System**: Integrated feedback collection with sentiment analysis and analytics
+- **Admin Dashboard**: System management with performance insights, user analytics, and configuration interface
 
-### Evaluation & Quality Assurance
+### Quality Assurance & Evaluation
 - **Comprehensive Evaluation Framework**: Multi-category testing (retrieval, generation, business value, robustness)
-- **LLM-based Automated Evaluation**: Automated scoring with confidence metrics
-- **CI/CD Integration**: Automated testing with configurable quality thresholds
-- **Performance Metrics**: Response time, accuracy, and user satisfaction tracking
+- **LLM-based Automated Evaluation**: Automated quality assessment using advanced language models with confidence metrics
+- **CI/CD Integration**: Automated testing pipeline with configurable quality thresholds
+- **Performance Benchmarking**: Continuous performance monitoring and improvement tracking
+- **Adaptive Chunking**: Content-type aware document processing with hierarchical chunking
+- **Flexible Vector Storage**: Weaviate cloud integration with automated data pipeline and batch optimization
 
 ## Installation
 
@@ -119,22 +134,22 @@ Isschat provides a powerful CLI tool for managing and querying your knowledge ba
 
 - **Status Check**: Check system components and configuration
   ```bash
-  uv run python -m src.cli.main status [--verbose] [--component config|ingestion|rag|all]
+  uv run -m src.cli.main status [--verbose] [--component config|ingestion|rag|all]
   ```
 
 - **Data Ingestion**: Build or update the vector database from Confluence
   ```bash
-  uv run python -m src.cli.main ingest [--source confluence] [--force-rebuild] [--verbose]
+  uv run -m src.cli.main ingest [--source confluence] [--force-rebuild] [--verbose]
   ```
 
 - **Interactive Chat**: Start a chat session without the web interface
   ```bash
-  uv run python -m src.cli.main chat [--user-id cli_user]
+  uv run -m src.cli.main chat [--user-id cli_user]
   ```
 
 - **Direct Query**: Query the vector database with detailed results
   ```bash
-  uv run python -m src.cli.main query -q "your question" [options]
+  uv run -m src.cli.main query -q "your question" [options]
   ```
 
 #### Query Command Options
@@ -152,19 +167,19 @@ Isschat provides a powerful CLI tool for managing and querying your knowledge ba
 
 ```bash
 # Check system status and configuration
-uv run python -m src.cli.main status --verbose
+uv run -m src.cli.main status --verbose
 
 # Ingest data from Confluence
-uv run python -m src.cli.main ingest --source confluence --verbose
+uv run -m src.cli.main ingest --source confluence --verbose
 
 # Start interactive chat session
-uv run python -m src.cli.main chat
+uv run -m src.cli.main chat
 
 # Query with detailed information
-uv run python -m src.cli.main query -q "How to configure authentication?" -k 3 --show-metadata --show-stats
+uv run -m src.cli.main query -q "How to configure authentication?" -k 3 --show-metadata --show-stats
 
 # Query without LLM generation (retrieval only)
-uv run python -m src.cli.main query -q "project management" --no-llm --show-stats
+uv run -m src.cli.main query -q "project management" --no-llm --show-stats
 ```
 
 ### Evaluation System
@@ -172,14 +187,16 @@ uv run python -m src.cli.main query -q "project management" --no-llm --show-stat
 Run comprehensive RAG evaluation:
 
 ```bash
+# View evaluation dashboard
+uv run rag_evaluation/evaluation_dashboard.py
+
 # Run all evaluation categories
-uv run python rag_evaluation/run_evaluation.py
+uv run rag_evaluation/run_evaluation.py
 
 # Run specific evaluation category
-uv run python rag_evaluation/run_evaluation.py --category retrieval
+uv run rag_evaluation/run_evaluation.py --category retrieval
 
-# View evaluation dashboard
-uv run python rag_evaluation/evaluation_dashboard.py
+
 ```
    
 
@@ -249,33 +266,6 @@ Isschat/
 - **Comprehensive Evaluation**: Built-in testing framework with multiple evaluators
 - **Enterprise Security**: Azure AD integration with domain validation
 - **CLI and Web Interfaces**: Both command-line and web-based interactions
-
-## Advanced Features
-
-### Semantic Intelligence
-- **Intent Classification**: Automatically detects and routes queries based on intent (team_info, project_info, technical_info, feature_info)
-- **Query Reformulation**: LLM-based coreference resolution using conversation context
-- **Context-Aware Retrieval**: Maintains document hierarchy awareness for complex queries
-- **Multilingual Processing**: Optimized for French and English content with cross-language understanding
-
-### Enterprise Operations
-- **Conversation Analytics**: Advanced user interaction tracking and analysis
-- **Performance Monitoring**: Real-time response time, accuracy metrics, and system health
-- **Feedback Loop**: Integrated user feedback collection with sentiment analysis
-- **Query History**: Persistent search history with conversation context
-- **Admin Dashboard**: System management with performance insights and user analytics
-
-### Quality Assurance
-- **Comprehensive RAG Evaluation**: Multi-category testing framework for retrieval, generation, business value, and robustness
-- **LLM-based Evaluation**: Automated quality assessment using advanced language models
-- **CI/CD Integration**: Automated testing pipeline with configurable quality thresholds
-- **Performance Benchmarking**: Continuous performance monitoring and improvement tracking
-
-### Technical Capabilities
-- **Flexible Vector Storage**: Weaviate cloud
-- **Adaptive Chunking**: Content-type aware document processing with hierarchical chunking
-- **Semantic Re-ranking**: Advanced result re-ranking based on semantic similarity and intent matching
-- **Automated Data Pipeline**: Streamlined document processing and embedding generation with batch optimization
 
 ## Production Deployment
 
