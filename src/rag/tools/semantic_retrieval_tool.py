@@ -70,6 +70,9 @@ class SemanticRetrievalTool:
         self._initialize()
 
         try:
+            # Debug output to verify what query is received
+            print(f"🔍 RETRIEVAL TOOL: Received query '{query}'")
+
             # Process query for semantic understanding
             if use_semantic_expansion:
                 query_result = self._query_processor.process_query(query)

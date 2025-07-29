@@ -5,13 +5,14 @@ Integrates semantic query processing and retrieval for better accuracy.
 
 import logging
 import time
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict, Any, Optional, List
 
 from ..config import get_config
 from ..storage.data_manager import get_data_manager
 from .tools.semantic_retrieval_tool import SemanticRetrievalTool
 from .tools.generation_tool import GenerationTool
 from .query_processor import QueryProcessor
+from .reformulation_service import ReformulationService, ConversationExchange
 
 
 class SemanticRAGPipeline:
@@ -30,6 +31,7 @@ class SemanticRAGPipeline:
         self.semantic_retrieval_tool = SemanticRetrievalTool()
         self.generation_tool = GenerationTool()
         self.query_processor = QueryProcessor()
+        self.reformulation_service = ReformulationService()
 
         self.logger.info("✅ Semantic RAG pipeline initialized")
 
@@ -64,13 +66,55 @@ class SemanticRAGPipeline:
             if verbose:
                 self.logger.info(f"🔍 Processing query with semantic understanding: '{query[:100]}...'")
 
-            # Step 1: Process query for semantic understanding
+            # Step 1: Query reformulation (new step)
+            reformulated_query = query
+            self.logger.info(f"🚀 PIPELINE START: Processing query: '{query}'")
+            self.logger.info(
+                f"📜 History provided: {bool(history and history.strip())} (length: {len(history) if history else 0})"
+            )
+
+            # Debug output that should be visible in Streamlit logs
+            print(f"🚀 SEMANTIC PIPELINE: Processing '{query}'")
+            print(f"📜 History length: {len(history) if history else 0}")
+
+            if history and history.strip():
+                if verbose:
+                    self.logger.info("🔄 Step 1: Query reformulation")
+
+                self.logger.info("📥 Extracting recent exchanges from history...")
+                # Extract recent exchanges from history
+                recent_exchanges = self._extract_exchanges_from_history(history)
+                self.logger.info(f"📚 Extracted {len(recent_exchanges)} exchanges from history")
+
+                # Log the history format for debugging
+                self.logger.debug(f"📜 Raw history format: {repr(history[:200])}...")
+
+                # Reformulate query to resolve coreferences
+                self.logger.info("🔄 Calling ReformulationService...")
+                print(f"🔄 CALLING REFORMULATION for: '{query}'")
+                reformulated_query = self.reformulation_service.reformulate_query(query, recent_exchanges)
+                print(f"🔄 REFORMULATION RESULT: '{reformulated_query}'")
+
+                if reformulated_query != query:
+                    self.logger.info(f"✅ QUERY REFORMULATED: '{query}' -> '{reformulated_query}'")
+                    if verbose:
+                        self.logger.info(f"📝 Query reformulated: '{query}' -> '{reformulated_query}'")
+                    # For debugging - this should be visible in logs
+                    print(f"🔄 REFORMULATION: '{query}' -> '{reformulated_query}'")
+                else:
+                    self.logger.info(f"⚪ Query unchanged after reformulation: '{query}'")
+            else:
+                self.logger.info("⚪ No history provided - skipping reformulation step")
+                print("⚪ NO HISTORY - skipping reformulation")
+
+            # Step 2: Process query for semantic understanding (optional legacy processing)
             query_result = None
             if self.use_semantic_features and use_semantic_expansion:
                 if verbose:
-                    self.logger.info("🧠 Step 1: Semantic query processing")
+                    self.logger.info("🧠 Step 2: Semantic query processing")
 
-                query_result = self.query_processor.process_query(query)
+                # Use reformulated query for semantic processing
+                query_result = self.query_processor.process_query(reformulated_query)
 
                 if verbose:
                     self.logger.info(
@@ -79,15 +123,18 @@ class SemanticRAGPipeline:
                         f"Confidence: {query_result.confidence:.2f}"
                     )
 
-            # Step 2: Semantic retrieval
+            # Step 3: Semantic retrieval
             if verbose:
-                self.logger.info("📥 Step 2: Semantic document retrieval")
+                self.logger.info("📥 Step 3: Semantic document retrieval")
 
+            # Use reformulated query for retrieval
+            print(f"🔍 VECTOR SEARCH: Using query '{reformulated_query}' for retrieval")
             search_results = self.semantic_retrieval_tool.retrieve(
-                query=query,
+                query=reformulated_query,
                 use_semantic_expansion=use_semantic_expansion and self.use_semantic_features,
                 use_semantic_reranking=use_semantic_reranking and self.use_semantic_features,
             )
+            print(f"📄 VECTOR SEARCH: Found {len(search_results)} results")
 
             if verbose:
                 self.logger.info(f"📄 {len(search_results)} documents retrieved")
@@ -96,11 +143,14 @@ class SemanticRAGPipeline:
                     avg_score = sum(doc.score for doc in search_results) / len(search_results)
                     self.logger.info(f"📊 Top score: {top_score:.3f}, Average score: {avg_score:.3f}")
 
-            # Step 3: Generate response
+            # Step 4: Generate response
             if verbose:
-                self.logger.info("🤖 Step 3: Generating response")
+                self.logger.info("🤖 Step 4: Generating response")
 
-            generation_result = self.generation_tool.generate(query=query, documents=search_results, history=history)
+            # Use reformulated query for generation to ensure consistent filtering
+            generation_result = self.generation_tool.generate(
+                query=reformulated_query, documents=search_results, history=""
+            )
 
             answer = generation_result["answer"]
             sources = generation_result["sources"]
@@ -120,6 +170,8 @@ class SemanticRAGPipeline:
                     "semantic_features_enabled": self.use_semantic_features,
                     "semantic_expansion_used": use_semantic_expansion,
                     "semantic_reranking_used": use_semantic_reranking,
+                    "query_reformulated": reformulated_query != query,
+                    "reformulated_query": reformulated_query if reformulated_query != query else None,
                 }
 
                 # Add query processing metadata if available
@@ -142,6 +194,7 @@ class SemanticRAGPipeline:
                     sources=self._format_sources_for_storage(search_results),
                     metadata=metadata,
                 )
+                print(f"💾 SAVED CONVERSATION: '{query}' to conversation_id={conv_id}")
             except Exception as e:
                 self.logger.warning(f"Failed to save conversation: {e}")
 
@@ -262,6 +315,51 @@ class SemanticRAGPipeline:
             sources.append(source_info)
 
         return sources
+
+    def _extract_exchanges_from_history(self, history: str) -> List[ConversationExchange]:
+        """
+        Extract conversation exchanges from history string.
+
+        Args:
+            history: Formatted history string from format_chat_history
+
+        Returns:
+            List of ConversationExchange objects
+        """
+        exchanges = []
+
+        if not history or not history.strip():
+            self.logger.debug("📭 Empty history provided")
+            return exchanges
+
+        # Split history into lines and process
+        lines = [line.strip() for line in history.split("\n") if line.strip()]
+        self.logger.debug(f"📄 Processing {len(lines)} lines from history")
+
+        current_user_msg = None
+
+        for i, line in enumerate(lines):
+            self.logger.debug(f"  Line {i + 1}: '{line[:100]}...'")
+
+            if line.startswith("User: "):
+                current_user_msg = line[6:]  # Remove 'User: '
+                self.logger.debug(f"    -> Found user message: '{current_user_msg}'")
+            elif line.startswith("Assistant: ") and current_user_msg:
+                assistant_msg = line[11:]  # Remove 'Assistant: '
+                exchange = ConversationExchange(user_message=current_user_msg, assistant_message=assistant_msg)
+                exchanges.append(exchange)
+                self.logger.debug(
+                    f"    -> Created exchange: User='{current_user_msg}' Assistant='{assistant_msg[:50]}...'"
+                )
+                current_user_msg = None
+
+        self.logger.info(f"📑 Extracted {len(exchanges)} exchanges total")
+
+        # Return most recent exchanges (limit to avoid too much context)
+        final_exchanges = exchanges[-5:] if len(exchanges) > 5 else exchanges
+        self.logger.info(f"📋 Using {len(final_exchanges)} most recent exchanges")
+
+        return final_exchanges
 
     def is_ready(self) -> bool:
         """Check if the pipeline is ready"""

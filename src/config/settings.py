@@ -38,10 +38,14 @@ class IsschatConfig:
     query_expansion_max_variations: int = 5
     intent_classification_enabled: bool = True
 
+    # Query reformulation configuration
+    force_reformulate_all_queries: bool = True
+
     # Source filtering configuration
     source_filtering_enabled: bool = True
-    min_source_score_threshold: float = 0.4
-    min_source_relevance_threshold: float = 0.3
+    min_source_score_threshold: float = 0.3  # Réduit de 0.4 → 0.3
+    min_source_relevance_threshold: float = 0.2  # Réduit de 0.3 → 0.2
+    use_flexible_filtering: bool = True  # Enable flexible multi-criteria filtering
 
     confluence_api_key: str = ""
     confluence_space_key: str = ""
@@ -101,6 +105,10 @@ class IsschatConfig:
                 "INTENT_CLASSIFICATION_ENABLED", str(defaults.intent_classification_enabled)
             ).lower()
             == "true",
+            force_reformulate_all_queries=os.getenv(
+                "FORCE_REFORMULATE_ALL_QUERIES", str(defaults.force_reformulate_all_queries)
+            ).lower()
+            == "true",
             source_filtering_enabled=os.getenv(
                 "SOURCE_FILTERING_ENABLED", str(defaults.source_filtering_enabled)
             ).lower()
@@ -111,6 +119,8 @@ class IsschatConfig:
             min_source_relevance_threshold=float(
                 os.getenv("MIN_SOURCE_RELEVANCE_THRESHOLD", str(defaults.min_source_relevance_threshold))
             ),
+            use_flexible_filtering=os.getenv("USE_FLEXIBLE_FILTERING", str(defaults.use_flexible_filtering)).lower()
+            == "true",
             confluence_api_key=secrets.get_confluence_api_key() or defaults.confluence_api_key,
             confluence_space_key=secrets.get_confluence_space_key() or defaults.confluence_space_key,
             confluence_space_name=secrets.get_confluence_space_name() or defaults.confluence_space_name,

@@ -6,8 +6,7 @@ import sys
 import asyncio
 from pathlib import Path
 import traceback
-import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
 from typing import Optional
 
@@ -329,14 +328,15 @@ def chat_page():
         ]
 
     # Helper to format chat history for prompt
-    def format_chat_history(conversation_id: str, max_turns=10):
+    def format_chat_history(conversation_id: str):
         from src.storage.data_manager import get_data_manager
 
         data_manager = get_data_manager()
-        # Fetch entries for the current conversation_id
-        conversation_entries = data_manager.get_conversation_history(
-            conversation_id=conversation_id, limit=max_turns * 2
-        )
+        # Fetch entries for the current conversation_id (no artificial limit)
+        conversation_entries = data_manager.get_conversation_history(conversation_id=conversation_id)
+
+        # Debug output
+        print(f"📚 HISTORY: Found {len(conversation_entries)} entries for conversation {conversation_id}")
 
         conversation_entries.sort(key=lambda x: x.get("timestamp", ""))
 
@@ -345,7 +345,11 @@ def chat_page():
             if entry.get("question") and entry.get("answer"):
                 history.append(f"User: {entry['question']}")
                 history.append(f"Assistant: {entry['answer']}")
-        return "\n".join(history)
+                print(f"📝 HISTORY ENTRY: User='{entry['question']}' Assistant='{entry['answer'][:50]}...'")
+
+        formatted_history = "\n".join(history)
+        print(f"📄 FORMATTED HISTORY ({len(formatted_history)} chars): {repr(formatted_history[:200])}...")
+        return formatted_history
 
     # Display message history with feedback widgets
     for i, msg in enumerate(st.session_state.messages):
@@ -408,6 +412,7 @@ def chat_page():
         st.chat_message("user", avatar=IMAGES["user"]).write(prompt)
 
         # Prepare chat history for context from the data manager
+        # Note: History is now used for query reformulation within the pipeline, not for generation
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
 
         # Process the question with all features
@@ -474,6 +479,7 @@ def chat_page():
         st.chat_message("user", avatar=IMAGES["user"]).write(prompt)
 
         # Prepare chat history for context from the data manager
+        # Note: History is now used for query reformulation within the pipeline, not for generation
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
 
         # Process the question with all features
@@ -622,149 +628,7 @@ def dashboard_page():
         st.rerun()
 
 
-def render_performance_tracking():
-    """Render performance tracking section"""
-    # Period selection
-    days = st.slider("Analysis period (days)", 1, 30, 7, key="performance_days")
-
-    try:
-        # Get real performance data
-        perf_data = get_real_performance_data()
-
-        if perf_data:
-            # Display main metrics
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Average Response Time", f"{perf_data.get('avg_response_time', 0):.0f} ms")
-            with col2:
-                st.metric("Total Conversations", perf_data.get("total_conversations", 0))
-            with col3:
-                st.metric("Conversations Today", perf_data.get("conversations_today", 0))
-
-            # Get conversation data for charts
-            from src.storage.data_manager import get_data_manager
-
-            data_manager = get_data_manager()
-            conversations = data_manager.get_conversation_history(limit=200)
-
-            if conversations:
-                # Convert to DataFrame for analysis
-                df = pd.DataFrame(conversations)
-                df["timestamp"] = pd.to_datetime(df["timestamp"])
-                df["date"] = df["timestamp"].dt.date
-
-                # Filter by selected period
-                cutoff_date = datetime.now() - timedelta(days=days)
-                recent_df = df[df["timestamp"] >= cutoff_date]
-
-                if not recent_df.empty:
-                    # Daily conversation count
-                    daily_counts = recent_df.groupby("date").size().reset_index(name="count")
-                    st.subheader("Daily Conversation Volume")
-                    st.bar_chart(daily_counts.set_index("date")["count"])
-
-                    # Response time evolution
-                    if "response_time_ms" in recent_df.columns:
-                        daily_response_times = recent_df.groupby("date")["response_time_ms"].mean().reset_index()
-                        st.subheader("Average Response Time Evolution")
-                        st.line_chart(daily_response_times.set_index("date")["response_time_ms"])
-                else:
-                    st.info(f"No conversations found in the last {days} days")
-            else:
-                st.info("No conversation data available")
-
-        else:
-            st.warning("No performance data available for the selected period")
-
-    except Exception as e:
-        st.error(f"Error displaying performance metrics: {str(e)}")
-
-
-def render_conversation_analysis():
-    """Render conversation analysis section"""
-    try:
-        # Get real conversation data
-        from src.storage.data_manager import get_data_manager
-
-        data_manager = get_data_manager()
-        conversations = data_manager.get_conversation_history(limit=200)
-
-        if conversations:
-            # Display basic metrics
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Total Conversations", len(conversations))
-            with col2:
-                avg_response_time = sum(c.get("response_time_ms", 0) for c in conversations) / len(conversations)
-                st.metric("Average Response Time", f"{avg_response_time:.0f}ms")
-            with col3:
-                avg_length = sum(c.get("answer_length", 0) for c in conversations) / len(conversations)
-                st.metric("Average Answer Length", f"{avg_length:.0f} chars")
-
-            # Convert to DataFrame for analysis
-            df = pd.DataFrame(conversations)
-            df["timestamp"] = pd.to_datetime(df["timestamp"])
-            df["hour"] = df["timestamp"].dt.hour
-
-            # Hourly distribution
-            st.subheader("Question Distribution by Hour")
-            hourly_counts = df.groupby("hour").size().reset_index(name="count")
-
-            # Fill missing hours with 0
-            all_hours = pd.DataFrame({"hour": range(24)})
-            hourly_counts = all_hours.merge(hourly_counts, on="hour", how="left").fillna(0)
-
-            st.bar_chart(hourly_counts.set_index("hour")["count"])
-
-            # User activity if multiple users
-            unique_users = df["user_id"].nunique()
-            if unique_users > 1:
-                st.subheader("User Activity")
-                user_counts = df["user_id"].value_counts().head(10)
-                st.bar_chart(user_counts)
-        else:
-            st.info("No conversation data available")
-
-    except Exception as e:
-        st.error(f"Error displaying conversation analysis: {str(e)}")
-
-
-def render_general_statistics():
-    """Render general statistics section"""
-    try:
-        # Get statistics from various sources
-        if "features_manager" in st.session_state and st.session_state["features_manager"]:
-            features = st.session_state["features_manager"]
-
-            # Get feedback statistics
-            feedback_stats = features.get_feedback_statistics(days=30)
-
-            # Display statistics in columns
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-                st.metric("Total conversations", feedback_stats.get("total_feedback", 0))
-
-            with col2:
-                st.metric("Average response time", "1200 ms")  # Sample data
-
-            with col3:
-                st.metric("Satisfaction rate", f"{feedback_stats.get('satisfaction_rate', 0):.1f}%")
-
-            # Additional metrics
-            col4, col5 = st.columns(2)
-
-            with col4:
-                st.metric("Positive feedback", feedback_stats.get("positive_feedback", 0))
-
-            with col5:
-                st.metric("Negative feedback", feedback_stats.get("negative_feedback", 0))
-
-        else:
-            st.warning("Statistics not available")
-
-    except Exception as e:
-        st.error(f"Error collecting statistics: {str(e)}")
+# Note: Unused dashboard functions removed - functionality moved to components/performance_dashboard.py
 
 
 @admin_required
