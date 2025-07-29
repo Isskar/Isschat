@@ -42,7 +42,6 @@ class SemanticRAGPipeline:
         user_id: str = "anonymous",
         conversation_id: Optional[str] = None,
         verbose: bool = False,
-        use_semantic_expansion: bool = True,
         use_semantic_reranking: bool = True,
     ) -> Tuple[str, str]:
         """
@@ -54,7 +53,6 @@ class SemanticRAGPipeline:
             user_id: User ID for logs
             conversation_id: Conversation ID for logs
             verbose: Detailed display
-            use_semantic_expansion: Enable semantic query expansion
             use_semantic_reranking: Enable semantic re-ranking
 
         Returns:
@@ -107,31 +105,14 @@ class SemanticRAGPipeline:
                 self.logger.info("⚪ No history provided - skipping reformulation step")
                 print("⚪ NO HISTORY - skipping reformulation")
 
-            # Step 2: Process query for semantic understanding (optional legacy processing)
-            query_result = None
-            if self.use_semantic_features and use_semantic_expansion:
-                if verbose:
-                    self.logger.info("🧠 Step 2: Semantic query processing")
-
-                # Use reformulated query for semantic processing
-                query_result = self.query_processor.process_query(reformulated_query)
-
-                if verbose:
-                    self.logger.info(
-                        f"📝 Intent: {query_result.intent}, "
-                        f"Variations: {len(query_result.expanded_queries)}, "
-                        f"Confidence: {query_result.confidence:.2f}"
-                    )
-
-            # Step 3: Semantic retrieval
+            # Step 2: Document retrieval
             if verbose:
-                self.logger.info("📥 Step 3: Semantic document retrieval")
+                self.logger.info("📥 Step 2: Document retrieval")
 
             # Use reformulated query for retrieval
             print(f"🔍 VECTOR SEARCH: Using query '{reformulated_query}' for retrieval")
             search_results = self.semantic_retrieval_tool.retrieve(
                 query=reformulated_query,
-                use_semantic_expansion=use_semantic_expansion and self.use_semantic_features,
                 use_semantic_reranking=use_semantic_reranking and self.use_semantic_features,
             )
             print(f"📄 VECTOR SEARCH: Found {len(search_results)} results")
@@ -143,9 +124,9 @@ class SemanticRAGPipeline:
                     avg_score = sum(doc.score for doc in search_results) / len(search_results)
                     self.logger.info(f"📊 Top score: {top_score:.3f}, Average score: {avg_score:.3f}")
 
-            # Step 4: Generate response
+            # Step 3: Generate response
             if verbose:
-                self.logger.info("🤖 Step 4: Generating response")
+                self.logger.info("🤖 Step 3: Generating response")
 
             # Use reformulated query for generation to ensure consistent filtering
             generation_result = self.generation_tool.generate(
@@ -168,22 +149,10 @@ class SemanticRAGPipeline:
                     "num_retrieved_docs": len(search_results),
                     "generation_success": generation_result["success"],
                     "semantic_features_enabled": self.use_semantic_features,
-                    "semantic_expansion_used": use_semantic_expansion,
                     "semantic_reranking_used": use_semantic_reranking,
                     "query_reformulated": reformulated_query != query,
                     "reformulated_query": reformulated_query if reformulated_query != query else None,
                 }
-
-                # Add query processing metadata if available
-                if query_result:
-                    metadata.update(
-                        {
-                            "query_intent": query_result.intent,
-                            "query_confidence": query_result.confidence,
-                            "num_query_variations": len(query_result.expanded_queries),
-                            "semantic_keywords": query_result.keywords,
-                        }
-                    )
 
                 self.data_manager.save_conversation(
                     user_id=user_id,
@@ -233,35 +202,22 @@ class SemanticRAGPipeline:
             Comparison results
         """
         try:
-            # Semantic retrieval
-            semantic_results = self.semantic_retrieval_tool.retrieve(
-                query=query, k=k, use_semantic_expansion=True, use_semantic_reranking=True
-            )
+            # Retrieval with reranking
+            reranked_results = self.semantic_retrieval_tool.retrieve(query=query, k=k, use_semantic_reranking=True)
 
-            # Basic retrieval (no semantic features)
-            basic_results = self.semantic_retrieval_tool.retrieve(
-                query=query, k=k, use_semantic_expansion=False, use_semantic_reranking=False
-            )
-
-            # Query processing info
-            query_result = self.query_processor.process_query(query)
+            # Basic retrieval (no reranking)
+            basic_results = self.semantic_retrieval_tool.retrieve(query=query, k=k, use_semantic_reranking=False)
 
             return {
                 "query": query,
-                "query_processing": {
-                    "intent": query_result.intent,
-                    "confidence": query_result.confidence,
-                    "keywords": query_result.keywords,
-                    "expanded_queries": query_result.expanded_queries,
-                },
-                "semantic_retrieval": {
-                    "count": len(semantic_results),
-                    "scores": [r.score for r in semantic_results],
-                    "top_content": semantic_results[0].content[:200] + "..." if semantic_results else None,
+                "reranked_retrieval": {
+                    "count": len(reranked_results),
+                    "scores": [r.score for r in reranked_results],
+                    "top_content": reranked_results[0].content[:200] + "..." if reranked_results else None,
                     "avg_score": (
-                        sum(r.score for r in semantic_results) / len(semantic_results) if semantic_results else 0
+                        sum(r.score for r in reranked_results) / len(reranked_results) if reranked_results else 0
                     ),
-                    "metadata_sample": semantic_results[0].metadata if semantic_results else None,
+                    "metadata_sample": reranked_results[0].metadata if reranked_results else None,
                 },
                 "basic_retrieval": {
                     "count": len(basic_results),
@@ -271,19 +227,19 @@ class SemanticRAGPipeline:
                 },
                 "improvement_metrics": {
                     "score_improvement": (
-                        (semantic_results[0].score - basic_results[0].score)
-                        if semantic_results and basic_results
+                        (reranked_results[0].score - basic_results[0].score)
+                        if reranked_results and basic_results
                         else 0
                     ),
                     "avg_score_improvement": (
-                        (sum(r.score for r in semantic_results) / len(semantic_results))
+                        (sum(r.score for r in reranked_results) / len(reranked_results))
                         - (sum(r.score for r in basic_results) / len(basic_results))
-                        if semantic_results and basic_results
+                        if reranked_results and basic_results
                         else 0
                     ),
-                    "semantic_advantage": (
-                        semantic_results[0].score > basic_results[0].score
-                        if semantic_results and basic_results
+                    "reranking_advantage": (
+                        reranked_results[0].score > basic_results[0].score
+                        if reranked_results and basic_results
                         else False
                     ),
                 },
@@ -393,7 +349,7 @@ class SemanticRAGPipeline:
                 "generation_tool": generation_stats,
                 "data_manager": self.data_manager.get_info(),
                 "capabilities": {
-                    "semantic_query_expansion": True,
+                    "query_reformulation": True,
                     "semantic_reranking": True,
                     "intent_classification": True,
                     "multilingual_support": True,

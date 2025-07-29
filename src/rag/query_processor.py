@@ -1,6 +1,6 @@
 """
 Query processor for semantic understanding and intent detection.
-Handles query expansion, synonym matching, and intent classification.
+Handles synonym matching and intent classification.
 """
 
 import logging
@@ -47,7 +47,7 @@ class QueryProcessor:
     def process_query(self, query: str) -> QueryProcessingResult:
         """
         Process a query with basic normalization and keyword extraction.
-        Legacy method kept for backward compatibility - semantic expansion now handled by ReformulationService.
+        Legacy method kept for backward compatibility.
 
         Args:
             query: Original user query

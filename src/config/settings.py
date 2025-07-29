@@ -32,10 +32,8 @@ class IsschatConfig:
 
     # Semantic understanding configuration
     use_semantic_features: bool = True
-    semantic_expansion_enabled: bool = True
     semantic_reranking_enabled: bool = True
     semantic_similarity_threshold: float = 0.7
-    query_expansion_max_variations: int = 5
     intent_classification_enabled: bool = True
 
     # Query reformulation configuration
@@ -87,19 +85,12 @@ class IsschatConfig:
             search_fetch_k=int(os.getenv("SEARCH_FETCH_K", str(defaults.search_fetch_k))),
             use_semantic_features=os.getenv("USE_SEMANTIC_FEATURES", str(defaults.use_semantic_features)).lower()
             == "true",
-            semantic_expansion_enabled=os.getenv(
-                "SEMANTIC_EXPANSION_ENABLED", str(defaults.semantic_expansion_enabled)
-            ).lower()
-            == "true",
             semantic_reranking_enabled=os.getenv(
                 "SEMANTIC_RERANKING_ENABLED", str(defaults.semantic_reranking_enabled)
             ).lower()
             == "true",
             semantic_similarity_threshold=float(
                 os.getenv("SEMANTIC_SIMILARITY_THRESHOLD", str(defaults.semantic_similarity_threshold))
-            ),
-            query_expansion_max_variations=int(
-                os.getenv("QUERY_EXPANSION_MAX_VARIATIONS", str(defaults.query_expansion_max_variations))
             ),
             intent_classification_enabled=os.getenv(
                 "INTENT_CLASSIFICATION_ENABLED", str(defaults.intent_classification_enabled)
@@ -183,10 +174,8 @@ def get_debug_info() -> dict:
             "data_dir": str(config.data_dir),
             "semantic_features": {
                 "use_semantic_features": config.use_semantic_features,
-                "semantic_expansion_enabled": config.semantic_expansion_enabled,
                 "semantic_reranking_enabled": config.semantic_reranking_enabled,
                 "semantic_similarity_threshold": config.semantic_similarity_threshold,
-                "query_expansion_max_variations": config.query_expansion_max_variations,
                 "intent_classification_enabled": config.intent_classification_enabled,
             },
         }

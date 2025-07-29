@@ -8,15 +8,15 @@ A chatbot that provides semantic search and conversational AI capabilities for C
 ## Key Features
 
 ### Core RAG Capabilities
-- **Semantic RAG Pipeline**: Advanced semantic understanding with intent classification and query expansion
+- **Semantic RAG Pipeline**: Advanced semantic understanding with query reformulation
 - **Dual Pipeline Architecture**: Both standard and semantic-enhanced RAG processing
 - **Intelligent Query Processing**: Handles misleading keywords and provides contextually accurate responses
-- **Multi-Query Retrieval**: Semantic query expansion with domain-specific mappings
+- **Vector Retrieval**: Direct vector search with optional semantic re-ranking
 - **Semantic Re-ranking**: Re-ranks results based on semantic similarity and intent matching
 
 ### Advanced Semantic Features  
 - **Intent Classification**: Automatically detects query intent (team_info, project_info, technical_info, feature_info)
-- **Query Expansion**: Generates semantic variations using domain-specific terminology
+- **Query Reformulation**: LLM-based coreference resolution and context clarification
 - **Multilingual Support**: Optimized for French and English content with synonym handling
 - **Contextual Understanding**: Maintains document hierarchy awareness for numerical and structured queries
 
@@ -75,7 +75,6 @@ A chatbot that provides semantic search and conversational AI capabilities for C
    
    # Optional - Semantic Features
    USE_SEMANTIC_FEATURES=true
-   SEMANTIC_EXPANSION_ENABLED=true
    SEMANTIC_RERANKING_ENABLED=true
    
    # Optional - Azure Integration (for production)
@@ -255,7 +254,7 @@ Isschat/
 
 ### Semantic Intelligence
 - **Intent Classification**: Automatically detects and routes queries based on intent (team_info, project_info, technical_info, feature_info)
-- **Query Expansion**: Semantic expansion using domain-specific mappings and synonym handling
+- **Query Reformulation**: LLM-based coreference resolution using conversation context
 - **Context-Aware Retrieval**: Maintains document hierarchy awareness for complex queries
 - **Multilingual Processing**: Optimized for French and English content with cross-language understanding
 
