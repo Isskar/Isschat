@@ -116,7 +116,11 @@ class GenerationTool:
 
         start_time = time.time()
 
-        headers = {"Authorization": f"Bearer {self.config.openrouter_api_key}", "Content-Type": "application/json"}
+        headers = {
+            "Authorization": f"Bearer {self.config.openrouter_api_key}",
+            "Helicone-Auth": f"Bearer {self.config.helicone_api_key}",
+            "Content-Type": "application/json",
+        }
 
         payload = {
             "model": self.config.llm_model,
@@ -127,7 +131,7 @@ class GenerationTool:
 
         try:
             response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30
+                "https://openrouter.helicone.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30
             )
             response.raise_for_status()
 

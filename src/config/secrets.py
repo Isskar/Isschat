@@ -84,6 +84,11 @@ def get_openrouter_api_key() -> Optional[str]:
     return get_secret_value("OPENROUTER_API_KEY")
 
 
+def get_helicone_api_key() -> Optional[str]:
+    """Get Helicone API key."""
+    return get_secret_value("HELICONE_API_KEY")
+
+
 def get_weaviate_url() -> Optional[str]:
     """Get Weaviate URL."""
     return get_secret_value("WEAVIATE_URL")

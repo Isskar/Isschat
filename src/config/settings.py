@@ -48,6 +48,7 @@ class IsschatConfig:
     confluence_space_name: str = ""
     confluence_email: str = ""
     openrouter_api_key: str = ""
+    helicone_api_key: str = ""
 
     use_azure_storage: bool = False
     azure_storage_account: str = ""
@@ -116,6 +117,7 @@ class IsschatConfig:
             confluence_space_name=secrets.get_confluence_space_name() or defaults.confluence_space_name,
             confluence_email=secrets.get_confluence_email() or defaults.confluence_email,
             openrouter_api_key=secrets.get_openrouter_api_key() or defaults.openrouter_api_key,
+            helicone_api_key=secrets.get_helicone_api_key() or defaults.helicone_api_key,
             use_azure_storage=os.getenv("USE_AZURE_STORAGE", str(defaults.use_azure_storage)).lower() == "true",
             azure_storage_account=secrets.get_azure_storage_account() or defaults.azure_storage_account,
             azure_blob_container=secrets.get_azure_blob_container() or defaults.azure_blob_container,
