@@ -13,8 +13,18 @@ import random
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    pass
+
+from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
+from src.webapp.components.features_manager import FeaturesManager
+from src.webapp.components.history_manager import get_history_manager
+from src.webapp.auth.azure_auth import AzureADAuth
+from src.webapp.example_prompts import EXAMPLE_PROMPTS
 
 
 def get_random_loading_message():
@@ -43,17 +53,6 @@ def get_random_loading_message():
     ]
     return random.choice(messages)
 
-
-try:
-    asyncio.get_running_loop()
-except RuntimeError:
-    pass
-
-from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
-from src.webapp.components.features_manager import FeaturesManager
-from src.webapp.components.history_manager import get_history_manager
-from src.webapp.auth.azure_auth import AzureADAuth
-from src.webapp.example_prompts import EXAMPLE_PROMPTS
 
 # images paths
 IMAGES = {
@@ -358,7 +357,10 @@ def chat_page():
 
     # Helper to format chat history for prompt
     def format_chat_history(conversation_id: str):
-        from src.storage.data_manager import get_data_manager
+        # Quick check: if this is the first question in session, skip database query
+        if len(st.session_state.get("messages", [])) <= 1:
+            print("📚 HISTORY: First question - skipping database query")
+            return ""
 
         data_manager = get_data_manager()
         # Fetch entries for the current conversation_id (no artificial limit)
@@ -513,12 +515,12 @@ def chat_page():
         # Show loading message immediately with variety
         loading_message = get_random_loading_message()
 
-        # Prepare chat history for context from the data manager
-        # Note: History is now used for query reformulation within the pipeline, not for generation
-        chat_history = format_chat_history(st.session_state["current_conversation_id"])
-
-        # Process the question with all features
+        # Process the question with all features - spinner covers everything
         with st.spinner(loading_message):
+            # Prepare chat history for context from the data manager
+            # Note: History is now used for query reformulation within the pipeline, not for generation
+            chat_history = format_chat_history(st.session_state["current_conversation_id"])
+
             result, sources = process_question_with_model(
                 model, features, prompt, chat_history, st.session_state["current_conversation_id"], start_time
             )
