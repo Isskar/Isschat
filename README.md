@@ -212,7 +212,7 @@ Isschat/
 │   ├── rag/                   # RAG pipeline implementation
 │   │   ├── pipeline.py        # Standard RAG pipeline
 │   │   ├── semantic_pipeline.py # Semantic-enhanced RAG pipeline
-│   │   ├── query_processor.py # Advanced query processing
+│   │   ├── reformulation_service.py # LLM-based query reformulation
 │   │   └── tools/             # RAG tools (retrieval, generation)
 │   ├── storage/               # Storage abstraction
 │   │   ├── storage_factory.py # Storage factory (local/Azure)

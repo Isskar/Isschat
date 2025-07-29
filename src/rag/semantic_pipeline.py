@@ -11,7 +11,6 @@ from ..config import get_config
 from ..storage.data_manager import get_data_manager
 from .tools.semantic_retrieval_tool import SemanticRetrievalTool
 from .tools.generation_tool import GenerationTool
-from .query_processor import QueryProcessor
 from .reformulation_service import ReformulationService, ConversationExchange
 
 
@@ -30,7 +29,6 @@ class SemanticRAGPipeline:
         # Initialize tools
         self.semantic_retrieval_tool = SemanticRetrievalTool()
         self.generation_tool = GenerationTool()
-        self.query_processor = QueryProcessor()
         self.reformulation_service = ReformulationService()
 
         self.logger.info("✅ Semantic RAG pipeline initialized")
