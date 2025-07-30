@@ -79,7 +79,6 @@ def query(
             llm_response_dict = generation_tool.generate(
                 query=query,
                 documents=results,
-                history="",
             )
             llm_response = llm_response_dict.get("answer", "")
             generation_time = (time.time() - generation_start) * 1000
