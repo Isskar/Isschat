@@ -36,7 +36,7 @@ class LLMJudge:
             temperature=config.judge_temperature,
             max_tokens=config.judge_max_tokens,
             openai_api_key=api_key,
-            openai_api_base="https://openrouter.ai/api/v1",
+            openai_api_base=config.openrouter_base_url,
         )
 
     def evaluate_conversational(self, question: str, response: str, expected: str, context: str = "") -> Dict[str, Any]:

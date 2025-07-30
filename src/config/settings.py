@@ -32,16 +32,24 @@ class IsschatConfig:
 
     # Semantic understanding configuration
     use_semantic_features: bool = True
-    semantic_expansion_enabled: bool = True
     semantic_reranking_enabled: bool = True
     semantic_similarity_threshold: float = 0.7
-    query_expansion_max_variations: int = 5
     intent_classification_enabled: bool = True
+
+    # OpenRouter API configuration
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_timeout: int = 30
+
+    # Query reformulation configuration
+    force_reformulate_all_queries: bool = True
+    reformulation_timeout: int = 15  # Shorter for reformulation
+    reformulation_max_tokens: int = 150
 
     # Source filtering configuration
     source_filtering_enabled: bool = True
-    min_source_score_threshold: float = 0.4
-    min_source_relevance_threshold: float = 0.3
+    min_source_score_threshold: float = 0.3  # Réduit de 0.4 → 0.3
+    min_source_relevance_threshold: float = 0.2  # Réduit de 0.3 → 0.2
+    use_flexible_filtering: bool = True  # Enable flexible multi-criteria filtering
 
     confluence_api_key: str = ""
     confluence_space_key: str = ""
@@ -83,10 +91,6 @@ class IsschatConfig:
             search_fetch_k=int(os.getenv("SEARCH_FETCH_K", str(defaults.search_fetch_k))),
             use_semantic_features=os.getenv("USE_SEMANTIC_FEATURES", str(defaults.use_semantic_features)).lower()
             == "true",
-            semantic_expansion_enabled=os.getenv(
-                "SEMANTIC_EXPANSION_ENABLED", str(defaults.semantic_expansion_enabled)
-            ).lower()
-            == "true",
             semantic_reranking_enabled=os.getenv(
                 "SEMANTIC_RERANKING_ENABLED", str(defaults.semantic_reranking_enabled)
             ).lower()
@@ -94,13 +98,16 @@ class IsschatConfig:
             semantic_similarity_threshold=float(
                 os.getenv("SEMANTIC_SIMILARITY_THRESHOLD", str(defaults.semantic_similarity_threshold))
             ),
-            query_expansion_max_variations=int(
-                os.getenv("QUERY_EXPANSION_MAX_VARIATIONS", str(defaults.query_expansion_max_variations))
-            ),
             intent_classification_enabled=os.getenv(
                 "INTENT_CLASSIFICATION_ENABLED", str(defaults.intent_classification_enabled)
             ).lower()
             == "true",
+            force_reformulate_all_queries=os.getenv(
+                "FORCE_REFORMULATE_ALL_QUERIES", str(defaults.force_reformulate_all_queries)
+            ).lower()
+            == "true",
+            reformulation_timeout=int(os.getenv("REFORMULATION_TIMEOUT", str(defaults.reformulation_timeout))),
+            reformulation_max_tokens=int(os.getenv("REFORMULATION_MAX_TOKENS", str(defaults.reformulation_max_tokens))),
             source_filtering_enabled=os.getenv(
                 "SOURCE_FILTERING_ENABLED", str(defaults.source_filtering_enabled)
             ).lower()
@@ -111,6 +118,8 @@ class IsschatConfig:
             min_source_relevance_threshold=float(
                 os.getenv("MIN_SOURCE_RELEVANCE_THRESHOLD", str(defaults.min_source_relevance_threshold))
             ),
+            use_flexible_filtering=os.getenv("USE_FLEXIBLE_FILTERING", str(defaults.use_flexible_filtering)).lower()
+            == "true",
             confluence_api_key=secrets.get_confluence_api_key() or defaults.confluence_api_key,
             confluence_space_key=secrets.get_confluence_space_key() or defaults.confluence_space_key,
             confluence_space_name=secrets.get_confluence_space_name() or defaults.confluence_space_name,
@@ -173,10 +182,8 @@ def get_debug_info() -> dict:
             "data_dir": str(config.data_dir),
             "semantic_features": {
                 "use_semantic_features": config.use_semantic_features,
-                "semantic_expansion_enabled": config.semantic_expansion_enabled,
                 "semantic_reranking_enabled": config.semantic_reranking_enabled,
                 "semantic_similarity_threshold": config.semantic_similarity_threshold,
-                "query_expansion_max_variations": config.query_expansion_max_variations,
                 "intent_classification_enabled": config.intent_classification_enabled,
             },
         }

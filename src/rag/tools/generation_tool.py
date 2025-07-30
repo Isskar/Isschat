@@ -33,7 +33,9 @@ class GenerationTool:
         """
         try:
             # Filter documents based on relevance
+            print(f"🔍 GENERATION: Received {len(documents)} documents for query '{query}'")
             relevant_documents = self._filter_relevant_documents(query, documents)
+            print(f"📄 GENERATION: After filtering, {len(relevant_documents)} documents remain")
 
             # Prepare context from relevant documents
             context = self._prepare_context(relevant_documents)
@@ -127,7 +129,10 @@ class GenerationTool:
 
         try:
             response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30
+                f"{self.config.openrouter_base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=self.config.openrouter_timeout,
             )
             response.raise_for_status()
 
@@ -179,7 +184,7 @@ class GenerationTool:
     def _filter_relevant_documents(self, query: str, documents: List[RetrievalDocument]) -> List[RetrievalDocument]:
         """
         Filter documents based on relevance to the query.
-        Returns only documents that are truly relevant to avoid showing irrelevant sources.
+        Uses a more flexible approach to avoid missing important documents.
         """
         if not documents:
             return []
@@ -233,9 +238,6 @@ class GenerationTool:
         if is_greeting or is_generic_term:
             # For greetings and generic terms, don't show any sources
             return []
-
-        # Calculate relevance scores
-        relevant_documents = []
 
         # Extract meaningful keywords from query (excluding stop words)
         stop_words = {
@@ -294,20 +296,75 @@ class GenerationTool:
         if not query_keywords:
             return []
 
-        # Calculate relevance for each document
-        for doc in documents:
+        # More flexible filtering approach
+        relevant_documents = []
+        min_score_threshold = self.config.min_source_score_threshold
+        min_relevance_threshold = self.config.min_source_relevance_threshold
+
+        print(f"🔍 FILTERING: Keywords extracted: {query_keywords}")
+
+        for i, doc in enumerate(documents):
             relevance_score = self._calculate_document_relevance(query_keywords, doc)
 
-            # Apply thresholds from configuration
-            min_score_threshold = self.config.min_source_score_threshold
-            min_relevance_threshold = self.config.min_source_relevance_threshold
+            print(f"📄 DOC {i + 1}: score={doc.score:.3f}, relevance={relevance_score:.3f}")
 
-            # Document is relevant if it meets both criteria
-            if doc.score >= min_score_threshold and relevance_score >= min_relevance_threshold:
-                relevant_documents.append(doc)
+            # Choose filtering approach based on configuration
+            if self.config.use_flexible_filtering:
+                # Flexible multi-criteria approach: document is relevant if it meets EITHER:
+                # 1. High vector similarity (even if keyword matching is poor) - semantic relevance
+                # 2. Good vector similarity AND decent keyword relevance - traditional approach
+                # 3. Exceptional keyword relevance (even if vector similarity is lower) - exact matches
+
+                high_vector_threshold = min_score_threshold + 0.2  # e.g., 0.5 if min is 0.3
+                exceptional_relevance_threshold = min_relevance_threshold + 0.3  # e.g., 0.5 if min is 0.2
+
+                is_highly_similar = doc.score >= high_vector_threshold
+                is_traditionally_relevant = (
+                    doc.score >= min_score_threshold and relevance_score >= min_relevance_threshold
+                )
+                is_exceptionally_relevant = relevance_score >= exceptional_relevance_threshold
+
+                print(
+                    f"  Flexible thresholds: high_vector={high_vector_threshold:.3f}, "
+                    f"traditional=({min_score_threshold:.3f},{min_relevance_threshold:.3f}), "
+                    f"exceptional={exceptional_relevance_threshold:.3f}"
+                )
+
+                if is_highly_similar:
+                    relevant_documents.append(doc)
+                    print(f"  ✅ DOC {i + 1}: ACCEPTED (high vector similarity)")
+                elif is_traditionally_relevant:
+                    relevant_documents.append(doc)
+                    print(f"  ✅ DOC {i + 1}: ACCEPTED (traditional criteria)")
+                elif is_exceptionally_relevant:
+                    relevant_documents.append(doc)
+                    print(f"  ✅ DOC {i + 1}: ACCEPTED (exceptional keyword relevance)")
+                else:
+                    print(f"  ❌ DOC {i + 1}: REJECTED")
+            else:
+                # Traditional strict approach: both criteria must be met
+                print(
+                    f"  Traditional thresholds: vector>={min_score_threshold:.3f}, "
+                    f"relevance>={min_relevance_threshold:.3f}"
+                )
+
+                if doc.score >= min_score_threshold and relevance_score >= min_relevance_threshold:
+                    relevant_documents.append(doc)
+                    print(f"  ✅ DOC {i + 1}: ACCEPTED (traditional criteria)")
+                else:
+                    print(f"  ❌ DOC {i + 1}: REJECTED")
 
         # Sort by combined score (similarity + relevance)
         relevant_documents.sort(key=lambda doc: doc.score, reverse=True)
+
+        # Ensure we don't filter out all documents if we have good candidates
+        if not relevant_documents and documents:
+            # If no documents pass the flexible criteria, take the top scoring document
+            # This prevents scenarios where important information is completely filtered out
+            top_doc = max(documents, key=lambda d: d.score)
+            if top_doc.score >= (min_score_threshold - 0.1):  # Slightly more lenient
+                relevant_documents = [top_doc]
+                print(f"🔄 FALLBACK: Taking top document with score {top_doc.score:.3f}")
 
         # Log filtering results
         self.logger.debug(f"Filtered {len(documents)} documents to {len(relevant_documents)} relevant ones")
@@ -317,6 +374,7 @@ class GenerationTool:
     def _calculate_document_relevance(self, query_keywords: List[str], document: RetrievalDocument) -> float:
         """
         Calculate how relevant a document is to the query keywords.
+        Enhanced with French language support and synonym matching.
         Returns a score between 0 and 1.
         """
         if not query_keywords:
@@ -326,13 +384,29 @@ class GenerationTool:
         content = document.content.lower()
         title = document.metadata.get("title", "").lower()
 
-        # Count keyword matches
-        content_matches = sum(1 for keyword in query_keywords if keyword in content)
-        title_matches = sum(1 for keyword in query_keywords if keyword in title)
+        # Enhanced keyword matching with French variations and common synonyms
+        content_matches = 0
+        title_matches = 0
 
-        # Calculate relevance score
+        for keyword in query_keywords:
+            # Direct match
+            if keyword in content:
+                content_matches += 1
+            if keyword in title:
+                title_matches += 1
+
+            # French variations and common synonyms
+            keyword_variations = self._get_keyword_variations(keyword)
+            for variation in keyword_variations:
+                if variation in content:
+                    content_matches += 0.8  # Slightly lower weight for variations
+                if variation in title:
+                    title_matches += 0.8
+
+        # Calculate base relevance score
         # Title matches are weighted higher than content matches
-        relevance_score = (title_matches * 2 + content_matches) / (len(query_keywords) * 2)
+        max_possible_matches = len(query_keywords) * 2  # 2 for title weight
+        relevance_score = (title_matches * 2 + content_matches) / max_possible_matches
 
         # Additional boost for exact phrase matches
         query_phrase = " ".join(query_keywords)
@@ -342,4 +416,71 @@ class GenerationTool:
         if query_phrase in title:
             relevance_score += 0.3
 
+        # Boost for partial phrase matches (useful for reformulated queries)
+        if len(query_keywords) > 1:
+            for i in range(len(query_keywords) - 1):
+                partial_phrase = " ".join(query_keywords[i : i + 2])
+                if partial_phrase in content:
+                    relevance_score += 0.1
+                if partial_phrase in title:
+                    relevance_score += 0.15
+
         return min(1.0, relevance_score)
+
+    def _get_keyword_variations(self, keyword: str) -> List[str]:
+        """
+        Get variations of a keyword for better matching.
+        Handles French conjugations, plurals, and common synonyms.
+        """
+        variations = []
+
+        # Common French and English synonyms/variations
+        synonym_map = {
+            # Team/people related
+            "équipe": ["team", "groupe", "collaborateurs", "membres"],
+            "team": ["équipe", "groupe", "collaborateurs", "membres"],
+            "collaborateurs": ["équipe", "team", "membres", "personnes"],
+            "membres": ["équipe", "team", "collaborateurs", "personnes"],
+            # Project related
+            "projet": ["project", "application", "app", "système"],
+            "project": ["projet", "application", "app", "système"],
+            "application": ["app", "projet", "project", "système"],
+            # Technical terms
+            "configuration": ["config", "paramètres", "settings", "setup"],
+            "installation": ["install", "setup", "configuration"],
+            "utilisation": ["usage", "use", "emploi"],
+            "fonctionnalités": ["features", "capacités", "options"],
+            "features": ["fonctionnalités", "capacités", "options"],
+            # Common verbs and their variations
+            "utiliser": ["use", "employer", "utilise", "utilisent"],
+            "installer": ["install", "installe", "installent", "setup"],
+            "configurer": ["configure", "config", "configure", "setup"],
+        }
+
+        # Add direct synonyms
+        if keyword in synonym_map:
+            variations.extend(synonym_map[keyword])
+
+        # Add common French plural/singular variations
+        if keyword.endswith("s") and len(keyword) > 3:
+            variations.append(keyword[:-1])  # Remove 's' for singular
+        elif not keyword.endswith("s"):
+            variations.append(keyword + "s")  # Add 's' for plural
+
+        # Add common French verb conjugations
+        verb_endings = {
+            "er": ["e", "es", "ent", "ez", "ons"],  # aimer -> aime, aimes, etc.
+            "ir": ["is", "it", "issent", "issez", "issons"],  # finir -> finis, finit, etc.
+            "re": ["", "s", "ent", "ez", "ons"],  # prendre -> prend, prends, etc.
+        }
+
+        for ending, conjugations in verb_endings.items():
+            if keyword.endswith(ending):
+                root = keyword[: -len(ending)]
+                for conj in conjugations:
+                    variations.append(root + conj)
+
+        # Remove duplicates and the original keyword
+        variations = list(set(v for v in variations if v != keyword and len(v) > 2))
+
+        return variations
