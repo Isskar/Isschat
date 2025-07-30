@@ -129,7 +129,10 @@ class GenerationTool:
 
         try:
             response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=30
+                f"{self.config.openrouter_base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=self.config.openrouter_timeout,
             )
             response.raise_for_status()
 
