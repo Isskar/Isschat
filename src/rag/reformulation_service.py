@@ -109,15 +109,39 @@ class ReformulationService:
             True if query is autonomous, False if it needs reformulation
         """
         query_lower = query.lower().strip()
-        # Remove punctuation for better word matching
         import re
 
         query_normalized = re.sub(r"[^\w\s]", " ", query_lower).strip()
+        words = query_normalized.split()
 
         self.logger.debug(f"🔍 Autonomy check for: '{query}'")
         self.logger.debug(f"  Normalized: '{query_normalized}'")
+        self.logger.debug(f"  Words: {words}")
 
-        # Check for coreference indicators
+        # Check various autonomy indicators
+        if self._has_coreference_indicators(words):
+            return False
+
+        if self._has_implicit_reference_patterns(query_lower):
+            return False
+
+        if self._has_ambiguous_references(words):
+            return False
+
+        if self._has_french_question_patterns(query_lower):
+            return False
+
+        if self._has_demonstrative_references(query_lower):
+            return False
+
+        if self._should_force_reformulation():
+            return False
+
+        self.logger.debug("  ✅ Query appears autonomous")
+        return True
+
+    def _has_coreference_indicators(self, words: list) -> bool:
+        """Check for coreference indicators at the beginning of the query"""
         coreference_indicators = [
             "il",
             "elle",
@@ -136,7 +160,15 @@ class ReformulationService:
             "les",  # French definite articles (when ambiguous)
         ]
 
-        # Check for implicit references
+        if words and words[0] in coreference_indicators:
+            self.logger.debug(f"  ❌ Found coreference indicator at start: '{words[0]}'")
+            return True
+        return False
+
+    def _has_implicit_reference_patterns(self, query_lower: str) -> bool:
+        """Check for implicit reference patterns"""
+        import re
+
         implicit_indicators = [
             "comment faire",
             "how to do",
@@ -156,84 +188,79 @@ class ReformulationService:
             "why",
         ]
 
-        # Check for standalone pronouns or demonstratives at the beginning
-        words = query_normalized.split()
-        self.logger.debug(f"  Words: {words}")
-
-        if words and words[0] in coreference_indicators:
-            self.logger.debug(f"  ❌ Found coreference indicator at start: '{words[0]}'")
-            return False
-
-        # Check for implicit reference patterns
         for indicator in implicit_indicators:
             if indicator in query_lower:
-                # If the query contains "it", "that", "ça" etc. after the indicator, it needs reformulation
                 remaining_text = query_lower.split(indicator, 1)[-1] if len(query_lower.split(indicator, 1)) > 1 else ""
                 remaining_normalized = re.sub(r"[^\w\s]", " ", remaining_text).strip()
                 remaining_words = remaining_normalized.split()
                 if any(word in remaining_words for word in ["it", "that", "ça", "cela"]):
                     self.logger.debug(f"  ❌ Found implicit reference pattern: '{indicator}' with ambiguous reference")
-                    return False
+                    return True
+        return False
 
-        # Check for standalone ambiguous references
+    def _has_ambiguous_references(self, words: list) -> bool:
+        """Check for standalone ambiguous references"""
         ambiguous_words = ["it", "that", "this", "they", "them", "ça", "cela"]
         for word in ambiguous_words:
             if word in words:
                 self.logger.debug(f"  ❌ Found ambiguous word: '{word}'")
-                return False
+                return True
+        return False
 
-        # Special check for French questioning patterns that need context
+    def _has_french_question_patterns(self, query_lower: str) -> bool:
+        """Check for French questioning patterns that need context"""
         french_question_patterns = [
             "et qui",
             "et quoi",
             "et où",
             "et quand",
-            "et comment",  # "and who", "and what", etc.
+            "et comment",
             "qui l'utilise",
             "qui utilise",
             "qui fait",
-            "qui peut",  # "who uses it", "who does", etc.
+            "qui peut",
             "qui en sont",
             "qui en est",
-            "qu'en est",  # "who are (of it)", "who is (of it)", etc.
+            "qu'en est",
             "en sont",
-            "en est",  # implicit pronoun references
+            "en est",
         ]
 
         for pattern in french_question_patterns:
             if pattern in query_lower:
                 self.logger.debug(f"  ❌ Found French question pattern needing context: '{pattern}'")
-                return False
+                return True
+        return False
 
-        # Check for demonstrative pronouns that need context resolution
+    def _has_demonstrative_references(self, query_lower: str) -> bool:
+        """Check for demonstrative pronouns that need context resolution"""
         demonstrative_references = [
             "ce projet",
             "cette application",
             "ce système",
-            "cette solution",  # "this project", "this app", etc.
+            "cette solution",
             "cet outil",
             "ces outils",
             "ce document",
-            "cette documentation",  # "this tool", "these tools", etc.
+            "cette documentation",
             "ce processus",
             "cette méthode",
             "ce code",
-            "cette fonction",  # "this process", "this method", etc.
+            "cette fonction",
         ]
 
         for ref in demonstrative_references:
             if ref in query_lower:
                 self.logger.debug(f"  ❌ Found demonstrative reference needing context: '{ref}'")
-                return False
+                return True
+        return False
 
-        # Check configuration for forced reformulation
+    def _should_force_reformulation(self) -> bool:
+        """Check if configuration forces reformulation for all queries"""
         if self.config.force_reformulate_all_queries:
             self.logger.debug("  🔄 Configuration forces reformulation for all queries")
-            return False
-
-        # Query appears autonomous
-        self.logger.debug("  ✅ Query appears autonomous")
-        return True
+            return True
+        return False
 
     def _build_reformulation_prompt(self, user_query: str, context_exchanges: List[ConversationExchange]) -> str:
         """
@@ -298,15 +325,15 @@ Reformulated query:"""
             "model": self.config.llm_model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,  # Low temperature for consistent reformulation
-            "max_tokens": 150,  # Concise reformulations
+            "max_tokens": self.config.reformulation_max_tokens,
         }
 
         try:
             response = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
+                f"{self.config.openrouter_base_url}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=15,  # Shorter timeout for reformulation
+                timeout=self.config.reformulation_timeout,
             )
             response.raise_for_status()
 
@@ -337,5 +364,8 @@ Reformulated query:"""
             "config": {
                 "llm_model": self.config.llm_model,
                 "api_key_configured": bool(self.config.openrouter_api_key),
+                "base_url": self.config.openrouter_base_url,
+                "timeout": self.config.reformulation_timeout,
+                "max_tokens": self.config.reformulation_max_tokens,
             },
         }

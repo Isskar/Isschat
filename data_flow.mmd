@@ -13,7 +13,7 @@ graph TD
     ChatInterface -->|Query| SemanticPipeline[Semantic RAG Pipeline]
     
     %% Semantic Processing Pipeline
-    SemanticPipeline -->|Reformulate query| ReformulationService[Reformulation Service]
+    SemanticPipeline -->|Reformulate query| ReformulationService[Service]
     ReformulationService -->|LLM call| LLM
     LLM -->|Reformulated query| ReformulationService
     ReformulationService -->|Resolved query| SemanticRetrieval[Vector Retrieval Tool]

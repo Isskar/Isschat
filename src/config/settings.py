@@ -36,8 +36,14 @@ class IsschatConfig:
     semantic_similarity_threshold: float = 0.7
     intent_classification_enabled: bool = True
 
+    # OpenRouter API configuration
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_timeout: int = 30
+
     # Query reformulation configuration
     force_reformulate_all_queries: bool = True
+    reformulation_timeout: int = 15  # Shorter for reformulation
+    reformulation_max_tokens: int = 150
 
     # Source filtering configuration
     source_filtering_enabled: bool = True
@@ -100,6 +106,8 @@ class IsschatConfig:
                 "FORCE_REFORMULATE_ALL_QUERIES", str(defaults.force_reformulate_all_queries)
             ).lower()
             == "true",
+            reformulation_timeout=int(os.getenv("REFORMULATION_TIMEOUT", str(defaults.reformulation_timeout))),
+            reformulation_max_tokens=int(os.getenv("REFORMULATION_MAX_TOKENS", str(defaults.reformulation_max_tokens))),
             source_filtering_enabled=os.getenv(
                 "SOURCE_FILTERING_ENABLED", str(defaults.source_filtering_enabled)
             ).lower()
