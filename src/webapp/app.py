@@ -23,6 +23,7 @@ except RuntimeError:
 from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
+from src.storage.data_manager import get_data_manager
 from src.webapp.auth.azure_auth import AzureADAuth
 from src.webapp.example_prompts import EXAMPLE_PROMPTS
 
@@ -414,7 +415,6 @@ def chat_page():
                 "reuse_conversation_id", str(uuid.uuid4())
             )
             st.session_state["messages"] = []
-            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             existing_messages = data_manager.get_conversation_history(
@@ -613,8 +613,6 @@ def history_page():
 def get_real_performance_data():
     """Get real performance data from data manager"""
     try:
-        from src.storage.data_manager import get_data_manager
-
         data_manager = get_data_manager()
 
         # Get recent performance data
@@ -649,7 +647,6 @@ def dashboard_page():
 
     try:
         # Use the new PerformanceDashboard component
-        from src.storage.data_manager import get_data_manager
         from src.webapp.components.performance_dashboard import render_performance_dashboard
 
         data_manager = get_data_manager()
