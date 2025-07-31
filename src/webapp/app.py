@@ -87,7 +87,7 @@ st.markdown(
         text-align: left !important;
         width: 100% !important;
     }
-    /* Example prompt button styling to match panel buttons */
+    /* Enhanced prompt selector styling */
     div[data-testid="stExpander"] .stButton > button {
         border-radius: 8px !important;
         width: 100% !important;
@@ -98,13 +98,37 @@ st.markdown(
         background-color: transparent !important;
         border: 1px solid #e0e0e0 !important;
         margin-bottom: 4px !important;
+        transition: all 0.2s ease !important;
     }
     div[data-testid="stExpander"] .stButton > button:hover {
-        background-color: #d2d2d2 !important;
+        background-color: #f0f0f0 !important;
+        border-color: #c0c0c0 !important;
+        transform: translateY(-1px) !important;
     }
     div[data-testid="stExpander"] .stButton > button > div {
         text-align: left !important;
         width: 100% !important;
+    }
+    /* Primary button styling for prompt actions */
+    .stButton > button[data-baseweb="button"][data-kind="primary"] {
+        background-color: #0066cc !important;
+        border-color: #0066cc !important;
+    }
+    .stButton > button[data-baseweb="button"][data-kind="primary"]:hover {
+        background-color: #0052a0 !important;
+        border-color: #0052a0 !important;
+    }
+    /* Prompt card styling */
+    .prompt-card {
+        padding: 12px !important;
+        border: 1px solid #e0e0e0 !important;
+        border-radius: 8px !important;
+        margin-bottom: 12px !important;
+        background-color: #fafafa !important;
+    }
+    .prompt-card:hover {
+        border-color: #c0c0c0 !important;
+        background-color: #f5f5f5 !important;
     }
     div[data-testid="stChatMessage"] div img,
   .stChatMessage img {
@@ -478,23 +502,17 @@ def chat_page():
             # Force rerun to display feedback widget in history
             st.rerun()
 
-    # Display example prompts only on a new chat
+    # Simple prompt suggestions - only show on new chat
     if len(st.session_state.messages) <= 1:
-        with st.expander("Not sure where to start? Try these examples :", expanded=False):
-            # Function to handle prompt click
-            def handle_prompt_click(prompt_text):
-                st.session_state.clicked_prompt = prompt_text
-
-            for example in EXAMPLE_PROMPTS:
-                if st.button(
-                    example["title"],
-                    key=f"example_{example['title']}",
-                    on_click=handle_prompt_click,
-                    args=[example["prompt"]],
-                    use_container_width=True,
-                    help=example["prompt"],
-                ):
-                    pass
+        with st.expander(" Example prompts", expanded=False):
+            cols = st.columns(2)
+            for i, example in enumerate(EXAMPLE_PROMPTS):
+                col = cols[i % 2]
+                with col:
+                    if st.button(
+                        example["title"], key=f"example_{i}", help=example["prompt"], use_container_width=True
+                    ):
+                        st.session_state.clicked_prompt = example["prompt"]
 
     # Handle chat input, prioritizing clicked examples
     if "clicked_prompt" in st.session_state and st.session_state.clicked_prompt:
