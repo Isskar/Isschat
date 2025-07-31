@@ -1586,9 +1586,8 @@ class EvaluationDashboard:
 
             # Add output file
             if params["output_name"]:
-                # Use absolute path to ensure it goes to the correct directory
-                output_path = Path(__file__).parent.parent / "evaluation_results" / params["output_name"]
-                cmd.extend(["--output", str(output_path)])
+                # Just pass the filename, let main.py handle the directory
+                cmd.extend(["--output", params["output_name"]])
 
             status_text.text("Starting evaluation process...")
             progress_bar.progress(10)
