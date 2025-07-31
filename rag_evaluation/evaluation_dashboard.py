@@ -588,6 +588,30 @@ class EvaluationDashboard:
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
+    def render_version_info_content(self, version_info: Dict[str, Any]):
+        """Render version information content (without outer container)"""
+
+        # Version description
+        description = version_info.get("description")
+        if description:
+            st.markdown(f"**Description:** {description}")
+
+        # Git information
+        git_info = version_info.get("git")
+        if git_info:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown(f"**Git Branch:** `{git_info.get('branch', 'N/A')}`")
+
+            with col2:
+                st.markdown(f"**Commit:** `{git_info.get('commit_hash_short', 'N/A')}`")
+
+            st.markdown(f"**Last Commit:** {git_info.get('commit_message', 'N/A')}")
+            st.markdown(
+                f"**Author:** {git_info.get('commit_author', 'N/A')} • **Date:** {git_info.get('commit_date', 'N/A')}"
+            )
+
     def render_sidebar(self):
         """Render sidebar with file selection"""
         # File selection
@@ -639,10 +663,16 @@ class EvaluationDashboard:
 
     def render_overview_metrics(self, results: Dict[str, Dict[str, Any]]):
         """Render overview metrics for selected files"""
-        st.header("Metrics overview")
 
+        # Display version information first, if available (collapsible)
         file_name = list(results.keys())[0]
         data = results[file_name]
+        version_info = data.get("version_info")
+        if version_info:
+            with st.expander("Version Information", expanded=False):
+                self.render_version_info_content(version_info)
+
+        st.header("Metrics overview")
         self.render_single_file_metrics(data)
 
     def render_single_file_metrics(self, data: Dict[str, Any]):
@@ -1429,6 +1459,21 @@ class EvaluationDashboard:
         # CI mode toggle
         ci_mode = st.checkbox("CI Mode", value=False, help="Run in CI mode with pass/fail thresholds")
 
+        # Version information
+        st.subheader("Version Information:")
+        version_description = st.text_area(
+            "Version Description (optional):",
+            placeholder="Describe what changes this evaluation version includes compared to previous ones...",
+            help="Add a description of what this evaluation version tests or what changes were made",
+            height=100,
+        )
+
+        include_git_info = st.checkbox(
+            "Include Git Information",
+            value=True,
+            help="Automatically include current branch, commit, and author information",
+        )
+
         # Output file name
         st.subheader("Output Configuration:")
         output_name = st.text_input(
@@ -1445,6 +1490,8 @@ class EvaluationDashboard:
                     "categories": selected_categories,
                     "ci_mode": ci_mode,
                     "output_name": output_name,
+                    "version_description": version_description,
+                    "include_git_info": include_git_info,
                 }
                 st.rerun()
             else:
@@ -1463,10 +1510,17 @@ class EvaluationDashboard:
         with col1:
             st.write(f"**Categories:** {', '.join(params['categories'])}")
             st.write(f"**CI Mode:** {'Yes' if params['ci_mode'] else 'No'}")
+            st.write(f"**Include Git Info:** {'Yes' if params.get('include_git_info', True) else 'No'}")
 
         with col2:
             output_file = params["output_name"] if params["output_name"] else "Auto-generated timestamp"
             st.write(f"**Output File:** {output_file}")
+
+            version_desc = params.get("version_description", "").strip()
+            if version_desc:
+                st.write(f"**Version Description:** {version_desc[:50]}{'...' if len(version_desc) > 50 else ''}")
+            else:
+                st.write("**Version Description:** Not provided")
 
         # Progress and status
         if "evaluation_running" not in st.session_state:
@@ -1520,6 +1574,15 @@ class EvaluationDashboard:
             # Add CI mode
             if params["ci_mode"]:
                 cmd.append("--ci")
+
+            # Add version description
+            version_desc = params.get("version_description", "").strip()
+            if version_desc:
+                cmd.extend(["--version-description", version_desc])
+
+            # Add git info setting
+            if not params.get("include_git_info", True):
+                cmd.append("--no-git-info")
 
             # Add output file
             if params["output_name"]:
