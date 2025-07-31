@@ -1,37 +1,61 @@
-# Isschat - Enterprise RAG Chatbot
+# Isschat - Enterprise RAG chatbot
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Isskar/Isschat/blob/main/LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/Isskar/Isschat/actions/workflows/ci.yml/badge.svg)](https://github.com/Isskar/Isschat/actions/workflows/ci.yml)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-black.svg)](https://github.com/astral-sh/ruff)
 
-A chatbot that provides semantic search and conversational AI capabilities for Confluence knowledge bases using advanced RAG (Retrieval-Augmented Generation) technology with semantic understanding.
+A chatbot that provides semantic search and conversational AI capabilities for Confluence knowledge bases using advanced RAG (Retrieval-Augmented Generation) technology.
 
-## Key Features
+## Table of contents
 
-### Core RAG Capabilities
-- **Semantic RAG Pipeline**: Advanced semantic understanding with query reformulation
-- **Dual Pipeline Architecture**: Both standard and semantic-enhanced RAG processing
-- **Intelligent Query Processing**: Handles misleading keywords and provides contextually accurate responses
-- **Vector Retrieval**: Direct vector search with optional semantic re-ranking
-- **Semantic Re-ranking**: Re-ranks results based on semantic similarity and intent matching
+- [Features](#features)
+- [Installation](#installation)
+- [Launch](#launch)
+  - [Web Interface](#web-interface)
+  - [Command Line Interface](#command-line-interface-cli)
+  - [Evaluation System](#evaluation-system)
+- [Architecture](#architecture)
+- [Production Deployment](#production-deployment)
+  - [Azure Cloud Deployment](#azure-cloud-deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Local Development](#local-development)
+  - [Testing](#testing)
+- [License](#license)
 
-### Advanced Semantic Features  
-- **Intent Classification**: Automatically detects query intent (team_info, project_info, technical_info, feature_info)
-- **Query Reformulation**: LLM-based coreference resolution and context clarification
-- **Multilingual Support**: Optimized for French and English content with synonym handling
-- **Contextual Understanding**: Maintains document hierarchy awareness for numerical and structured queries
+## Features
 
-### Enterprise Features
-- **Azure AD Authentication**: Secure OAuth 2.0 integration with domain validation
-- **Performance Monitoring**: Real-time metrics tracking and analytics dashboard
-- **Conversation History**: Persistent chat history with search capabilities
-- **User Feedback System**: Integrated feedback collection and analysis
-- **Admin Dashboard**: System management and configuration interface
+### Core RAG capabilities
+- **Document ingestion**: Automated Confluence space crawling and content extraction
+- **Hierarchical chunking**: Structure-preserving document segmentation for optimal context retrieval
+- **Weaviate integration**: Fast vector search with cosine similarity and HNSW indexing
+- **Semantic query processing**: Query reformulation and coreference resolution using LLM
+- **Flexible data handling**: Adaptive chunking strategies and support for multiple data sources
 
-### Evaluation & Quality Assurance
-- **Comprehensive Evaluation Framework**: Multi-category testing (retrieval, generation, business value, robustness)
-- **LLM-based Automated Evaluation**: Automated scoring with confidence metrics
-- **CI/CD Integration**: Automated testing with configurable quality thresholds
-- **Performance Metrics**: Response time, accuracy, and user satisfaction tracking
+### Chatbot intelligence
+- **Persistent history**: Session-aware conversations with memory across interactions
+- **Multi-turn dialogue**: Natural conversation flow with context preservation
+- **Multilingual support**: Optimized for French and English enterprise use cases
+- **Response generation**: Coherent answers synthesized from retrieved knowledge
+
+### User interfaces
+- **Streamlit web app**: Interactive chat interface
+- **Streamlit Evaluation dashboard**: Multi-category testing (retrieval, generation, business value, robustness)
+- **Command line interface (CLI)**: Complete system management and querying capabilities
+
+### Enterprise features
+- **Azure AD authentication**: Secure access with enterprise domain validation
+- **Cloud storage integration**: Azure Blob Storage support for scalable deployments
+- **Secret management**: Azure Key Vault integration for secure credential handling
+- **Environment support**: Configurable settings for development, staging, and production
+- **Feedback integration**: User input collection for continuous model improvement
+
+### Monitoring & analytics
+- **Evaluation dashboard**: Multi-category testing (retrieval, generation, business value, robustness)
+- **Performance dashboard**: Real-time system metrics and usage analytics
+- **Admin dashboard** *(in development)*: Backend management and monitoring tools
+- **CI/CD support**: Integrated testing pipelines and automated deployment workflows
+- **Comprehensive logging**: Detailed system activity tracking and debugging support
 
 ## Installation
 
@@ -91,7 +115,7 @@ A chatbot that provides semantic search and conversational AI capabilities for C
 
 ## Launch
 
-### Web Interface
+### Web interface
 
 1. **Install dependencies**
    ```bash
@@ -103,41 +127,35 @@ A chatbot that provides semantic search and conversational AI capabilities for C
    uv run streamlit run src/webapp/app.py
    ```
 
-3. **Reconstruct the database**
+3. **Ask your question to Isschat**
 
-   Click on the button "Rebuild from Confluence"
+### Command line interface (CLI)
 
-4. **Launch the chatbot**
+Isschat provides a CLI tool for managing and querying your knowledge base:
 
-   Ask your question to the chatbot
+#### Available commands
 
-### Command Line Interface (CLI)
-
-Isschat provides a powerful CLI tool for managing and querying your knowledge base:
-
-#### Available Commands
-
-- **Status Check**: Check system components and configuration
+- **Status check**: Check system components and configuration
   ```bash
-  uv run python -m src.cli.main status [--verbose] [--component config|ingestion|rag|all]
+  uv run -m src.cli.main status [--verbose] [--component config|ingestion|rag|all]
   ```
 
-- **Data Ingestion**: Build or update the vector database from Confluence
+- **Data ingestion**: Build or update the vector database from Confluence
   ```bash
-  uv run python -m src.cli.main ingest [--source confluence] [--force-rebuild] [--verbose]
+  uv run -m src.cli.main ingest [--source confluence] [--force-rebuild] [--verbose]
   ```
 
-- **Interactive Chat**: Start a chat session without the web interface
+- **Interactive chat**: Start a chat session without the web interface
   ```bash
-  uv run python -m src.cli.main chat [--user-id cli_user]
+  uv run -m src.cli.main chat [--user-id cli_user]
   ```
 
-- **Direct Query**: Query the vector database with detailed results
+- **Direct query**: Query the vector database with detailed results
   ```bash
-  uv run python -m src.cli.main query -q "your question" [options]
+  uv run -m src.cli.main query -q "your question" [options]
   ```
 
-#### Query Command Options
+#### Query command options
 
 - `-q, --query`: Your search query (required)
 - `-k, --top-k`: Number of chunks to retrieve (default: 5)
@@ -148,38 +166,40 @@ Isschat provides a powerful CLI tool for managing and querying your knowledge ba
 - `--show-stats`: Display statistics about sources and scores
 - `--no-llm`: Skip LLM generation and only show retrieved chunks
 
-#### Example Usage
+#### Example usage
 
 ```bash
 # Check system status and configuration
-uv run python -m src.cli.main status --verbose
+uv run -m src.cli.main status --verbose
 
 # Ingest data from Confluence
-uv run python -m src.cli.main ingest --source confluence --verbose
+uv run -m src.cli.main ingest --source confluence --verbose
 
 # Start interactive chat session
-uv run python -m src.cli.main chat
+uv run -m src.cli.main chat
 
 # Query with detailed information
-uv run python -m src.cli.main query -q "How to configure authentication?" -k 3 --show-metadata --show-stats
+uv run -m src.cli.main query -q "How to configure authentication?" -k 3 --show-metadata --show-stats
 
 # Query without LLM generation (retrieval only)
-uv run python -m src.cli.main query -q "project management" --no-llm --show-stats
+uv run -m src.cli.main query -q "project management" --no-llm --show-stats
 ```
 
-### Evaluation System
+### Evaluation system
 
 Run comprehensive RAG evaluation:
 
 ```bash
+# View evaluation dashboard
+uv run streamlit run rag_evaluation/evaluation_dashboard.py
+
 # Run all evaluation categories
-uv run python rag_evaluation/run_evaluation.py
+uv run rag_evaluation/run_evaluation.py
 
 # Run specific evaluation category
-uv run python rag_evaluation/run_evaluation.py --category retrieval
+uv run rag_evaluation/run_evaluation.py --category retrieval
 
-# View evaluation dashboard
-uv run python rag_evaluation/evaluation_dashboard.py
+
 ```
    
 
@@ -239,47 +259,9 @@ Isschat/
 └── README.md                 # This documentation
 ```
 
-### Key Architectural Components
+## Production deployment
 
-- **Modular Design**: Clear separation of concerns with pluggable components
-- **Factory Patterns**: Flexible component selection (storage, vector DB, etc.)
-- **Abstract Interfaces**: Clean abstractions for easy extension and testing
-- **Dual Storage Support**: Local files or Azure Blob Storage
-- **Multiple Vector Databases**: Weaviate cloud
-- **Comprehensive Evaluation**: Built-in testing framework with multiple evaluators
-- **Enterprise Security**: Azure AD integration with domain validation
-- **CLI and Web Interfaces**: Both command-line and web-based interactions
-
-## Advanced Features
-
-### Semantic Intelligence
-- **Intent Classification**: Automatically detects and routes queries based on intent (team_info, project_info, technical_info, feature_info)
-- **Query Reformulation**: LLM-based coreference resolution using conversation context
-- **Context-Aware Retrieval**: Maintains document hierarchy awareness for complex queries
-- **Multilingual Processing**: Optimized for French and English content with cross-language understanding
-
-### Enterprise Operations
-- **Conversation Analytics**: Advanced user interaction tracking and analysis
-- **Performance Monitoring**: Real-time response time, accuracy metrics, and system health
-- **Feedback Loop**: Integrated user feedback collection with sentiment analysis
-- **Query History**: Persistent search history with conversation context
-- **Admin Dashboard**: System management with performance insights and user analytics
-
-### Quality Assurance
-- **Comprehensive RAG Evaluation**: Multi-category testing framework for retrieval, generation, business value, and robustness
-- **LLM-based Evaluation**: Automated quality assessment using advanced language models
-- **CI/CD Integration**: Automated testing pipeline with configurable quality thresholds
-- **Performance Benchmarking**: Continuous performance monitoring and improvement tracking
-
-### Technical Capabilities
-- **Flexible Vector Storage**: Weaviate cloud
-- **Adaptive Chunking**: Content-type aware document processing with hierarchical chunking
-- **Semantic Re-ranking**: Advanced result re-ranking based on semantic similarity and intent matching
-- **Automated Data Pipeline**: Streamlined document processing and embedding generation with batch optimization
-
-## Production Deployment
-
-### Azure Cloud Deployment
+### Azure cloud deployment
 
 For production deployment with Azure integration:
 
@@ -291,7 +273,6 @@ AZURE_BLOB_CONTAINER_NAME=your_container_name
 
 # Azure Key Vault for Secret Management
 KEY_VAULT_URL=https://your-keyvault.vault.azure.net/
-ENVIRONMENT=production
 
 # Azure AD Authentication (for web app)
 AZURE_CLIENT_ID=your_azure_app_client_id
@@ -299,7 +280,7 @@ AZURE_CLIENT_SECRET=your_azure_app_client_secret
 AZURE_TENANT_ID=your_azure_tenant_id
 ```
 
-### Docker Deployment
+### Docker deployment
 
 Build and run with Docker:
 
@@ -323,13 +304,12 @@ docker run -d \
   isschat
 ```
 
-### Local Development
+### Local development
 
 For local development, leave Azure settings disabled:
 
 ```bash
 USE_AZURE_STORAGE=false
-ENVIRONMENT=development
 ```
 
 ### Testing

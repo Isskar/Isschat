@@ -127,9 +127,7 @@ class SemanticRAGPipeline:
                 self.logger.info("🤖 Step 3: Generating response")
 
             # Use reformulated query for generation to ensure consistent filtering
-            generation_result = self.generation_tool.generate(
-                query=reformulated_query, documents=search_results, history=""
-            )
+            generation_result = self.generation_tool.generate(query=reformulated_query, documents=search_results)
 
             answer = generation_result["answer"]
             sources = generation_result["sources"]

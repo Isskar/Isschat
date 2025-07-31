@@ -9,9 +9,9 @@ import traceback
 from datetime import datetime
 import uuid
 from typing import Optional
+import random
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
-
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -23,8 +23,37 @@ except RuntimeError:
 from src.rag.semantic_pipeline import SemanticRAGPipelineFactory
 from src.webapp.components.features_manager import FeaturesManager
 from src.webapp.components.history_manager import get_history_manager
+from src.storage.data_manager import get_data_manager
 from src.webapp.auth.azure_auth import AzureADAuth
 from src.webapp.example_prompts import EXAMPLE_PROMPTS
+
+
+def get_random_loading_message():
+    """Get a random loading message to show variety"""
+    messages = [
+        "Analysis in progress...",
+        "Searching documentation...",
+        "Processing your request...",
+        "Analyzing your question...",
+        "Searching for relevant information...",
+        "Consulting knowledge base...",
+        "Formulating response...",
+        "Researching your topic...",
+        "Examining documentation...",
+        "Finding the best answer...",
+        "Exploring available resources...",
+        "Analyzing your request...",
+        "Collecting information...",
+        "Compiling data...",
+        "Processing your request...",
+        "Preparing response...",
+        "Consulting sources...",
+        "Thinking in progress...",
+        "Generating response...",
+        "Finalizing analysis...",
+    ]
+    return random.choice(messages)
+
 
 # images paths
 IMAGES = {
@@ -329,7 +358,10 @@ def chat_page():
 
     # Helper to format chat history for prompt
     def format_chat_history(conversation_id: str):
-        from src.storage.data_manager import get_data_manager
+        # Quick check: if this is the first question in session, skip database query
+        if len(st.session_state.get("messages", [])) <= 1:
+            print("📚 HISTORY: First question - skipping database query")
+            return ""
 
         data_manager = get_data_manager()
         # Fetch entries for the current conversation_id (no artificial limit)
@@ -383,7 +415,6 @@ def chat_page():
                 "reuse_conversation_id", str(uuid.uuid4())
             )
             st.session_state["messages"] = []
-            from src.storage.data_manager import get_data_manager
 
             data_manager = get_data_manager()
             existing_messages = data_manager.get_conversation_history(
@@ -415,8 +446,11 @@ def chat_page():
         # Note: History is now used for query reformulation within the pipeline, not for generation
         chat_history = format_chat_history(st.session_state["current_conversation_id"])
 
+        # Show loading message immediately with variety
+        loading_message = get_random_loading_message()
+
         # Process the question with all features
-        with st.spinner("Analysis in progress..."):
+        with st.spinner(loading_message):
             result, sources = process_question_with_model(
                 model, features, prompt, chat_history, st.session_state["current_conversation_id"], start_time
             )
@@ -478,12 +512,15 @@ def chat_page():
         )
         st.chat_message("user", avatar=IMAGES["user"]).write(prompt)
 
-        # Prepare chat history for context from the data manager
-        # Note: History is now used for query reformulation within the pipeline, not for generation
-        chat_history = format_chat_history(st.session_state["current_conversation_id"])
+        # Show loading message immediately with variety
+        loading_message = get_random_loading_message()
 
-        # Process the question with all features
-        with st.spinner("Analysis in progress..."):
+        # Process the question with all features - spinner covers everything
+        with st.spinner(loading_message):
+            # Prepare chat history for context from the data manager
+            # Note: History is now used for query reformulation within the pipeline, not for generation
+            chat_history = format_chat_history(st.session_state["current_conversation_id"])
+
             result, sources = process_question_with_model(
                 model, features, prompt, chat_history, st.session_state["current_conversation_id"], start_time
             )
@@ -576,8 +613,6 @@ def history_page():
 def get_real_performance_data():
     """Get real performance data from data manager"""
     try:
-        from src.storage.data_manager import get_data_manager
-
         data_manager = get_data_manager()
 
         # Get recent performance data
@@ -612,7 +647,6 @@ def dashboard_page():
 
     try:
         # Use the new PerformanceDashboard component
-        from src.storage.data_manager import get_data_manager
         from src.webapp.components.performance_dashboard import render_performance_dashboard
 
         data_manager = get_data_manager()

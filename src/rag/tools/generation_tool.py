@@ -16,16 +16,13 @@ class GenerationTool:
         if not self.config.openrouter_api_key:
             raise ValueError("OPENROUTER_API_KEY required for generation")
 
-    def generate(
-        self, query: str, documents: List[RetrievalDocument], history: str = "", numerical_context: Any = None
-    ) -> Dict[str, Any]:
+    def generate(self, query: str, documents: List[RetrievalDocument], numerical_context: Any = None) -> Dict[str, Any]:
         """
         Generate response from query and retrieved documents
 
         Args:
             query: User query
             documents: Retrieved documents with scores
-            history: Conversation history
             numerical_context: Optional numerical query processing result
 
         Returns:
@@ -41,7 +38,7 @@ class GenerationTool:
             context = self._prepare_context(relevant_documents)
 
             avg_score = sum(doc.score for doc in documents) / len(documents) if documents else 0.0
-            prompt = self._build_prompt(query, context, history, avg_score, numerical_context)
+            prompt = self._build_prompt(query, context, avg_score, numerical_context)
 
             llm_response = self._call_openrouter(prompt)
 
@@ -77,18 +74,14 @@ class GenerationTool:
         context_parts = [doc.to_context_section(max_content_per_doc) for doc in documents]
         return "\n\n".join(context_parts)
 
-    def _build_prompt(
-        self, query: str, context: str, history: str = "", avg_score: float = 0.0, numerical_context: Any = None
-    ) -> str:
+    def _build_prompt(self, query: str, context: str, avg_score: float = 0.0, numerical_context: Any = None) -> str:
         """Build prompt based on context quality"""
-        history_section = f"{history}\n" if history.strip() else ""
-
         # Add numerical context if available
         if numerical_context:
             numerical_info = self._format_numerical_context(numerical_context)
             context = f"{context}\n\n{numerical_info}"
 
-        return PromptTemplates.get_default_template().format(context=context, history=history_section, query=query)
+        return PromptTemplates.get_default_template().format(context=context, query=query)
 
     def _format_numerical_context(self, numerical_context: Any) -> str:
         """Format numerical context for inclusion in prompt"""

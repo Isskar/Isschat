@@ -16,14 +16,17 @@ class LLMJudge:
         """Initialize LLM judge with configuration"""
         self.config = config
 
-        # Get API key from config
+        # Get API key and base URL from main Isschat config
         try:
             isschat_config = get_config()
             api_key = convert_to_secret_str(isschat_config.openrouter_api_key)
+            base_url = isschat_config.openrouter_base_url
             if not api_key:
                 raise ValueError("OPENROUTER_API_KEY not found in configuration")
+            if not base_url:
+                raise ValueError("OPENROUTER_BASE_URL not found in configuration")
         except Exception as e:
-            raise ValueError(f"Failed to get API key: {e}")
+            raise ValueError(f"Failed to get API configuration: {e}")
 
         # Configure logging to suppress httpx INFO logs
         import logging
@@ -36,7 +39,7 @@ class LLMJudge:
             temperature=config.judge_temperature,
             max_tokens=config.judge_max_tokens,
             openai_api_key=api_key,
-            openai_api_base=config.openrouter_base_url,
+            openai_api_base=base_url,
         )
 
     def evaluate_conversational(self, question: str, response: str, expected: str, context: str = "") -> Dict[str, Any]:
