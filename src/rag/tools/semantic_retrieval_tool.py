@@ -10,13 +10,12 @@ from ...config import get_config
 from ...embeddings import get_embedding_service
 from ...vectordb import VectorDBFactory
 from ...core.documents import RetrievalDocument
-from ..query_processor import QueryProcessor, QueryProcessingResult
 
 
 class SemanticRetrievalTool:
     """
-    Enhanced retrieval tool with semantic understanding capabilities.
-    Handles misleading keywords through query expansion and semantic re-ranking.
+    Modernized vector retrieval tool that works with reformulated queries.
+    Provides optional semantic re-ranking for improved relevance.
     """
 
     def __init__(self):
@@ -26,7 +25,6 @@ class SemanticRetrievalTool:
         # Centralized services - lazy loading
         self._embedding_service = None
         self._vector_db = None
-        self._query_processor = None
         self._initialized = False
 
     def _initialize(self):
@@ -38,10 +36,9 @@ class SemanticRetrievalTool:
             # Initialize services
             self._embedding_service = get_embedding_service()
             self._vector_db = VectorDBFactory.create_from_config()
-            self._query_processor = QueryProcessor()
 
             self._initialized = True
-            self.logger.debug("Semantic retrieval tool initialized")
+            self.logger.debug("Vector retrieval tool initialized")
 
         except Exception as e:
             raise RuntimeError(f"Failed to initialize semantic retrieval tool: {e}")
@@ -51,163 +48,99 @@ class SemanticRetrievalTool:
         query: str,
         k: Optional[int] = None,
         filter_conditions: Optional[Dict[str, Any]] = None,
-        use_semantic_expansion: bool = True,
         use_semantic_reranking: bool = True,
     ) -> List[RetrievalDocument]:
         """
-        Retrieve relevant documents with semantic understanding.
+        Retrieve relevant documents using vector similarity.
 
         Args:
             query: User query
             k: Number of results to return
             filter_conditions: Filter conditions
-            use_semantic_expansion: Whether to use query expansion
             use_semantic_reranking: Whether to use semantic re-ranking
 
         Returns:
-            List of semantically relevant documents
+            List of relevant documents
         """
         self._initialize()
 
         try:
-            # Process query for semantic understanding
-            if use_semantic_expansion:
-                query_result = self._query_processor.process_query(query)
-                self.logger.debug(
-                    f"Query processed: intent={query_result.intent}, variations={len(query_result.expanded_queries)}"
-                )
-            else:
-                query_result = QueryProcessingResult(
-                    original_query=query,
-                    expanded_queries=[query],
-                    intent="general",
-                    keywords=query.split(),
-                    semantic_variations=[],
-                    confidence=0.5,
-                )
+            # Debug output to verify what query is received
+            print(f"🔍 RETRIEVAL TOOL: Received query '{query}'")
 
-            # Retrieve documents using multi-query approach
-            all_results = self._multi_query_retrieval(query_result, filter_conditions)
+            all_results = self._direct_vector_retrieval(query, filter_conditions)
 
-            # Apply semantic re-ranking if enabled
             if use_semantic_reranking and len(all_results) > 1:
-                all_results = self._semantic_rerank(query_result, all_results)
+                all_results = self._semantic_rerank_simple(query, all_results)
 
-            # Determine number of results to return
             return_k = k if k is not None else self.config.search_k
             final_results = all_results[:return_k]
 
-            self.logger.debug(f"Semantic retrieval: {len(final_results)} results for '{query[:50]}...'")
+            self.logger.debug(f"Vector retrieval: {len(final_results)} results for '{query[:50]}...'")
             return final_results
 
         except Exception as e:
-            self.logger.error(f"Semantic retrieval failed: {e}")
+            self.logger.error(f"Vector retrieval failed: {e}")
             # Fallback to basic retrieval
             return self._basic_retrieval(query, k, filter_conditions)
 
-    def _multi_query_retrieval(
-        self, query_result: QueryProcessingResult, filter_conditions: Optional[Dict[str, Any]] = None
+    def _direct_vector_retrieval(
+        self, query: str, filter_conditions: Optional[Dict[str, Any]] = None
     ) -> List[RetrievalDocument]:
         """
-        Perform retrieval using multiple query variations and merge results.
+        Perform direct vector retrieval.
         """
-        all_candidates = []
-        seen_content = set()
+        try:
+            query_embedding = self._embedding_service.encode_query(query)
 
-        # Weight queries based on their origin
-        query_weights = {
-            query_result.original_query: 1.0,  # Original query has highest weight
-        }
+            search_results = self._vector_db.search(
+                query_embedding=query_embedding, k=self.config.search_fetch_k, filter_conditions=filter_conditions
+            )
 
-        # Lower weights for expanded queries
-        for i, expanded_query in enumerate(query_result.expanded_queries[1:], 1):
-            query_weights[expanded_query] = max(0.3, 1.0 - (i * 0.1))
-
-        # Retrieve for each query variation
-        for query_text in query_result.expanded_queries:
-            try:
-                # Generate embedding for this query variation
-                query_embedding = self._embedding_service.encode_query(query_text)
-
-                # Search in vector database
-                search_results = self._vector_db.search(
-                    query_embedding=query_embedding, k=self.config.search_fetch_k, filter_conditions=filter_conditions
+            retrieval_docs = []
+            for result in search_results:
+                retrieval_doc = RetrievalDocument(
+                    content=result.document.content,
+                    metadata=result.document.metadata or {},
+                    score=result.score,
                 )
+                retrieval_docs.append(retrieval_doc)
 
-                # Convert to retrieval documents with weighted scores
-                query_weight = query_weights.get(query_text, 0.5)
-                for result in search_results:
-                    # Avoid duplicates based on content
-                    content_key = result.document.content[:200]  # First 200 chars as key
-                    if content_key not in seen_content:
-                        seen_content.add(content_key)
+            retrieval_docs.sort(key=lambda x: x.score, reverse=True)
 
-                        # Adjust score based on query weight
-                        weighted_score = result.score * query_weight
+            self.logger.debug(f"Vector retrieval: {len(retrieval_docs)} documents found")
+            return retrieval_docs
 
-                        retrieval_doc = RetrievalDocument(
-                            content=result.document.content,
-                            metadata=result.document.metadata or {},
-                            score=weighted_score,
-                        )
+        except Exception as e:
+            self.logger.error(f"Vector retrieval failed: {e}")
+            return []
 
-                        # Add query information to metadata
-                        retrieval_doc.metadata["matched_query"] = query_text
-                        retrieval_doc.metadata["query_weight"] = query_weight
-                        retrieval_doc.metadata["original_score"] = result.score
-
-                        all_candidates.append(retrieval_doc)
-
-            except Exception as e:
-                self.logger.warning(f"Failed to retrieve for query '{query_text}': {e}")
-                continue
-
-        # Sort by weighted score
-        all_candidates.sort(key=lambda x: x.score, reverse=True)
-
-        # Return top candidates (more than final k to allow for re-ranking)
-        max_candidates = min(len(all_candidates), self.config.search_fetch_k * 2)
-        return all_candidates[:max_candidates]
-
-    def _semantic_rerank(
-        self, query_result: QueryProcessingResult, candidates: List[RetrievalDocument]
-    ) -> List[RetrievalDocument]:
+    def _semantic_rerank_simple(self, query: str, candidates: List[RetrievalDocument]) -> List[RetrievalDocument]:
         """
-        Re-rank candidates using semantic similarity and intent matching.
+        Semantic re-ranking based on content similarity with the query.
         """
         if not candidates:
             return candidates
 
         try:
-            # Generate embedding for original query
-            original_query_embedding = self._embedding_service.encode_single(query_result.original_query)
+            query_embedding = self._embedding_service.encode_single(query)
 
-            # Calculate semantic scores for each candidate
             for candidate in candidates:
-                # Semantic similarity with original query
                 content_embedding = self._embedding_service.encode_single(candidate.content)
-                semantic_score = self._embedding_service.similarity(original_query_embedding, content_embedding)
+                semantic_score = self._embedding_service.similarity(query_embedding, content_embedding)
 
-                # Intent matching bonus
-                intent_bonus = self._calculate_intent_bonus(query_result.intent, candidate)
+                query_keywords = [word.lower() for word in query.split() if len(word) > 2]
+                content_lower = candidate.content.lower()
+                keyword_matches = sum(1 for keyword in query_keywords if keyword in content_lower)
+                keyword_bonus = min(0.3, keyword_matches / len(query_keywords)) if query_keywords else 0
 
-                # Keyword matching bonus
-                keyword_bonus = self._calculate_keyword_bonus(query_result.keywords, candidate)
+                combined_score = 0.7 * candidate.score + 0.2 * semantic_score + 0.1 * keyword_bonus
 
-                # Combine scores
-                # 60% original score, 25% semantic similarity, 10% intent, 5% keywords
-                combined_score = (
-                    0.6 * candidate.score + 0.25 * semantic_score + 0.1 * intent_bonus + 0.05 * keyword_bonus
-                )
-
-                # Update candidate score and add debugging info
                 candidate.score = combined_score
                 candidate.metadata["semantic_score"] = semantic_score
-                candidate.metadata["intent_bonus"] = intent_bonus
                 candidate.metadata["keyword_bonus"] = keyword_bonus
                 candidate.metadata["combined_score"] = combined_score
 
-            # Sort by combined score
             candidates.sort(key=lambda x: x.score, reverse=True)
 
             self.logger.debug(f"Semantic re-ranking applied to {len(candidates)} candidates")
@@ -216,46 +149,6 @@ class SemanticRetrievalTool:
         except Exception as e:
             self.logger.error(f"Semantic re-ranking failed: {e}")
             return candidates
-
-    def _calculate_intent_bonus(self, intent: str, candidate: RetrievalDocument) -> float:
-        """Calculate bonus score based on intent matching"""
-        content_lower = candidate.content.lower()
-
-        intent_keywords = {
-            "team_info": [
-                "équipe",
-                "team",
-                "collaborateurs",
-                "membres",
-                "vincent",
-                "nicolas",
-                "emin",
-                "fraillon",
-                "lambropoulos",
-                "calyaka",
-                "composition",
-                "responsabilités",
-            ],
-            "project_info": ["projet", "isschat", "application", "description", "objectif", "but"],
-            "technical_info": ["configuration", "installation", "utilisation", "problème", "erreur"],
-            "feature_info": ["fonctionnalités", "features", "capacités", "options", "paramètres"],
-        }
-
-        if intent in intent_keywords:
-            keywords = intent_keywords[intent]
-            matches = sum(1 for keyword in keywords if keyword in content_lower)
-            return min(1.0, matches / len(keywords))
-
-        return 0.0
-
-    def _calculate_keyword_bonus(self, keywords: List[str], candidate: RetrievalDocument) -> float:
-        """Calculate bonus score based on keyword matching"""
-        if not keywords:
-            return 0.0
-
-        content_lower = candidate.content.lower()
-        matches = sum(1 for keyword in keywords if keyword in content_lower)
-        return min(1.0, matches / len(keywords))
 
     def _basic_retrieval(
         self, query: str, k: Optional[int] = None, filter_conditions: Optional[Dict[str, Any]] = None
@@ -299,7 +192,7 @@ class SemanticRetrievalTool:
             embedding_info = self._embedding_service.get_info()
 
             return {
-                "type": "semantic_retrieval_tool",
+                "type": "vector_retrieval_tool",
                 "ready": self.is_ready(),
                 "config": {
                     "search_k": self.config.search_k,
@@ -310,56 +203,12 @@ class SemanticRetrievalTool:
                 "vector_db": db_info,
                 "embedding_service": embedding_info,
                 "features": {
-                    "semantic_expansion": True,
+                    "direct_vector_retrieval": True,
                     "semantic_reranking": True,
-                    "intent_classification": True,
-                    "multi_query_retrieval": True,
+                    "query_reformulation_compatible": True,
+                    "french_language_support": True,
                 },
             }
 
         except Exception as e:
-            return {"type": "semantic_retrieval_tool", "ready": False, "error": str(e)}
-
-    def test_semantic_retrieval(self, test_query: str = "qui sont les collaborateurs sur Isschat") -> Dict[str, Any]:
-        """Test semantic retrieval with the specific problematic query"""
-        try:
-            self._initialize()
-
-            if not self.is_ready():
-                return {"success": False, "error": "Vector DB empty or not accessible"}
-
-            # Test with semantic features enabled
-            semantic_results = self.retrieve(test_query, k=5, use_semantic_expansion=True, use_semantic_reranking=True)
-
-            # Test with semantic features disabled (basic retrieval)
-            basic_results = self.retrieve(test_query, k=5, use_semantic_expansion=False, use_semantic_reranking=False)
-
-            return {
-                "success": True,
-                "query": test_query,
-                "semantic_results": {
-                    "count": len(semantic_results),
-                    "scores": [r.score for r in semantic_results],
-                    "sample_content": semantic_results[0].content[:200] + "..." if semantic_results else None,
-                    "matched_queries": [r.metadata.get("matched_query") for r in semantic_results[:3]],
-                },
-                "basic_results": {
-                    "count": len(basic_results),
-                    "scores": [r.score for r in basic_results],
-                    "sample_content": basic_results[0].content[:200] + "..." if basic_results else None,
-                },
-                "improvement": {
-                    "score_improvement": (
-                        (semantic_results[0].score - basic_results[0].score)
-                        if semantic_results and basic_results
-                        else 0
-                    ),
-                    "semantic_features_help": (
-                        len(semantic_results) > 0
-                        and (not basic_results or semantic_results[0].score > basic_results[0].score)
-                    ),
-                },
-            }
-
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {"type": "vector_retrieval_tool", "ready": False, "error": str(e)}

@@ -33,12 +33,6 @@ de documents Confluence.
 -----
 {context}
 -----
-=== CONTEXTE DE LA CONVERSATION ===
-Historique des échanges précédents dans cette conversation :
-(Utilise cet historique pour maintenir la cohérence et éviter les répétitions)
------
-{history}
------
 
 === STYLE ET TON ===
 - Professionnel mais accessible, comme un collègue expérimenté

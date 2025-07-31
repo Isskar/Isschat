@@ -13,8 +13,10 @@ graph TD
     ChatInterface -->|Query| SemanticPipeline[Semantic RAG Pipeline]
     
     %% Semantic Processing Pipeline
-    SemanticPipeline -->|Analyze query| QueryProcessor[Query Processor]
-    QueryProcessor -->|Intent & expansion| SemanticRetrieval[Semantic Retrieval Tool]
+    SemanticPipeline -->|Reformulate query| ReformulationService[Service]
+    ReformulationService -->|LLM call| LLM
+    LLM -->|Reformulated query| ReformulationService
+    ReformulationService -->|Resolved query| SemanticRetrieval[Vector Retrieval Tool]
     SemanticRetrieval -->|Vector search| WeaviateDB[(Weaviate Vector DB<br>Collection: isschat_docs)]
     WeaviateDB -->|Relevant documents| SemanticRetrieval
     SemanticRetrieval -->|Ranked results| GenerationTool[Generation Tool]
@@ -74,7 +76,7 @@ graph TD
     
     subgraph "RAG Processing Engine"
         SemanticPipeline
-        QueryProcessor
+        ReformulationService
         SemanticRetrieval
         GenerationTool
         LLM
@@ -121,7 +123,7 @@ graph TD
     
     class User,WebApp,CLI,ChatInterface,AdminInterface,InteractiveCLI interface
     class AzureAuth,KeyVault auth
-    class SemanticPipeline,QueryProcessor,SemanticRetrieval,GenerationTool,LLM processing
+    class SemanticPipeline,ReformulationService,SemanticRetrieval,GenerationTool,LLM processing
     class WeaviateDB,DataManager,StorageSystem,LocalStorage,AzureStorage storage
     class FeaturesManager,HistoryManager,PerformanceDashboard components
     class IngestionPipeline,ConfluenceConnector,ConfluenceAPI,DocumentProcessor,DocumentChunker,EmbeddingService ingestion

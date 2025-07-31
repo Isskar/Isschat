@@ -116,7 +116,7 @@ class ConversationHistoryManager:
 
         col1, col2 = st.columns([3, 1])
         with col1:
-            show_details = st.checkbox("Show full details", value=False, key="show_details_history_list")
+            show_details = st.checkbox("Show full conversation", value=False, key="show_details_history_list")
         with col2:
             export_btn = st.button("Export CSV", key="export_csv_history_list")
 
@@ -138,13 +138,10 @@ class ConversationHistoryManager:
         for i, (conversation_id, conv_entries) in enumerate(sorted_conversation_groups):
             first_entry = conv_entries[0]
             num_messages = len(conv_entries)
-            total_response_time = sum(e.get("response_time_ms", 0) for e in conv_entries)
-
             with st.expander(
                 f"Conversation with {num_messages} messages "
                 f"({self._format_timestamp(first_entry['timestamp'])}) - "
-                f"{first_entry.get('user_id', 'Anonymous')} - "
-                f"{total_response_time:.0f}ms",
+                f"{first_entry.get('user_id', 'Anonymous')} ",
                 expanded=False,
             ):
                 for entry in conv_entries:
@@ -158,19 +155,9 @@ class ConversationHistoryManager:
                         preview = entry["answer"][:200] + "..." if len(entry["answer"]) > 200 else entry["answer"]
                         st.write(preview)
 
-                    col1, col2, col3, col4 = st.columns(4)
+                    col1 = st.columns(1)[0]
                     with col1:
-                        st.metric("Response Length", f"{entry.get('answer_length', 0)} chars")
-                    with col2:
-                        st.metric("Sources", entry.get("sources_count", 0))
-                    with col3:
                         st.metric("Response Time", f"{entry.get('response_time_ms', 0):.0f}ms")
-                    with col4:
-                        feedback = entry.get("feedback")
-                        if feedback:
-                            st.metric("Rating", f"{feedback.get('rating', 'N/A')}/5")
-                        else:
-                            st.metric("Rating", "Not rated")
 
                     if show_details and entry.get("sources"):
                         st.markdown("**Sources used:**")
@@ -281,15 +268,9 @@ class ConversationHistoryManager:
                     )
                     st.markdown(highlighted_answer, unsafe_allow_html=True)
 
-                    col1, col2, col3 = st.columns(3)
+                    col1 = st.columns(1)[0]
                     with col1:
                         st.write(f"**Response Time:** {conv.get('response_time_ms', 0):.0f}ms")
-                    with col2:
-                        st.write(f"**Sources:** {conv.get('sources_count', 0)}")
-                    with col3:
-                        feedback = conv.get("feedback")
-                        rating = feedback.get("rating", "N/A") if feedback else "Not rated"
-                        st.write(f"**Rating:** {rating}")
 
                     if st.button("Reuse", key=f"search_reuse_{i}"):
                         st.session_state["reuse_question"] = conv["question"]

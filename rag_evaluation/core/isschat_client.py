@@ -35,12 +35,15 @@ class IsschatClient:
     def query(self, question: str, context: Optional[str] = None) -> Tuple[str, float, List[Dict[str, str]]]:
         start_time = time.time()
         try:
-            # Use provided context or build contextual question
-            contextual_question = question
+            # Format history for reformulation service if context provided
+            history = ""
             if context:
-                contextual_question = f"Contexte de conversation:\n{context}\n\nQuestion actuelle: {question}"
+                history = self._format_context_as_history(context)
+            elif self.conversation_memory and self.conversation_history:
+                history = self._format_conversation_history()
 
-            response, sources = self.rag_pipeline.process_query(contextual_question, verbose=False)
+            # Use new API signature with history parameter
+            response, sources = self.rag_pipeline.process_query(query=question, history=history, verbose=False)
             response_time = time.time() - start_time
 
             # Store in conversation history if memory is enabled
@@ -68,6 +71,30 @@ class IsschatClient:
         for title, url in markdown_matches:
             sources.append({"title": title, "url": url})
         return sources
+
+    def _format_context_as_history(self, context: str) -> str:
+        """Format evaluation context as conversation history for reformulation service"""
+        if not context or not context.strip():
+            return ""
+
+        # If context already looks like formatted history, return as is
+        if "User:" in context and "Assistant:" in context:
+            return context
+
+        # Otherwise, treat as single assistant message
+        return f"Assistant: {context.strip()}"
+
+    def _format_conversation_history(self) -> str:
+        """Format stored conversation history for reformulation service"""
+        if not self.conversation_history:
+            return ""
+
+        history_lines = []
+        for exchange in self.conversation_history:
+            history_lines.append(f"User: {exchange['question']}")
+            history_lines.append(f"Assistant: {exchange['response']}")
+
+        return "\n".join(history_lines)
 
     def health_check(self) -> bool:
         """Check if Isschat is responding properly"""

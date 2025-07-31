@@ -120,31 +120,29 @@ def _check_rag_status(verbose: bool) -> Dict[str, Any]:
     try:
         pipeline = SemanticRAGPipelineFactory.create_semantic_pipeline()
 
-        # Test du pipeline
-        test_results = pipeline.check_pipeline()
-
-        # Detailed status
+        # Get pipeline status (more efficient than running test queries)
         status_info = pipeline.get_status()
+        pipeline_ready = pipeline.is_ready()
 
         checks = {
-            "Pipeline ready": test_results.get("success", False),
-            "Retrieval tool": status_info.get("retrieval_tool", {}).get("ready", False),
+            "Pipeline ready": pipeline_ready,
+            "Retrieval tool": status_info.get("semantic_retrieval_tool", {}).get("ready", False),
             "Generation tool": status_info.get("generation_tool", {}).get("ready", False),
         }
-
-        success = test_results.get("success", False)
 
         details = {}
         if verbose:
             details = {
-                "pipeline_ready": status_info.get("ready", False),
-                "test_query": test_results.get("test_query", ""),
-                "response_time_ms": test_results.get("response_time_ms", 0),
-                "vector_db_count": status_info.get("retrieval_tool", {}).get("vector_db", {}).get("points_count", 0),
-                "error": test_results.get("error"),
+                "pipeline_ready": pipeline_ready,
+                "semantic_features_enabled": status_info.get("semantic_features_enabled", False),
+                "vector_db_count": status_info.get("semantic_retrieval_tool", {})
+                .get("vector_db", {})
+                .get("points_count", 0),
+                "reformulation_service": "available" if pipeline.reformulation_service.is_ready() else "not configured",
+                "capabilities": list(status_info.get("capabilities", {}).keys()),
             }
 
-        return {"success": success, "checks": checks, "details": details}
+        return {"success": pipeline_ready, "checks": checks, "details": details}
 
     except Exception as e:
         return {"success": False, "error": str(e), "checks": {"Pipeline RAG": False}}

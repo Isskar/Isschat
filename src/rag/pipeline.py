@@ -56,7 +56,7 @@ class RAGPipeline:
             if verbose:
                 self.logger.info("🤖 Step 2: Generating response")
 
-            generation_result = self.generation_tool.generate(query=query, documents=search_results, history=history)
+            generation_result = self.generation_tool.generate(query=query, documents=search_results)
 
             answer = generation_result["answer"]
             sources = generation_result["sources"]
