@@ -126,7 +126,7 @@ class GenerationTool:
 
         try:
             response = requests.post(
-                f"{self.config.openrouter.helicone_base_url}/chat/completions",
+                "https://openrouter.helicone.ai/api/v1/chat/completions",
                 headers=headers,
                 json=payload,
                 timeout=self.config.openrouter_timeout,
