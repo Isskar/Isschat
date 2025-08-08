@@ -1,0 +1,19 @@
+flowchart TD
+    A[L'utilisateur envoie un message via l'UI] --> B{SemanticRAGPipeline.process_query};
+    B --> C{Historique existe ?};
+    C -- Oui --> D[ReformulationService];
+    D --> E[Service LLM pour reformulation];
+    E --> F[Requête Reformulée];
+    C -- Non --> G[Requête Originale];
+    F --> H[SemanticRetrievalTool];
+    G --> H;
+    H --> I[VectorDB];
+    I --> J[Documents Récupérés];
+    J --> K[GenerationTool];
+    F --> K;
+    G --> K;
+    K --> L[Service LLM pour génération];
+    L --> M[Réponse et Sources Générées];
+    M --> N[DataManager sauvegarde la conversation];
+    N --> O[Stockage de Fichiers];
+    M --> P[Réponse affichée sur l'UI];

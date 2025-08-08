@@ -1,0 +1,57 @@
+classDiagram
+    direction LR
+
+    class Storage {
+        <<Service>>
+        # String path
+        # JSONL data
+        +append_jsonl_data(path, data)
+    }
+
+    class ConversationEntry {
+        +timestamp: string
+        +user_id: string
+        +conversation_id: string
+        +question: string
+        +answer: string
+        +response_time_ms: float
+        +sources: Source[]
+        +metadata: dict
+    }
+
+    class FeedbackEntry {
+        +timestamp: string
+        +user_id: string
+        +conversation_id: string
+        +rating: int
+        +comment: string
+        +metadata: dict
+    }
+
+    class PerformanceEntry {
+        +timestamp: string
+        +operation: string
+        +duration_ms: float
+        +user_id: string
+        +metadata: dict
+    }
+
+    class Source {
+        +content_preview: string
+        +score: float
+        +metadata: dict
+        +semantic_metadata: SemanticMetadata
+    }
+    
+    class SemanticMetadata {
+      +semantic_score: float
+      +intent_bonus: float
+      +keyword_bonus: float
+    }
+
+    Storage "1" -- "0..*" ConversationEntry : stocke dans /conversations
+    Storage "1" -- "0..*" FeedbackEntry : stocke dans /feedback
+    Storage "1" -- "0..*" PerformanceEntry : stocke dans /performance
+
+    ConversationEntry "1" -- "0..*" Source : contient
+    Source "1" -- "0..1" SemanticMetadata : contient

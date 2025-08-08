@@ -1,0 +1,54 @@
+graph TD
+    subgraph Interfaces Utilisateur
+        UI_Streamlit["Application Web Streamlit"]
+        UI_CLI["Interface en Ligne de Commande"]
+    end
+
+    subgraph Application Principale
+        Semantic_RAG_Pipeline["Pipeline RAG Sémantique"]
+        Ingestion_Pipeline["Pipeline d'Ingestion"]
+        DataManager["Gestionnaire de Données"]
+    end
+
+    subgraph Outils RAG
+        Reformulation_Service["Service de Reformulation"]
+        Semantic_Retrieval_Tool["Outil de Recherche Sémantique"]
+        Generation_Tool["Outil de Génération"]
+    end
+
+    subgraph Services
+        Embedding_Service["Service d'Embedding"]
+        LLM_Service["Service LLM (via OpenRouter)"]
+    end
+
+    subgraph Stockage des Données
+        VectorDB["Base de Données Vectorielle (Weaviate)"]
+        Storage["Stockage de Fichiers (Local/Azure Blob)"]
+    end
+    
+    subgraph Systèmes Externes
+        Confluence
+    end
+
+    %% Connexions
+    UI_Streamlit --> Semantic_RAG_Pipeline
+    UI_CLI --> Semantic_RAG_Pipeline
+    UI_CLI --> Ingestion_Pipeline
+
+    Semantic_RAG_Pipeline --> Reformulation_Service
+    Semantic_RAG_Pipeline --> Semantic_Retrieval_Tool
+    Semantic_RAG_Pipeline --> Generation_Tool
+    Semantic_RAG_Pipeline --> DataManager
+
+    Reformulation_Service --> LLM_Service
+
+    Semantic_Retrieval_Tool --> VectorDB
+    Semantic_Retrieval_Tool --> Embedding_Service
+    
+    Generation_Tool --> LLM_Service
+
+    Ingestion_Pipeline --> Confluence
+    Ingestion_Pipeline --> Embedding_Service
+    Ingestion_Pipeline --> VectorDB
+
+    DataManager --> Storage

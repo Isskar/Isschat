@@ -1,0 +1,31 @@
+graph TD
+    subgraph Application Isschat
+        Ingestion_Pipeline["Pipeline d'Ingestion"]
+        Semantic_RAG_Pipeline["Pipeline RAG Sémantique"]
+        DataManager["Gestionnaire de Données"]
+        WebApp["Application Web Streamlit"]
+    end
+
+    subgraph Services Externes
+        Confluence_API["API Confluence"]
+        OpenRouter_API["API OpenRouter (LLMs)"]
+        Weaviate_DB["BD Vectorielle Weaviate"]
+        Azure_Storage["Stockage Blob Azure"]
+        Azure_AD["Azure Active Directory"]
+    end
+
+    %% Flux d'Ingestion de Données
+    Ingestion_Pipeline -- "Extrait les pages et documents" --> Confluence_API
+
+    %% Flux RAG & Génération
+    Semantic_RAG_Pipeline -- "Envoie des prompts pour reformulation et génération" --> OpenRouter_API
+    
+    %% Flux Base de Données Vectorielle
+    Ingestion_Pipeline -- "Écrit les vecteurs de documents" --> Weaviate_DB
+    Semantic_RAG_Pipeline -- "Lit les vecteurs de documents pertinents" --> Weaviate_DB
+
+    %% Flux de Journalisation des Données
+    DataManager -- "Sauvegarde et charge les conversations, feedbacks, logs de performance" --> Azure_Storage
+
+    %% Flux d'Authentification
+    WebApp -- "Authentifie les utilisateurs" --> Azure_AD

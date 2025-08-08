@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant Utilisateur
+    participant WebApp
+    participant SemanticRAGPipeline
+    participant ReformulationService
+    participant SemanticRetrievalTool
+    participant GenerationTool
+    participant OpenRouter_API as Service LLM
+    participant VectorDB
+    participant DataManager
+
+    Utilisateur->>WebApp: Saisit une question et envoie.
+    WebApp->>SemanticRAGPipeline: process_query(query, history, conversation_id)
+
+    alt Si l'historique de conversation existe
+        SemanticRAGPipeline->>ReformulationService: reformulate_query(query, history)
+        ReformulationService->>OpenRouter_API: Demande la reformulation de la requête
+        OpenRouter_API-->>ReformulationService: Retourne la requête reformulée
+        ReformulationService-->>SemanticRAGPipeline: Fournit la requête reformulée
+    end
+
+    SemanticRAGPipeline->>SemanticRetrievalTool: retrieve(reformulated_query)
+    SemanticRetrievalTool->>VectorDB: Recherche les vecteurs de documents pertinents
+    VectorDB-->>SemanticRetrievalTool: Retourne les fragments de documents
+    SemanticRetrievalTool-->>SemanticRAGPipeline: Retourne les documents filtrés et classés
+
+    SemanticRAGPipeline->>GenerationTool: generate(reformulated_query, documents)
+    note right of GenerationTool: Construit un prompt avec la requête et le contexte des documents.
+    GenerationTool->>OpenRouter_API: Demande la génération de la réponse
+    OpenRouter_API-->>GenerationTool: Retourne la réponse et les sources générées
+    GenerationTool-->>SemanticRAGPipeline: Fournit la réponse finale et les sources
+
+    SemanticRAGPipeline->>DataManager: save_conversation(...)
+    DataManager-->>SemanticRAGPipeline: Confirme la sauvegarde
+
+    SemanticRAGPipeline-->>WebApp: Retourne la réponse finale et les sources
+    WebApp->>Utilisateur: Affiche la réponse et les sources.
