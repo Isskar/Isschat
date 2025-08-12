@@ -1,0 +1,72 @@
+%%{config: {'theme':'base', 'themeVariables': {'primaryColor':'#2E4057', 'primaryTextColor':'#FFFFFF', 'primaryBorderColor':'#1A2332', 'lineColor':'#4A90A4', 'secondaryColor':'#87CEEB', 'tertiaryColor':'#F0F8FF'}}}%%
+graph TD
+    subgraph Interface CLI
+        CLI_Interface["Interface Ligne de Commande"]
+        Chat_Session["Session de Chat"]
+        History_Manager["Gestionnaire d'Historique Local"]
+    end
+
+    subgraph Commandes CLI
+        Chat_Command["chat - Mode conversation"]
+        Ingest_Command["ingest - Ingestion de documents"]
+        Status_Command["status - Statut du système"]
+    end
+
+    subgraph Pipeline Principal
+        Semantic_RAG_Pipeline["Pipeline RAG Sémantique"]
+        Ingestion_Pipeline["Pipeline d'Ingestion"]
+        DataManager["Gestionnaire de Données"]
+    end
+
+    subgraph Outils RAG
+        Reformulation_Service["Service de Reformulation"]
+        Semantic_Retrieval_Tool["Outil de Recherche Sémantique"]
+        Generation_Tool["Outil de Génération"]
+    end
+
+    subgraph Services Externes
+        Embedding_Service["Service d'Embedding"]
+        LLM_Service["Service LLM (OpenRouter)"]
+    end
+
+    subgraph Stockage
+        VectorDB["Base Vectorielle (Weaviate)"]
+        Storage["Stockage Conversations"]
+    end
+
+    subgraph Sources Externes
+        Confluence["Confluence"]
+        Local_Files["Fichiers Locaux"]
+    end
+
+    %% Connexions CLI
+    CLI_Interface --> Chat_Command
+    CLI_Interface --> Ingest_Command  
+    CLI_Interface --> Status_Command
+    
+    Chat_Command --> Chat_Session
+    Chat_Session --> History_Manager
+    Chat_Command --> Semantic_RAG_Pipeline
+    
+    Ingest_Command --> Ingestion_Pipeline
+    
+    %% Pipeline RAG
+    Semantic_RAG_Pipeline --> Reformulation_Service
+    Semantic_RAG_Pipeline --> Semantic_Retrieval_Tool
+    Semantic_RAG_Pipeline --> Generation_Tool
+    Semantic_RAG_Pipeline --> DataManager
+
+    %% Pipeline Ingestion
+    Ingestion_Pipeline --> Confluence
+    Ingestion_Pipeline --> Local_Files
+    Ingestion_Pipeline --> Embedding_Service
+    Ingestion_Pipeline --> VectorDB
+
+    %% Services
+    Reformulation_Service --> LLM_Service
+    Generation_Tool --> LLM_Service
+    Semantic_Retrieval_Tool --> VectorDB
+    Semantic_Retrieval_Tool --> Embedding_Service
+    
+    %% Stockage
+    DataManager --> Storage

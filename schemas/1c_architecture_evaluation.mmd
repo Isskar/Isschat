@@ -1,0 +1,68 @@
+%%{config: {'theme':'base', 'themeVariables': {'primaryColor':'#2E4057', 'primaryTextColor':'#FFFFFF', 'primaryBorderColor':'#1A2332', 'lineColor':'#4A90A4', 'secondaryColor':'#87CEEB', 'tertiaryColor':'#F0F8FF'}}}%%
+graph TD
+    subgraph Interface Évaluation
+        Eval_Interface["Interface d'Évaluation"]
+        Test_Runner["Exécuteur de Tests"]
+        Report_Generator["Générateur de Rapports"]
+    end
+
+    subgraph Jeux de Données
+        Question_Dataset["Dataset de Questions"]
+        Answer_Dataset["Dataset de Réponses Attendues"]
+        Context_Dataset["Dataset de Contextes"]
+    end
+
+    subgraph Métriques d'Évaluation
+        Relevance_Metric["Métrique de Pertinence"]
+        Accuracy_Metric["Métrique de Précision"]
+        Retrieval_Metric["Métrique de Récupération"]
+        Latency_Metric["Métrique de Latence"]
+    end
+
+    subgraph Système à Évaluer
+        Semantic_RAG_Pipeline["Pipeline RAG Sémantique"]
+        Reformulation_Service["Service de Reformulation"]
+        Semantic_Retrieval_Tool["Outil de Recherche"]
+        Generation_Tool["Outil de Génération"]
+    end
+
+    subgraph Services d'Évaluation
+        LLM_Judge["LLM Juge (pour évaluation)"]
+        Embedding_Service["Service d'Embedding"]
+        Similarity_Calculator["Calculateur de Similarité"]
+    end
+
+    subgraph Stockage Résultats
+        Results_DB["Base de Résultats"]
+        Performance_Logs["Logs de Performance"]
+        Report_Storage["Stockage Rapports"]
+    end
+
+    %% Flux d'évaluation
+    Eval_Interface --> Test_Runner
+    Test_Runner --> Question_Dataset
+    Test_Runner --> Answer_Dataset
+    Test_Runner --> Context_Dataset
+    
+    %% Tests du pipeline
+    Test_Runner --> Semantic_RAG_Pipeline
+    Semantic_RAG_Pipeline --> Reformulation_Service
+    Semantic_RAG_Pipeline --> Semantic_Retrieval_Tool
+    Semantic_RAG_Pipeline --> Generation_Tool
+    
+    %% Calcul des métriques
+    Test_Runner --> Relevance_Metric
+    Test_Runner --> Accuracy_Metric
+    Test_Runner --> Retrieval_Metric
+    Test_Runner --> Latency_Metric
+    
+    %% Services d'évaluation
+    Relevance_Metric --> LLM_Judge
+    Accuracy_Metric --> Similarity_Calculator
+    Retrieval_Metric --> Embedding_Service
+    
+    %% Génération de rapports
+    Test_Runner --> Report_Generator
+    Report_Generator --> Results_DB
+    Report_Generator --> Performance_Logs
+    Report_Generator --> Report_Storage

@@ -1,0 +1,48 @@
+%%{config: {'theme':'base', 'themeVariables': {'primaryColor':'#2E4057', 'primaryTextColor':'#FFFFFF', 'primaryBorderColor':'#1A2332', 'lineColor':'#4A90A4', 'secondaryColor':'#87CEEB', 'tertiaryColor':'#F0F8FF'}}}%%
+graph TD
+    subgraph Interface WebApp
+        UI_Streamlit["Application Web Streamlit"]
+        Session_Manager["Gestionnaire de Session"]
+        State_Manager["Gestionnaire d'État"]
+    end
+
+    subgraph Pipeline Principal
+        Semantic_RAG_Pipeline["Pipeline RAG Sémantique"]
+        DataManager["Gestionnaire de Données"]
+    end
+
+    subgraph Outils RAG
+        Reformulation_Service["Service de Reformulation"]
+        Semantic_Retrieval_Tool["Outil de Recherche Sémantique"]
+        Generation_Tool["Outil de Génération"]
+    end
+
+    subgraph Services Externes
+        Embedding_Service["Service d'Embedding"]
+        LLM_Service["Service LLM (OpenRouter)"]
+    end
+
+    subgraph Stockage
+        VectorDB["Base Vectorielle (Weaviate)"]
+        Storage["Stockage Conversations"]
+    end
+
+    %% Connexions WebApp
+    UI_Streamlit --> Session_Manager
+    Session_Manager --> State_Manager
+    UI_Streamlit --> Semantic_RAG_Pipeline
+    
+    %% Pipeline RAG
+    Semantic_RAG_Pipeline --> Reformulation_Service
+    Semantic_RAG_Pipeline --> Semantic_Retrieval_Tool
+    Semantic_RAG_Pipeline --> Generation_Tool
+    Semantic_RAG_Pipeline --> DataManager
+
+    %% Services
+    Reformulation_Service --> LLM_Service
+    Generation_Tool --> LLM_Service
+    Semantic_Retrieval_Tool --> VectorDB
+    Semantic_Retrieval_Tool --> Embedding_Service
+    
+    %% Stockage
+    DataManager --> Storage

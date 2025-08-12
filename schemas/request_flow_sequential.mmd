@@ -1,0 +1,38 @@
+%%{config: {'theme':'base', 'themeVariables': {'primaryColor':'#2E4057', 'primaryTextColor':'#FFFFFF', 'primaryBorderColor':'#1A2332', 'lineColor':'#4A90A4', 'secondaryColor':'#87CEEB', 'tertiaryColor':'#F0F8FF'}}}%%
+sequenceDiagram
+    participant U as Utilisateur
+    participant WA as WebApp  
+    participant PR as Pipeline RAG
+    participant RQ as Reformulateur de requêtes
+    participant RD as Récupérateur de documents
+    participant GR as Générateur de réponse
+    participant API as Service LLM (OpenRouter)
+    participant VDB as Base vectorielle (Weaviate)
+    participant DM as Manager de données
+
+    U->>WA: Saisit une question et envoie
+    WA->>PR: Traite la requête avec historique et ID de conversation
+
+    alt Si l'historique de conversation existe
+        PR->>RQ: Reformule la requête avec l'historique
+        RQ->>API: Demande la reformulation de la requête
+        API-->>RQ: Retourne la requête reformulée
+        RQ-->>PR: Fournit la requête reformulée
+    end
+
+    PR->>RD: Recherche les documents pertinents
+    RD->>VDB: Recherche les vecteurs de documents pertinents
+    VDB-->>RD: Retourne les fragments de documents
+    RD-->>PR: Retourne les documents filtrés et classés
+
+    PR->>GR: Génère la réponse avec requête et documents
+    note right of GR: Construit un prompt avec la requête et le contexte des documents
+    GR->>API: Demande la génération de la réponse
+    API-->>GR: Retourne la réponse et les sources générées
+    GR-->>PR: Fournit la réponse finale et les sources
+
+    PR->>DM: Sauvegarde la conversation
+    DM-->>PR: Confirme la sauvegarde
+
+    PR-->>WA: Retourne la réponse finale et les sources
+    WA->>U: Affiche la réponse et les sources

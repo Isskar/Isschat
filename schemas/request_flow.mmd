@@ -1,0 +1,32 @@
+---
+config:
+  theme: default
+---
+flowchart TD
+    %% Entrée utilisateur
+    A[L'utilisateur envoie une requête depuis la webapp] --> P["Prétraitement :
+Normalisation du texte
+Suppression des stopwords"]
+
+    %% Historique
+    P --> B{Historique de conversation disponible ?}
+    B -- Oui --> C[Reformulation de la requête par LLM]
+    B -- Non --> D[Utilisation de la requête originale]
+
+    %% Recherche
+    C --> G[Recherche sémantique dans la base vectorielle]
+    D --> G
+    G --> I[Documents pertinents récupérés]
+
+    %% Génération
+    I --> J[Génération de la réponse par LLM]
+    J --> L[Ajout des sources à la réponse]
+
+    %% Affichage
+    L --> O[Affichage à l'utilisateur]
+    L --> M[Sauvegarde de la conversation, temps de réponse, etc.]
+
+    %% Feedback
+    O --> F{L'utilisateur fournit-il un feedback ?}
+    F -- Oui --> R[Stockage du feedback]
+    F -- Non --> E[Fin du processus]
