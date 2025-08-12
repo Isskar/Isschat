@@ -182,8 +182,17 @@ class EvaluationManager:
             overall_stats["overall_pass_rate"] = 0.0
 
         # Store results
+        version_info = {}
+        if self.config.version_description:
+            version_info["description"] = self.config.version_description
+
+        git_info = self.config.get_git_info()
+        if git_info:
+            version_info["git"] = git_info
+
         self.results = {
             "timestamp": datetime.now().isoformat(),
+            "version_info": version_info if version_info else None,
             "config": {
                 "ci_mode": self.config.ci_mode,
                 "categories_run": selected_categories,
@@ -250,6 +259,20 @@ class EvaluationManager:
         print(f"\n{'=' * 60}")
         print("EVALUATION SUMMARY")
         print(f"{'=' * 60}")
+
+        # Show version information if available
+        version_info = self.results.get("version_info")
+        if version_info:
+            if version_info.get("description"):
+                print(f"Version Description: {version_info['description']}")
+
+            git_info = version_info.get("git")
+            if git_info:
+                print(f"Git Branch: {git_info['branch']}")
+                print(f"Last Commit: {git_info['commit_hash_short']} - {git_info['commit_message']}")
+                print(f"Commit Author: {git_info['commit_author']} ({git_info['commit_date']})")
+            print(f"{'-' * 60}")
+
         print(f"Total Tests: {overall_stats.get('total_tests', 0)}")
 
         if self.config.ci_mode:
@@ -329,6 +352,17 @@ def main():
         action="store_true",
         help="Generate an HTML report after evaluation",
     )
+    parser.add_argument(
+        "--version-description",
+        "--desc",
+        type=str,
+        help="Textual description of what this evaluation version adds compared to older ones",
+    )
+    parser.add_argument(
+        "--no-git-info",
+        action="store_true",
+        help="Disable automatic git information collection",
+    )
     args = parser.parse_args()
 
     try:
@@ -336,6 +370,10 @@ def main():
         config = EvaluationConfig()
         if args.ci:
             config.ci_mode = True
+        if args.version_description:
+            config.version_description = args.version_description
+        if args.no_git_info:
+            config.include_git_info = False
 
         # Create evaluation manager
         manager = EvaluationManager(config)

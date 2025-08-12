@@ -3,9 +3,10 @@ Configuration settings for Isschat evaluation system
 """
 
 import json
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 
 @dataclass
@@ -26,6 +27,10 @@ class EvaluationConfig:
     # CI configuration
     ci_mode: bool = False
     fail_on_threshold: bool = True
+
+    # Version information
+    version_description: str = ""
+    include_git_info: bool = True
 
     # Evaluators configuration (loaded dynamically)
     _evaluators_config: Dict[str, Any] = field(default_factory=dict, init=False)
@@ -81,3 +86,73 @@ class EvaluationConfig:
     def get_ci_threshold(self) -> float:
         """Get CI threshold (only used in CI mode)"""
         return self.ci_threshold
+
+    def get_git_info(self) -> Optional[Dict[str, str]]:
+        """Get current git information"""
+        if not self.include_git_info:
+            return None
+
+        try:
+            # Get current branch
+            branch = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                    cwd=Path(__file__).parent.parent.parent,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
+            )
+
+            # Get last commit hash
+            commit_hash = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], cwd=Path(__file__).parent.parent.parent, stderr=subprocess.DEVNULL
+                )
+                .decode()
+                .strip()
+            )
+
+            # Get last commit message
+            commit_message = (
+                subprocess.check_output(
+                    ["git", "log", "-1", "--pretty=format:%s"],
+                    cwd=Path(__file__).parent.parent.parent,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
+            )
+
+            # Get last commit author and date
+            commit_author = (
+                subprocess.check_output(
+                    ["git", "log", "-1", "--pretty=format:%an"],
+                    cwd=Path(__file__).parent.parent.parent,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
+            )
+
+            commit_date = (
+                subprocess.check_output(
+                    ["git", "log", "-1", "--pretty=format:%ci"],
+                    cwd=Path(__file__).parent.parent.parent,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
+            )
+
+            return {
+                "branch": branch,
+                "commit_hash": commit_hash,
+                "commit_hash_short": commit_hash[:8],
+                "commit_message": commit_message,
+                "commit_author": commit_author,
+                "commit_date": commit_date,
+            }
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Git not available or not in a git repository
+            return None
